@@ -31,9 +31,7 @@ app.use(
       if (!origin) return callback(null, true);
       const allowedOrigins = [
         env.clientUrl,
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'http://127.0.0.1:5173',
+        'https://app.bussinesssarthi.com',
         'https://bs-ebon-omega.vercel.app',
         'https://business-sarthi.vercel.app'
       ];
