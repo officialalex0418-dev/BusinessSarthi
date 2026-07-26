@@ -21,6 +21,7 @@ const designationSchema = new mongoose.Schema(
       salesTracker: { type: Boolean, default: false },
       inventory: { type: Boolean, default: false },
       distributors: { type: Boolean, default: false },
+      vendors: { type: Boolean, default: false },
       payroll: { type: Boolean, default: false },
       complaints: { type: Boolean, default: false },
       reports: { type: Boolean, default: false },

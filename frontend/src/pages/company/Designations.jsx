@@ -11,6 +11,7 @@ const PERMISSIONS = [
   { key: 'salesTracker', label: 'Sales Tracker' },
   { key: 'inventory', label: 'Inventory' },
   { key: 'distributors', label: 'Distributors' },
+  { key: 'vendors', label: 'Vendors' },
   { key: 'payroll', label: 'Payroll' },
   { key: 'complaints', label: 'Complaints' },
   { key: 'reports', label: 'Reports' },

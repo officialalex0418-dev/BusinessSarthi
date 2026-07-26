@@ -115,8 +115,15 @@ export const updateMyCompany = asyncHandler(async (req, res) => {
 
 /** PATCH /companies/:id */
 export const updateCompany = asyncHandler(async (req, res) => {
-  const updates = (({ name, address, panVat, phone, email, logo, status, settings, registrationNumber, website, description, additionalInfo }) =>
-    ({ name, address, panVat, phone, email, logo, status, settings, registrationNumber, website, description, additionalInfo }))(req.body);
+  const updates = (({
+    name, address, panVat, phone, email, logo, status, settings,
+    registrationNumber, website, description, additionalInfo,
+    location, checkInRadiusMeters
+  }) => ({
+    name, address, panVat, phone, email, logo, status, settings,
+    registrationNumber, website, description, additionalInfo,
+    location, checkInRadiusMeters
+  }))(req.body);
   Object.keys(updates).forEach((k) => updates[k] === undefined && delete updates[k]);
 
   if (updates.logo && updates.logo.startsWith('data:')) {

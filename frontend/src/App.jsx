@@ -139,14 +139,16 @@ export default function App() {
   });
 
   const filteredCompanyNav = companyNav.filter(item => {
-    if (user?.role === 'COMPANY_OWNER') return true;
-
+    // 1. Feature Gates (Apply to everyone including owners)
     if (item.to === '/company/complaints' && !hasFeature('complaintChat')) return false;
     if (item.to === '/company/sales' && !hasFeature('salesTracking')) return false;
     if (item.to === '/company/inventory' && !hasFeature('inventoryManagement')) return false;
     if (item.to === '/company/distributors' && !hasFeature('distributorManagement')) return false;
     if (item.to === '/company/vendors' && !hasFeature('vendorManagement')) return false;
     if (item.to === '/company/payroll' && !hasFeature('payrollManagement')) return false;
+
+    // 2. Role/Permission Gates
+    if (user?.role === 'COMPANY_OWNER') return true;
 
     if (user?.designation?.permissions) {
       const perms = user.designation.permissions;
