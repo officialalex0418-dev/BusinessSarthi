@@ -23,10 +23,9 @@ COPY package.json ./
 
 USER appuser
 
-EXPOSE 5000
-
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -qO- http://localhost:5000/health || exit 1
+# Render provides the PORT env var, we listen on it automatically via env.port
+# We remove the hardcoded HEALTHCHECK to avoid failures if PORT != 5000
+# Render handles health checks via the dashboard settings
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "src/server.js"]
