@@ -35,7 +35,7 @@ app.use(
         'https://bs-ebon-omega.vercel.app',
         'https://business-sarthi.vercel.app'
       ];
-      if (allowedOrigins.includes(origin) || !env.isProd) {
+      if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || !env.isProd) {
         return callback(null, true);
       }
       console.warn(`[CORS REJECTED] Origin: ${origin}`);

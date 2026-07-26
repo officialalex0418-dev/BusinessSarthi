@@ -13,11 +13,21 @@ const required = [
 for (const key of required) {
   if (!process.env[key]) {
     if (process.env.NODE_ENV === 'production') {
-      throw new Error(`CRITICAL: Missing required environment variable: ${key}`);
+      console.error(`[FATAL] Missing required environment variable: ${key}`);
+      process.exit(1);
     } else {
       console.warn(`[SECURITY WARN] Missing environment variable: ${key}. Using insecure development default.`);
     }
   }
+}
+
+if (process.env.NODE_ENV === 'production') {
+  console.log('[CONFIG] Validating production environment variables...');
+  required.forEach(key => {
+    const val = process.env[key];
+    const masked = val ? (val.length > 8 ? `${val.substring(0, 4)}...${val.substring(val.length - 4)}` : '****') : 'MISSING';
+    console.log(`[CONFIG] ${key}: ${masked}`);
+  });
 }
 
 export const env = {

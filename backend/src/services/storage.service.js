@@ -3,14 +3,26 @@ import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const s3 = new S3Client({
-  region: 'auto',
-  endpoint: env.r2.endpoint,
-  credentials: {
-    accessKeyId: env.r2.accessKeyId,
-    secretAccessKey: env.r2.secretAccessKey,
-  },
-});
+let s3Client = null;
+
+const getS3Client = () => {
+  if (s3Client) return s3Client;
+
+  if (!env.r2.endpoint || !env.r2.accessKeyId || !env.r2.secretAccessKey) {
+    logger.error('R2 configuration is incomplete. Storage service will fail.');
+    return null;
+  }
+
+  s3Client = new S3Client({
+    region: 'auto',
+    endpoint: env.r2.endpoint,
+    credentials: {
+      accessKeyId: env.r2.accessKeyId,
+      secretAccessKey: env.r2.secretAccessKey,
+    },
+  });
+  return s3Client;
+};
 
 /**
  * Uploads a file to Cloudflare R2
@@ -20,6 +32,9 @@ const s3 = new S3Client({
  * @returns {Promise<string>} - Public URL of the uploaded file
  */
 export const uploadFile = async (fileContent, folder = 'general', contentType = 'image/jpeg') => {
+  const s3 = getS3Client();
+  if (!s3) throw new Error('Storage service not configured');
+
   try {
     let buffer;
     if (typeof fileContent === 'string' && fileContent.startsWith('data:')) {
@@ -58,6 +73,9 @@ export const uploadFile = async (fileContent, folder = 'general', contentType = 
 };
 
 export const deleteFile = async (fileUrl) => {
+  const s3 = getS3Client();
+  if (!s3) return;
+
   try {
     if (!fileUrl) return;
 
