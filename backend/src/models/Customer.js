@@ -5,6 +5,7 @@ const customerSchema = new mongoose.Schema(
     company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
     name: { type: String, required: true, trim: true },
     address: { type: String, trim: true },
+    town: { type: String, trim: true },
     contactNumber: { type: String, trim: true },
     panVat: { type: String, trim: true },
     ownerName: { type: String, trim: true },

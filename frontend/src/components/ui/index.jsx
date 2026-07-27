@@ -144,7 +144,7 @@ export const DatePicker = ({ label, value, onChange, className, position = 'bott
 
   const displayValue = show && typedValue !== ''
     ? typedValue
-    : (format === 'BS' ? (adToBs(value)?.formatted || '') : (value || ''));
+    : (format === 'BS' ? (value ? (adToBs(value)?.formatted || '') : '') : (value || ''));
 
   return (
     <div className="relative" ref={containerRef}>

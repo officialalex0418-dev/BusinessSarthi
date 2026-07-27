@@ -24,6 +24,8 @@ This file tracks the architectural changes, refactors, and feature implementatio
 - **Staff Profile**: Fixed staff profile photo upload functionality and added support for updating Name, Address, and PAN fields. Disabled the email field in profile edits to prevent login conflicts.
 
 ### 📊 Core Module Enhancements
+- **Customer Management**: Added a "Town" field to customers and created a centralized "Customer List" for the company panel. Implemented town and employee filters to track field activity across all staff.
+- **Attendance Stability**: Fixed a critical crash on the staff attendance page by adding safety checks to date formatting and the Nepali (BS) calendar components.
 - **Flexible Payroll**: Made every field in the payroll detail report editable (Absent Deduction, Tax, Allowances, etc.). Updates now persist correctly on save.
 - **Inventory "Add Product" Upgrade**: Refactored the Add Product form to support searching existing inventory and auto-filling details (Batch, Price, MRP). Added a seamless "+ Add New Product" workflow.
 - **Smart Inventory Sync**: Invoices now auto-adjust inventory levels on update (reversing old quantities and applying new ones).

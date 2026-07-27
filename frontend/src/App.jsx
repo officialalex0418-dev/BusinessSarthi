@@ -34,6 +34,7 @@ import LiveTracking from '@/pages/company/LiveTracking';
 import InventoryPage from '@/pages/company/Inventory';
 import Distributors from '@/pages/company/Distributors';
 import DistributorDetails from '@/pages/company/DistributorDetails';
+import CompanyCustomers from '@/pages/company/Customers';
 import Vendors from '@/pages/company/Vendors';
 import VendorDetails from '@/pages/company/VendorDetails';
 import CompanyPayroll from '@/pages/company/Payroll';
@@ -94,6 +95,7 @@ const companyNav = [
   { to: '/company/attendance', label: 'Attendance', icon: CalendarCheck },
   { to: '/company/leaves', label: 'Leave Management', icon: CalendarOff },
   { to: '/company/sales', label: 'Sales Tracker', icon: TrendingUp },
+  { to: '/company/customers', label: 'Customer List', icon: Users },
   { to: '/company/inventory', label: 'Inventory', icon: Boxes },
   { to: '/company/distributors', label: 'Distributors', icon: Truck },
   { to: '/company/vendors', label: 'Vendors', icon: Building2 },
@@ -157,6 +159,7 @@ export default function App() {
       if (item.to === '/company/attendance') return perms.attendance;
       if (item.to === '/company/leaves') return perms.leaves;
       if (item.to === '/company/sales') return perms.salesTracker;
+      if (item.to === '/company/customers') return perms.salesTracker; // Reuse salesTracker permission for customers
       if (item.to === '/company/inventory') return perms.inventory;
       if (item.to === '/company/distributors') return perms.distributors;
       if (item.to === '/company/vendors') return perms.distributors; // uses same permission
@@ -178,7 +181,10 @@ export default function App() {
       if (perms.liveTracking) finalStaffNav.push({ to: '/staff/management/tracking', label: 'Tracking Mgmt', icon: MapPin });
       if (perms.attendance) finalStaffNav.push({ to: '/staff/management/attendance', label: 'Attendance Mgmt', icon: CalendarCheck });
       if (perms.leaves) finalStaffNav.push({ to: '/staff/management/leaves', label: 'Leave Mgmt', icon: CalendarOff });
-      if (perms.salesTracker && hasFeature('salesTracking') && user.role !== 'STAFF') finalStaffNav.push({ to: '/staff/management/sales', label: 'Sales Mgmt', icon: TrendingUp });
+      if (perms.salesTracker && hasFeature('salesTracking') && user.role !== 'STAFF') {
+         finalStaffNav.push({ to: '/staff/management/sales', label: 'Sales Mgmt', icon: TrendingUp });
+         finalStaffNav.push({ to: '/staff/management/customers', label: 'Customer List', icon: Users });
+      }
       if (perms.inventory && hasFeature('inventoryManagement')) finalStaffNav.push({ to: '/staff/management/inventory', label: 'Inventory', icon: Boxes });
       if (perms.distributors && hasFeature('distributorManagement')) {
          finalStaffNav.push({ to: '/staff/management/distributors', label: 'Distributors', icon: Truck });
@@ -254,6 +260,7 @@ export default function App() {
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="sales" element={<SalesTracker />} />
+        <Route path="customers" element={<CompanyCustomers />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="distributors" element={<Distributors />} />
         <Route path="distributors/:id" element={<DistributorDetails />} />
@@ -298,6 +305,7 @@ export default function App() {
         <Route path="management/attendance" element={<AttendancePage />} />
         <Route path="management/leaves" element={<Leaves />} />
         <Route path="management/sales" element={<SalesTracker />} />
+        <Route path="management/customers" element={<CompanyCustomers />} />
         <Route path="management/inventory" element={<InventoryPage />} />
         <Route path="management/distributors" element={<Distributors />} />
         <Route path="management/distributors/:id" element={<DistributorDetails />} />

@@ -1,44 +1,45 @@
-# Implementation Plan - UI Enhancements, Session Management & Payroll Refactor
+# Implementation Plan - Customer Management & Attendance Fix
 
-This plan outlines the changes to display user designations, configure session timeouts for mobile and web, and enhance the payroll editing experience.
-
-## User Review Required
-
-> [!IMPORTANT]
-> The session timeout for web is already set to 30 minutes in the frontend (inactivity detection). I will ensure the backend cookie `maxAge` also aligns with this for consistency.
+This plan addresses the crash on the staff attendance page and adds the requested "Town" field and company-wide customer list.
 
 ## Proposed Changes
 
-### 🔐 Authentication & Session Management
-#### [MODIFY] [auth.controller.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/controllers/auth.controller.js)
-- Ensure mobile session `maxAge` is exactly 30 days (`30 * 24 * 60 * 60 * 1000`).
-- Ensure web session `maxAge` is exactly 30 minutes (`30 * 60 * 1000`).
+### 🔐 Stability Fixes
+#### [MODIFY] [ui/index.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/components/ui/index.jsx)
+- Add safety checks to `toLocalDateString` and `DatePicker` to handle missing settings or invalid dates.
+- Ensure `DatePicker` doesn't attempt to render the BS calendar if `user` or `settings` are not yet loaded.
 
-#### [MODIFY] [DashboardLayout.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/layouts/DashboardLayout.jsx)
-- Verify `idleTimeoutMs` is set to `30 * 60 * 1000` (30 minutes).
+### 👥 Customer Module Enhancements
+#### [MODIFY] [Customer.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/models/Customer.js)
+- Add `town: { type: String, trim: true }` field to the schema.
 
-### 🏷️ User Interface Enhancements
-#### [MODIFY] [dashboard.controller.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/controllers/dashboard.controller.js)
-- Update `staffDashboard` to include `designationName: req.user.designation?.name` in the returned `profile` data.
+#### [MODIFY] [validators.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/routes/validators.js)
+- Update `customerBody` schema to include `town` (optional string).
 
-#### [MODIFY] [DashboardLayout.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/layouts/DashboardLayout.jsx)
-- In the top header (User menu), display the user's designation name (if available) below their name.
+#### [MODIFY] [customer.controller.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/controllers/customer.controller.js)
+- Update `listCustomers`:
+    - Support filtering by `town` and `createdBy` (employee ID).
+    - Populate `createdBy` with employee `name`.
+    - Enhance search to include `town`.
 
-#### [MODIFY] [Dashboard.jsx (Staff)](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/staff/Dashboard.jsx)
-- Update the profile header to display the designation name instead of just the generic "position".
+#### [MODIFY] [Customers.jsx (Staff)](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/staff/Customers.jsx)
+- Add "Town" field to the add/edit customer form.
+- Display "Town" in the customer table.
 
-### 💰 Payroll Module Refactor
-#### [MODIFY] [payroll.controller.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/controllers/payroll.controller.js)
-- Update `updatePayroll` to allow manual overrides for `deductions.absent` and `deductions.tax`.
-- If these are provided in `req.body`, prioritize them over the automatic calculation.
+#### [NEW] [Customers.jsx (Company)](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/company/Customers.jsx)
+- Create a new page for company owners/managers to view all customers.
+- Implement filters for "Town" and "Employee" (Created By).
+- Show which staff member added each customer.
 
-#### [MODIFY] [PayrollManager.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/components/PayrollManager.jsx)
-- Convert "Absent Deduction", "Tax Deduction", and "Total Allowances" from read-only displays to editable `Input` fields.
-- Update the `saveDetail` function to send all manually edited values to the backend.
+### 🚀 Navigation & Routing
+#### [MODIFY] [App.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/App.jsx)
+- Register the new `/company/customers` route.
+- Add "Customer List" to the sidebar menu for Company Owners and Managers.
 
 ## Verification Plan
 
 ### Manual Verification
-- **UI**: Log in as a staff member and verify the designation is visible on the dashboard and in the top right header.
-- **Sessions**: Log in on web and wait 30 minutes without activity; verify auto-logout occurs.
-- **Payroll**: Open a payroll report, manually change the Tax or Absent deduction values, click "Save Changes", and verify the Net Salary updates and persists correctly.
+- **Attendance**: Navigate to the staff attendance page and verify it loads correctly without crashing. Open the Overtime Request modal and test the date picker.
+- **Customer Form**: Add a new customer as staff and fill in the "Town" field. Verify it saves and displays.
+- **Company List**: Log in as a company owner, navigate to "Customer List", and verify you can see all customers.
+- **Filtering**: Test filtering the customer list by a specific Town and a specific Employee.

@@ -254,6 +254,7 @@ export const schemas = {
   customerBody: Joi.object({
     name: Joi.string().max(200).required(),
     address: Joi.string().max(300).allow(''),
+    town: Joi.string().max(100).allow(''),
     contactNumber: Joi.string().max(20).allow(''),
     panVat: Joi.string().max(30).allow(''),
     ownerName: Joi.string().max(120).allow(''),

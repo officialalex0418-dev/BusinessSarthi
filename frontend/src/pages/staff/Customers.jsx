@@ -10,7 +10,7 @@ export default function StaffCustomers() {
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '', address: '', contactNumber: '', panVat: '', ownerName: '' });
+  const [form, setForm] = useState({ name: '', address: '', town: '', contactNumber: '', panVat: '', ownerName: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -27,7 +27,7 @@ export default function StaffCustomers() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: '', address: '', contactNumber: '', panVat: '', ownerName: '' });
+    setForm({ name: '', address: '', town: '', contactNumber: '', panVat: '', ownerName: '' });
     setError('');
     setModal(true);
   };
@@ -37,6 +37,7 @@ export default function StaffCustomers() {
     setForm({
       name: c.name,
       address: c.address || '',
+      town: c.town || '',
       contactNumber: c.contactNumber || '',
       panVat: c.panVat || '',
       ownerName: c.ownerName || ''
@@ -101,7 +102,7 @@ export default function StaffCustomers() {
 
       <Card>
         <Table
-          columns={['Customer Name', 'Contact Info', 'Owner', 'Actions']}
+          columns={['Customer Name', 'Town', 'Contact Info', 'Owner', 'Actions']}
           data={customers.items}
           renderRow={(c) => (
             <tr key={c._id}>
@@ -111,6 +112,7 @@ export default function StaffCustomers() {
                   <MapPin className="h-3 w-3" /> {c.address || 'No address'}
                 </div>
               </td>
+              <td className="table-td text-sm font-medium">{c.town || '—'}</td>
               <td className="table-td">
                 <div className="flex items-center gap-1.5 text-sm">
                   <Phone className="h-3.5 w-3.5 text-slate-400" /> {c.contactNumber || '—'}
@@ -161,7 +163,10 @@ export default function StaffCustomers() {
       <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Edit Customer' : 'Add New Customer'}>
         <form onSubmit={submit} className="space-y-4">
           <Input label="Business Name *" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <Input label="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <Input label="Town" value={form.town} onChange={(e) => setForm({ ...form, town: e.target.value })} />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <Input label="Contact Number" value={form.contactNumber} onChange={(e) => setForm({ ...form, contactNumber: e.target.value })} />
             <Input label="PAN/VAT" value={form.panVat} onChange={(e) => setForm({ ...form, panVat: e.target.value })} />

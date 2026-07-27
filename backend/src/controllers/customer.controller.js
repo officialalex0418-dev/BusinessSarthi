@@ -7,16 +7,20 @@ export const listCustomers = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
   const filter = { company: req.companyId };
 
+  if (req.query.town) filter.town = { $regex: req.query.town, $options: 'i' };
+  if (req.query.createdBy) filter.createdBy = req.query.createdBy;
+
   if (req.query.search) {
     filter.$or = [
       { name: { $regex: req.query.search, $options: 'i' } },
       { contactNumber: { $regex: req.query.search, $options: 'i' } },
-      { ownerName: { $regex: req.query.search, $options: 'i' } }
+      { ownerName: { $regex: req.query.search, $options: 'i' } },
+      { town: { $regex: req.query.search, $options: 'i' } }
     ];
   }
 
   const [items, total] = await Promise.all([
-    Customer.find(filter).sort('name').skip(skip).limit(limit),
+    Customer.find(filter).populate('createdBy', 'name').sort('name').skip(skip).limit(limit),
     Customer.countDocuments(filter),
   ]);
   res.json({ success: true, data: paginatedResponse(items, total, page, limit) });

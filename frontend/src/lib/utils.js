@@ -67,6 +67,8 @@ export const formatDate = (d, format = 'AD') => {
 export const toLocalDateString = (d) => {
   if (!d) return '';
   const date = new Date(d);
+  if (isNaN(date.getTime())) return '';
+
   // Using Intl.DateTimeFormat to reliably get components in Nepal timezone
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Kathmandu',

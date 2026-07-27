@@ -1,10 +1,12 @@
-- [/] Session & UI Enhancements
-    - [ ] Set session timeouts in `auth.controller.js` (30d mobile, 30m web)
-    - [ ] Update header designation in `DashboardLayout.jsx`
-    - [ ] Add designation to `dashboard.controller.js` response
-    - [ ] Update staff profile header in `Dashboard.jsx`
-- [ ] Payroll Refactor
-    - [ ] Allow manual field overrides in `payroll.controller.js`
-    - [ ] Make all fields editable in `PayrollManager.jsx` UI
+- [/] Stability Fixes
+    - [ ] Add safety checks to `ui/index.jsx` to prevent crashes
+- [ ] Customer Module Backend
+    - [ ] Update `Customer.js` model with `town` field
+    - [ ] Update `validators.js` schema
+    - [ ] Update `customer.controller.js` for filtering and population
+- [ ] Customer Module Frontend
+    - [ ] Update Staff `Customers.jsx` with Town field
+    - [ ] Create Company `Customers.jsx` with filters
+    - [ ] Add route to `App.jsx` and update navigation
 - [ ] Verification
 - [ ] Update `memory.md`
