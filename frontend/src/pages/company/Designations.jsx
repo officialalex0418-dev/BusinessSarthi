@@ -90,14 +90,6 @@ export default function Designations() {
                   ))}
                 </div>
               </td>
-                <div className="flex flex-wrap gap-1">
-                  {PERMISSIONS.map(p => item.permissions[p.key] && (
-                    <Badge key={p.key} color="blue" className="text-[9px] uppercase tracking-tighter">
-                      {p.label}
-                    </Badge>
-                  ))}
-                </div>
-              </td>
               <td className="table-td">
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" onClick={() => {
