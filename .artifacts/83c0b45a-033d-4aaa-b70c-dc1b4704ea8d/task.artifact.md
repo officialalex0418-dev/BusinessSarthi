@@ -1,9 +1,10 @@
-- [x] Fix Profile Edit & Upload
-    - [x] Update `misc.controller.js` to allow more fields and verify photo upload
-    - [x] Disable email field in `EditProfile.jsx`
-- [x] Refactor Designations UI
-    - [x] Remove "Base System Role" from `Designations.jsx`
-- [x] Update Permissions Logic
-    - [x] Update `rbac.js` to allow `STAFF` with permissions to access management routes
-    - [x] Update `staff.controller.js` to handle role assignment correctly
-- [x] Verify changes
+- [/] Session & UI Enhancements
+    - [ ] Set session timeouts in `auth.controller.js` (30d mobile, 30m web)
+    - [ ] Update header designation in `DashboardLayout.jsx`
+    - [ ] Add designation to `dashboard.controller.js` response
+    - [ ] Update staff profile header in `Dashboard.jsx`
+- [ ] Payroll Refactor
+    - [ ] Allow manual field overrides in `payroll.controller.js`
+    - [ ] Make all fields editable in `PayrollManager.jsx` UI
+- [ ] Verification
+- [ ] Update `memory.md`

@@ -61,12 +61,12 @@ export const authorize = (...roles) => (req, _res, next) => {
       } else if (path.startsWith('/inventory')) {
         permissionChecked = true;
         permissionGranted = permissions.inventory;
-      } else if (path.startsWith('/distributors') || path.startsWith('/invoices') || path.startsWith('/payments')) {
+      } else if (path.startsWith('/distributors') || path.startsWith('/invoices') || path.startsWith('/payments') || path.startsWith('/sales-invoices')) {
         permissionChecked = true;
         permissionGranted = permissions.distributors;
-      } else if (path.startsWith('/vendors') || path.startsWith('/purchases')) {
+      } else if (path.startsWith('/vendors') || path.startsWith('/purchases') || path.startsWith('/vendor-payments')) {
         permissionChecked = true;
-        permissionGranted = permissions.vendors || permissions.distributors; // Fallback for legacy
+        permissionGranted = permissions.vendors || permissions.distributors;
       } else if (path.startsWith('/cheques')) {
         permissionChecked = true;
         permissionGranted = permissions.distributors || permissions.vendors;

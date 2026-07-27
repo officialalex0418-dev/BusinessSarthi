@@ -9,10 +9,10 @@ import {
   Card, Button, Spinner, Table, Badge,
   EmptyState, Modal, Input, Select, Textarea, DatePicker
 } from '@/components/ui';
-import { formatMoney, formatDate, formatDateTime } from '@/lib/utils';
+import { formatMoney, formatDate, formatDateTime, fixFileUrl } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
-const emptyPayment = { amount: 0, method: 'CASH', remarks: '', paymentDate: '' };
+const emptyPayment = { amount: 0, method: 'CASH', remarks: '', paymentDate: '', chequeNumber: '', bankName: '', maturityDate: '' };
 
 export default function VendorDetails() {
   const { id } = useParams();
@@ -338,7 +338,14 @@ export default function VendorDetails() {
                 <td className="table-td text-slate-500 whitespace-nowrap text-xs">{formatDateTime(item.date, dateFormat)}</td>
                 <td className="table-td">
                   <p className="font-bold text-xs uppercase">{item.type}</p>
-                  <p className="text-[10px] text-slate-400">{item.ref} {item.method ? `(${item.method})` : ''}</p>
+                  <p className="text-[10px] text-slate-400">
+                    {item.ref} {item.method ? `(${item.method})` : ''}
+                  </p>
+                  {item.chequeDetails?.number && (
+                    <p className="text-[9px] text-blue-500 font-bold">
+                      # {item.chequeDetails.number} | {item.chequeDetails.bankName || 'Bank'}
+                    </p>
+                  )}
                 </td>
                 <td className="table-td text-red-600 font-medium">
                   {item.type === 'PURCHASE' ? `+ ${formatMoney(item.amount)}` : ''}
@@ -397,6 +404,25 @@ export default function VendorDetails() {
               ]}
             />
 
+            {payForm.method === 'CHEQUE' && (
+              <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                <Input
+                  label="Cheque Number"
+                  value={payForm.chequeNumber}
+                  onChange={e => setPayForm({...payForm, chequeNumber: e.target.value})}
+                  placeholder="e.g. 012345"
+                  required
+                />
+                <Input
+                  label="Bank Name"
+                  value={payForm.bankName}
+                  onChange={e => setPayForm({...payForm, bankName: e.target.value})}
+                  placeholder="e.g. Nabil Bank"
+                  required
+                />
+              </div>
+            )}
+
             <DatePicker
               label="Payment Date"
               value={payForm.paymentDate}
@@ -437,6 +463,25 @@ export default function VendorDetails() {
                 { value: 'CHEQUE', label: 'Cheque' }
               ]}
             />
+
+            {payForm.method === 'CHEQUE' && (
+              <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                <Input
+                  label="Cheque Number"
+                  value={payForm.chequeNumber}
+                  onChange={e => setPayForm({...payForm, chequeNumber: e.target.value})}
+                  placeholder="e.g. 012345"
+                  required
+                />
+                <Input
+                  label="Bank Name"
+                  value={payForm.bankName}
+                  onChange={e => setPayForm({...payForm, bankName: e.target.value})}
+                  placeholder="e.g. Nabil Bank"
+                  required
+                />
+              </div>
+            )}
             <DatePicker
               label="Payment Date"
               value={payForm.paymentDate}

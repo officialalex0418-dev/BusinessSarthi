@@ -273,7 +273,9 @@ export default function DashboardLayout({ title, nav }) {
                 </div>
                 <div className="hidden text-left md:block">
                   <p className="text-sm font-medium leading-tight">{user?.name}</p>
-                  <p className="text-[10px] text-slate-400">{ROLE_LABELS[user?.role]}</p>
+                  <p className="text-[10px] text-slate-400">
+                    {user?.designation?.name || ROLE_LABELS[user?.role]}
+                  </p>
                 </div>
                 <ChevronDown className="hidden h-4 w-4 text-slate-400 md:block" />
               </div>

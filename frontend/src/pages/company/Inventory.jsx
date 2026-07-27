@@ -50,8 +50,9 @@ export default function InventoryPage() {
 
   // New Product Modal State (Table-like as requested)
   const [productRows, setProductRows] = useState([
-    { productName: '', sku: '', batch: '', price: 0, quantity: 1, amount: 0, expiryDate: '' }
+    { productName: '', productId: '', sku: '', batch: '', price: 0, mrp: 0, quantity: 1, amount: 0, expiryDate: '' }
   ]);
+  const [quickProductSource, setQuickProductSource] = useState(null); // 'purchase' | 'form'
   const [customFieldKey, setCustomFieldKey] = useState('');
   const [customFieldValue, setCustomFieldKeyVal] = useState('');
   const [stockForm, setStockForm] = useState({ type: 'IN', quantity: 1, note: '' });
@@ -183,7 +184,7 @@ export default function InventoryPage() {
   };
 
   const addProductRow = () => {
-    setProductRows([...productRows, { productName: '', sku: '', batch: '', price: 0, mrp: 0, quantity: 1, amount: 0, expiryDate: '' }]);
+    setProductRows([...productRows, { productName: '', productId: '', sku: '', batch: '', price: 0, mrp: 0, quantity: 1, amount: 0, expiryDate: '' }]);
   };
 
   const updateProductRow = (index, field, value) => {
@@ -525,13 +526,60 @@ export default function InventoryPage() {
                   <tr key={idx} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="px-3 py-3 text-slate-400">{idx + 1}</td>
                     <td className="px-2 py-3 min-w-[220px]">
-                      <Input
-                        value={row.productName}
-                        onChange={e => updateProductRow(idx, 'productName', e.target.value)}
-                        placeholder="e.g. Organic Soap"
-                        required
-                        className="h-10 text-sm"
-                      />
+                      {row.productId === '' && row.productName && !editing ? (
+                        <div className="relative">
+                          <Input
+                            value={row.productName}
+                            onChange={e => updateProductRow(idx, 'productName', e.target.value)}
+                            placeholder="New Product Name"
+                            required
+                            className="h-10 text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateProductRow(idx, 'productName', '');
+                              updateProductRow(idx, 'productId', '');
+                            }}
+                            className="absolute -top-2 -right-2 bg-slate-100 dark:bg-slate-700 rounded-full p-1 shadow-md hover:bg-slate-200"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <Select
+                          className="w-full h-10 text-sm"
+                          value={row.productId || (editing ? editing._id : '')}
+                          disabled={!!editing}
+                          onChange={(e) => {
+                            if (e.target.value === 'NEW') {
+                              setQuickProductRowIndex(idx);
+                              setQuickProductSource('form');
+                              setModal('quickProduct');
+                              return;
+                            }
+                            const prod = allProducts.find(p => p._id === e.target.value);
+                            updateProductRow(idx, 'productId', e.target.value);
+                            updateProductRow(idx, 'productName', prod?.productName || '');
+                            if (prod) {
+                              updateProductRow(idx, 'price', prod.costPrice);
+                              updateProductRow(idx, 'mrp', prod.mrp || 0);
+                              updateProductRow(idx, 'batch', prod.batchNumber || '');
+                              updateProductRow(idx, 'sku', prod.sku || '');
+                              updateProductRow(idx, 'expiryDate', prod.expiryDate ? prod.expiryDate.slice(0, 10) : '');
+                            }
+                          }}
+                          options={[
+                            { value: '', label: 'Select product...' },
+                            ...(!editing ? [{ value: 'NEW', label: '+ Add New Product' }] : []),
+                            ...allProducts.map(p => ({
+                              value: p._id,
+                              label: `${p.productName} ${p.batchNumber ? `(Batch: ${p.batchNumber})` : ''}`
+                            }))
+                          ]}
+                          required
+                        />
+                      )}
                     </td>
                     <td className="px-2 py-3">
                       <Input value={row.batch} onChange={e => updateProductRow(idx, 'batch', e.target.value)} placeholder="Batch #" required className="h-10 text-sm" />
@@ -673,16 +721,22 @@ export default function InventoryPage() {
       </Modal>
 
       {/* Quick Product Create Modal */}
-      <Modal open={modal === 'quickProduct'} onClose={() => setModal('purchase')} title="Quick Add Product">
+      <Modal open={modal === 'quickProduct'} onClose={() => setModal(quickProductSource === 'purchase' ? 'purchase' : 'form')} title="Quick Add Product">
          <form onSubmit={(e) => {
            e.preventDefault();
            const name = e.target.productName.value;
            if (quickProductRowIndex !== null) {
-             updatePurchaseRow(quickProductRowIndex, 'productName', name);
-             updatePurchaseRow(quickProductRowIndex, 'productId', ''); // Mark as new product
+             if (quickProductSource === 'purchase') {
+               updatePurchaseRow(quickProductRowIndex, 'productName', name);
+               updatePurchaseRow(quickProductRowIndex, 'productId', ''); // Mark as new product
+             } else {
+               updateProductRow(quickProductRowIndex, 'productName', name);
+               updateProductRow(quickProductRowIndex, 'productId', ''); // Mark as new product
+             }
            }
-           setModal('purchase');
+           setModal(quickProductSource === 'purchase' ? 'purchase' : 'form');
            setQuickProductRowIndex(null);
+           setQuickProductSource(null);
          }} className="space-y-4">
             <Input name="productName" label="Product Name *" required placeholder="Enter product name..." autoFocus />
             <p className="text-xs text-slate-500">This will be used to identify the product. Other details like Batch and Price can be entered in the purchase row.</p>
@@ -803,6 +857,7 @@ export default function InventoryPage() {
                           onChange={(e) => {
                             if (e.target.value === 'NEW') {
                               setQuickProductRowIndex(idx);
+                              setQuickProductSource('purchase');
                               setModal('quickProduct');
                               return;
                             }

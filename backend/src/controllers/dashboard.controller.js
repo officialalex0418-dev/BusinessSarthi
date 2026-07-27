@@ -139,6 +139,7 @@ export const staffDashboard = asyncHandler(async (req, res) => {
       profile: {
         name: req.user.name,
         position: req.user.position,
+        designationName: req.user.designation?.name || req.user.position || 'Staff',
         profilePhoto: req.user.profilePhoto,
         company: req.user.company?.name,
         email: req.user.email,

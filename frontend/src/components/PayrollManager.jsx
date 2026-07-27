@@ -115,35 +115,24 @@ export default function PayrollManager({ scope }) {
   // Real-time calculation logic for the form
   const calculatedFields = useMemo(() => {
     const basic = Number(detailForm.basicSalary) || 0;
-    const dailyAllow = Number(detailForm.dailyAllowance) || 0;
+    const bonus = Number(detailForm.bonus) || 0;
+    const allowance = Number(detailForm.allowance) || 0;
+    const absentDed = Number(detailForm.deductions.absent) || 0;
+    const taxDed = Number(detailForm.deductions.tax) || 0;
+    const otherDed = Number(detailForm.deductions.other) || 0;
+
     const present = Number(detailForm.presentDays) || 0;
     const working = Number(detailForm.workingDays) || 0;
     const paidLeave = Number(detailForm.paidLeaveDays) || 0;
-    const bonus = Number(detailForm.bonus) || 0;
-    const otherDeduction = Number(detailForm.deductions.other) || 0;
-
     const absentDays = Math.max(working - (present + paidLeave), 0);
 
-    // Total Allowances = Present Days * Allowances per day
-    const totalAllowance = Math.round(present * dailyAllow);
+    const totalDeductions = absentDed + taxDed + otherDed;
 
-    // Absent Deduction = ((Basic Salary * 12) / 365) * No of Absent Days
-    const dailyRate = (basic * 12) / 365;
-    const absentDeduction = Math.round(dailyRate * absentDays);
-
-    // Tax Deduction = (Basic Salary - Absent Deduction) * 1%
-    const taxDeduction = Math.round(Math.max(basic - absentDeduction, 0) * 0.01);
-
-    const totalDeductions = absentDeduction + taxDeduction + otherDeduction;
-
-    // Net Payable Amount = Basic Salary - Absent deduction - Tax Deduction + Total allowances + Bonus
-    const netSalary = Math.max(Math.round(basic - absentDeduction - taxDeduction + totalAllowance + bonus - otherDeduction), 0);
+    // FORMULA: Net Payable Amount = Basic Salary - Absent deduction - Tax Deduction + Total allowances + Bonus - Other
+    const netSalary = Math.max(Math.round(basic - absentDed - taxDed + allowance + bonus - otherDed), 0);
 
     return {
       absentDays,
-      totalAllowance,
-      absentDeduction,
-      taxDeduction,
       totalDeductions,
       netSalary
     };
@@ -158,11 +147,11 @@ export default function PayrollManager({ scope }) {
       const payload = {
         basicSalary: Number(detailForm.basicSalary),
         dailyAllowance: Number(detailForm.dailyAllowance),
-        allowance: calculatedFields.totalAllowance,
+        allowance: Number(detailForm.allowance),
         bonus: Number(detailForm.bonus),
         deductions: {
-          absent: calculatedFields.absentDeduction,
-          tax: calculatedFields.taxDeduction,
+          absent: Number(detailForm.deductions.absent),
+          tax: Number(detailForm.deductions.tax),
           other: Number(detailForm.deductions.other),
         },
         presentDays: Number(detailForm.presentDays),
@@ -324,31 +313,16 @@ export default function PayrollManager({ scope }) {
                 <Input label="Present Days" type="number" min="0" value={detailForm.presentDays}
                   onChange={(e) => setDetailForm({ ...detailForm, presentDays: e.target.value })} />
 
-                <Input label="Absent Days" type="number" disabled value={calculatedFields.absentDays} />
+                <Input label="Absent Days" type="number" value={calculatedFields.absentDays} disabled />
 
-                <div className="space-y-1">
-                    <label className="text-sm font-medium">Total Allowances</label>
-                    <div className="input bg-slate-100 dark:bg-slate-800 flex items-center h-10 px-3 text-sm text-slate-600">
-                        {formatMoney(calculatedFields.totalAllowance)}
-                    </div>
-                    <p className="text-[10px] text-slate-400 italic">Present Days × Allowances/day</p>
-                </div>
+                <Input label="Total Allowances" type="number" min="0" value={detailForm.allowance}
+                  onChange={(e) => setDetailForm({ ...detailForm, allowance: e.target.value })} />
 
-                <div className="space-y-1">
-                    <label className="text-sm font-medium">Absent Deduction</label>
-                    <div className="input bg-red-50 dark:bg-red-900/10 flex items-center h-10 px-3 text-sm text-red-600">
-                        {formatMoney(calculatedFields.absentDeduction)}
-                    </div>
-                    <p className="text-[10px] text-slate-400 italic">((Salary × 12)/365) × Absent Days</p>
-                </div>
+                <Input label="Absent Deduction" type="number" min="0" value={detailForm.deductions.absent}
+                  onChange={(e) => setDetailForm({ ...detailForm, deductions: { ...detailForm.deductions, absent: e.target.value } })} />
 
-                <div className="space-y-1">
-                    <label className="text-sm font-medium">Tax Deduction (1%)</label>
-                    <div className="input bg-red-50 dark:bg-red-900/10 flex items-center h-10 px-3 text-sm text-red-600">
-                        {formatMoney(calculatedFields.taxDeduction)}
-                    </div>
-                    <p className="text-[10px] text-slate-400 italic">(Salary - Absent Ded.) × 1%</p>
-                </div>
+                <Input label="Tax Deduction" type="number" min="0" value={detailForm.deductions.tax}
+                  onChange={(e) => setDetailForm({ ...detailForm, deductions: { ...detailForm.deductions, tax: e.target.value } })} />
 
                 <Input label="Other Deduction" type="number" min="0" value={detailForm.deductions.other}
                   onChange={(e) => setDetailForm({ ...detailForm, deductions: { ...detailForm.deductions, other: e.target.value } })} />

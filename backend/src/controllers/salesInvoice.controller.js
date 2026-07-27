@@ -122,40 +122,85 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 
   const oldNetTotal = invoice.netTotal;
 
-  if (items !== undefined) invoice.items = items;
+  // 1. Reverse Inventory Changes from Old Items
+  for (const item of invoice.items) {
+    if (item.product) {
+      await Inventory.findByIdAndUpdate(item.product, {
+        $inc: { quantity: Number(item.quantity) },
+        $push: {
+          movements: {
+            type: 'IN',
+            quantity: item.quantity,
+            note: `Invoice Correction (Reversing Old Items) - ID: ${invoice.invoiceNumber}`,
+            by: req.user._id
+          }
+        }
+      });
+    }
+  }
+
+  if (items !== undefined) {
+    // 2. Process New Items and Apply to Inventory
+    let totalAmount = 0;
+    const processedItems = [];
+
+    for (const item of items) {
+      const price = Number(item.price) || 0;
+      const quantity = Number(item.quantity) || 0;
+      const amount = price * quantity;
+      totalAmount += amount;
+
+      let product = null;
+      if (item.product || item.productId) {
+        product = await Inventory.findOne({ _id: item.product || item.productId, company: companyId }).select('+movements');
+      } else {
+        product = await Inventory.findOne({ productName: item.productName, company: companyId }).select('+movements');
+      }
+
+      if (product) {
+        if (product.quantity < quantity) {
+          throw ApiError.badRequest(`Insufficient stock for ${product.productName}. Available: ${product.quantity}`);
+        }
+        product.quantity -= quantity;
+        product.movements.push({
+          type: 'OUT',
+          quantity: quantity,
+          note: `Invoice Correction (Applying New Items) - ID: ${invoice.invoiceNumber}`,
+          by: req.user._id
+        });
+        await product.save();
+      }
+
+      processedItems.push({
+        product: product?._id,
+        productName: item.productName,
+        batch: item.batch,
+        price,
+        mrp: Number(item.mrp || 0),
+        quantity,
+        amount
+      });
+    }
+
+    invoice.items = processedItems;
+    invoice.totalAmount = totalAmount;
+  }
+
   if (discountPct !== undefined) invoice.discountPct = Number(discountPct);
   if (vatPct !== undefined) invoice.vatPct = Number(vatPct);
   if (customerName !== undefined) invoice.customerName = customerName;
   if (remarks !== undefined) invoice.remarks = remarks;
   if (dueDate !== undefined) invoice.dueDate = dueDate;
 
-  // Recalculate everything
-  let totalAmount = 0;
-  invoice.items = invoice.items.map(item => {
-    const price = Number(item.price) || 0;
-    const quantity = Number(item.quantity) || 0;
-    const amount = price * quantity;
-    totalAmount += amount;
-    return {
-      product: item.product,
-      productName: item.productName,
-      batch: item.batch,
-      price,
-      mrp: Number(item.mrp || 0),
-      quantity,
-      amount
-    };
-  });
-
-  invoice.totalAmount = totalAmount;
-  invoice.discountAmount = (totalAmount * invoice.discountPct) / 100;
-  invoice.taxableAmount = totalAmount - invoice.discountAmount;
+  // Recalculate Totals
+  invoice.discountAmount = (invoice.totalAmount * invoice.discountPct) / 100;
+  invoice.taxableAmount = invoice.totalAmount - invoice.discountAmount;
   invoice.vatAmount = (invoice.taxableAmount * invoice.vatPct) / 100;
   invoice.netTotal = invoice.taxableAmount + invoice.vatAmount;
 
   await invoice.save();
 
-  // If the total changed, update distributor outstanding balance
+  // 3. Sync Distributor Balance
   if (invoice.distributor && Math.abs(invoice.netTotal - oldNetTotal) > 0.01) {
     const diff = invoice.netTotal - oldNetTotal;
     await mongoose.model('Distributor').findByIdAndUpdate(invoice.distributor, {

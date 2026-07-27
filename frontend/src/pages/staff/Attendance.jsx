@@ -375,7 +375,12 @@ export default function StaffAttendance() {
 
       <Modal open={reqModal} onClose={() => setReqModal(false)} title="Attendance Request (Overtime)">
         <form onSubmit={handleRequest} className="space-y-4">
-          <Input label="Date" type="date" value={reqForm.date} onChange={e => setReqForm({ ...reqForm, date: e.target.value })} required />
+          <DatePicker
+            label="Date"
+            value={reqForm.date}
+            onChange={val => setReqForm({ ...reqForm, date: val })}
+            required
+          />
           <div className="grid grid-cols-2 gap-4">
             <Input label="Check In Time" type="time" value={reqForm.checkInTime} onChange={e => setReqForm({ ...reqForm, checkInTime: e.target.value })} required />
             <Input label="Check Out Time" type="time" value={reqForm.checkOutTime} onChange={e => setReqForm({ ...reqForm, checkOutTime: e.target.value })} required />

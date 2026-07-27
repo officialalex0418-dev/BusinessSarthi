@@ -246,9 +246,9 @@ export const updatePayroll = asyncHandler(async (req, res) => {
 
   if (req.body.deductions) {
     payroll.deductions = {
-      absent: req.body.deductions.absent ?? autoAbsentDeduction,
-      tax: req.body.deductions.tax ?? autoTax,
-      other: req.body.deductions.other ?? payroll.deductions?.other ?? 0,
+      absent: req.body.deductions.absent !== undefined ? Number(req.body.deductions.absent) : autoAbsentDeduction,
+      tax: req.body.deductions.tax !== undefined ? Number(req.body.deductions.tax) : autoTax,
+      other: req.body.deductions.other !== undefined ? Number(req.body.deductions.other) : (payroll.deductions?.other || 0),
     };
   } else {
     // Apply auto updates if not explicitly provided
@@ -256,7 +256,9 @@ export const updatePayroll = asyncHandler(async (req, res) => {
     payroll.deductions.tax = autoTax;
   }
 
-  if (req.body.allowance === undefined) {
+  if (req.body.allowance !== undefined) {
+    payroll.allowance = Number(req.body.allowance);
+  } else {
     payroll.allowance = autoAllowance;
   }
 

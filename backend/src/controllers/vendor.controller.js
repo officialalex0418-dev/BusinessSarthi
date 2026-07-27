@@ -48,7 +48,16 @@ export const getVendorDetails = asyncHandler(async (req, res) => {
       payments: payments.reverse(),
       history: [
         ...purchases.map(p => ({ id: p._id, type: 'PURCHASE', date: p.createdAt, amount: p.netTotal, ref: 'Purchase', createdAt: p.createdAt })),
-        ...payments.map(p => ({ id: p._id, type: 'PAYMENT', date: p.paymentDate, amount: p.amount, ref: 'Payment', method: p.method, createdAt: p.createdAt }))
+        ...payments.map(p => ({
+            id: p._id,
+            type: 'PAYMENT',
+            date: p.paymentDate,
+            amount: p.amount,
+            ref: 'Payment',
+            method: p.method,
+            chequeDetails: p.chequeDetails,
+            createdAt: p.createdAt
+        }))
       ].sort((a, b) => {
         const dateDiff = new Date(b.date) - new Date(a.date);
         if (dateDiff !== 0) return dateDiff;
@@ -92,25 +101,19 @@ export const deleteVendor = asyncHandler(async (req, res) => {
 
 /** POST /vendor-payments */
 export const recordVendorPayment = asyncHandler(async (req, res) => {
-  const { vendorId, amount, method, remarks, paymentDate } = req.body;
+  const { vendorId, amount, method, remarks, paymentDate, chequeNumber, bankName, maturityDate } = req.body;
 
   const vendor = await Vendor.findOne({ _id: vendorId, company: req.companyId });
   if (!vendor) throw ApiError.notFound('Vendor not found');
 
-  // Logic to handle "5:45 AM" issue:
-  // If paymentDate is just a date string (YYYY-MM-DD), we should use the current local time
-  // if it's for today, or at least a reasonable time.
   let finalDate = new Date();
   if (paymentDate) {
     const pDate = new Date(paymentDate);
     if (!isNaN(pDate.getTime())) {
         const now = new Date();
-        // If the selected date is today (local time), use the current precise time
         if (pDate.toDateString() === now.toDateString()) {
           finalDate = now;
         } else {
-          // If it's a string like "YYYY-MM-DD", set to noon to avoid timezone shifts
-          // If it's already a full date/ISO string, just use it
           if (typeof paymentDate === 'string' && paymentDate.length <= 10) {
             finalDate = new Date(paymentDate + 'T12:00:00');
           } else {
@@ -120,7 +123,7 @@ export const recordVendorPayment = asyncHandler(async (req, res) => {
     }
   }
 
-  const payment = await VendorPayment.create({
+  const paymentData = {
     company: req.companyId,
     vendor: vendorId,
     amount: Number(amount),
@@ -128,7 +131,18 @@ export const recordVendorPayment = asyncHandler(async (req, res) => {
     remarks,
     paymentDate: finalDate,
     createdBy: req.user._id
-  });
+  };
+
+  if (method === 'CHEQUE') {
+    paymentData.chequeDetails = {
+        number: chequeNumber,
+        bankName: bankName,
+        maturityDate: maturityDate || finalDate,
+        status: 'PENDING'
+    };
+  }
+
+  const payment = await VendorPayment.create(paymentData);
 
   // Update vendor outstanding balance
   vendor.outstandingBalance -= Number(amount);
@@ -158,7 +172,7 @@ export const deleteVendorPayment = asyncHandler(async (req, res) => {
 /** PATCH /vendor-payments/:id */
 export const updateVendorPayment = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { amount, method, remarks, paymentDate } = req.body;
+  const { amount, method, remarks, paymentDate, chequeNumber, bankName, maturityDate } = req.body;
 
   const payment = await VendorPayment.findOne({ _id: id, company: req.companyId });
   if (!payment) throw ApiError.notFound('Payment record not found');
@@ -170,13 +184,22 @@ export const updateVendorPayment = asyncHandler(async (req, res) => {
   payment.method = method || payment.method;
   payment.remarks = remarks || payment.remarks;
 
+  if (payment.method === 'CHEQUE') {
+      payment.chequeDetails = {
+          ...payment.chequeDetails,
+          number: chequeNumber || payment.chequeDetails?.number,
+          bankName: bankName || payment.chequeDetails?.bankName,
+          maturityDate: maturityDate || payment.chequeDetails?.maturityDate || payment.paymentDate
+      };
+  }
+
   if (paymentDate) {
     const pDate = new Date(paymentDate);
     const now = new Date();
     if (pDate.toDateString() === now.toDateString()) {
       payment.paymentDate = now;
     } else {
-      payment.paymentDate = new Date(paymentDate + 'T12:00:00');
+      payment.paymentDate = new Date(paymentDate + (paymentDate.includes('T') ? '' : 'T12:00:00'));
     }
   }
 

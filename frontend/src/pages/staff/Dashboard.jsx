@@ -128,7 +128,7 @@ export default function StaffDashboard() {
             <div className="space-y-2">
               <h1 className="text-2xl font-bold">{data.profile.name}</h1>
               <p className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-primary-50">
-                {data.profile.position} · {data.profile.department}
+                {data.profile.designationName} · {data.profile.department}
               </p>
               <div className="flex flex-wrap gap-4 pt-1 text-sm text-primary-100">
                 <span className="flex items-center gap-1.5"><Building2 className="h-4 w-4" /> {data.profile.company}</span>

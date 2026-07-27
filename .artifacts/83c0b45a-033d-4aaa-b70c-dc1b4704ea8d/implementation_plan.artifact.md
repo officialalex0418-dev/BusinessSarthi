@@ -1,38 +1,44 @@
-# Implementation Plan - Fix Profile Upload & Designation-Based Access
+# Implementation Plan - UI Enhancements, Session Management & Payroll Refactor
 
-This plan addresses three key issues: fixing the staff profile photo upload and profile edit functionality, removing the "Base System Role" from designations to simplify management, and ensuring staff access is driven primarily by their designation's granular permissions.
+This plan outlines the changes to display user designations, configure session timeouts for mobile and web, and enhance the payroll editing experience.
+
+## User Review Required
+
+> [!IMPORTANT]
+> The session timeout for web is already set to 30 minutes in the frontend (inactivity detection). I will ensure the backend cookie `maxAge` also aligns with this for consistency.
 
 ## Proposed Changes
 
-### 🔌 Backend (API)
+### 🔐 Authentication & Session Management
+#### [MODIFY] [auth.controller.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/controllers/auth.controller.js)
+- Ensure mobile session `maxAge` is exactly 30 days (`30 * 24 * 60 * 60 * 1000`).
+- Ensure web session `maxAge` is exactly 30 minutes (`30 * 60 * 1000`).
 
-#### [MODIFY] [misc.controller.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/controllers/misc.controller.js)
-- Update `updateMyProfile` to allow updating `name`, `address`, and `pan` in addition to `phone` and `profilePhoto`.
-- Ensure `profilePhoto` base64 upload logic remains robust.
+#### [MODIFY] [DashboardLayout.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/layouts/DashboardLayout.jsx)
+- Verify `idleTimeoutMs` is set to `30 * 60 * 1000` (30 minutes).
 
-#### [MODIFY] [rbac.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/middleware/rbac.js)
-- Update `authorize` middleware: When a user has a designation and `permissionGranted` is `true`, allow access even if the route is typically restricted to `COMPANY_MANAGER` or `COMPANY_OWNER` and the user's role is `STAFF`. This fulfills the requirement that "Staff will get access as per their designation".
+### 🏷️ User Interface Enhancements
+#### [MODIFY] [dashboard.controller.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/controllers/dashboard.controller.js)
+- Update `staffDashboard` to include `designationName: req.user.designation?.name` in the returned `profile` data.
 
-#### [MODIFY] [staff.controller.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/controllers/staff.controller.js)
-- In `createStaff` and `updateStaff`, stop deriving the user's `role` from `designation.baseRole`.
-- Default new company staff to `ROLES.STAFF` if no role is explicitly provided.
+#### [MODIFY] [DashboardLayout.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/layouts/DashboardLayout.jsx)
+- In the top header (User menu), display the user's designation name (if available) below their name.
 
-### 🌐 Frontend (Dashboard)
+#### [MODIFY] [Dashboard.jsx (Staff)](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/staff/Dashboard.jsx)
+- Update the profile header to display the designation name instead of just the generic "position".
 
-#### [MODIFY] [EditProfile.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/staff/EditProfile.jsx)
-- Disable the `email` input field in the profile edit form to prevent accidental lockouts or conflicts, as email is the primary login identifier.
+### 💰 Payroll Module Refactor
+#### [MODIFY] [payroll.controller.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/controllers/payroll.controller.js)
+- Update `updatePayroll` to allow manual overrides for `deductions.absent` and `deductions.tax`.
+- If these are provided in `req.body`, prioritize them over the automatic calculation.
 
-#### [MODIFY] [Designations.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/company/Designations.jsx)
-- Remove the "Base System Role" selection field from the New/Edit Designation modal.
-- Set the default `baseRole` in `emptyForm` to `STAFF`.
-- Remove "Base Role" column from the designations table as it's no longer a relevant configuration for the user.
+#### [MODIFY] [PayrollManager.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/components/PayrollManager.jsx)
+- Convert "Absent Deduction", "Tax Deduction", and "Total Allowances" from read-only displays to editable `Input` fields.
+- Update the `saveDetail` function to send all manually edited values to the backend.
 
 ## Verification Plan
 
-### Automated Tests
-- Test profile update via API with all fields (`name`, `pan`, `address`, `profilePhoto`) and verify database updates.
-- Test a `STAFF` user with a designation that has `staff` permission and verify they can access the `/staff` management routes.
-
 ### Manual Verification
-- **Profile**: Upload a new profile photo and edit details as a staff member; verify they persist.
-- **Designation**: Create a new designation without selecting a base role, assign it to a staff member, and verify their access level in the app matches the selected permissions.
+- **UI**: Log in as a staff member and verify the designation is visible on the dashboard and in the top right header.
+- **Sessions**: Log in on web and wait 30 minutes without activity; verify auto-logout occurs.
+- **Payroll**: Open a payroll report, manually change the Tax or Absent deduction values, click "Save Changes", and verify the Net Salary updates and persists correctly.
