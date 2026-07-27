@@ -7,17 +7,17 @@
                     │                 CLIENTS                       │
                     │  ┌────────────┐ ┌────────────┐ ┌───────────┐ │
                     │  │ Super Admin│ │  Company   │ │ Staff App │ │
-                    │  │   Panel    │ │   Panel    │ │ (PWA /    │ │
+                    │  │   Panel    │ │   Panel    │ │ (Capacitor│ │
                     │  │  (React)   │ │  (React)   │ │  Native)  │ │
                     │  └─────┬──────┘ └─────┬──────┘ └─────┬─────┘ │
                     └────────┼──────────────┼──────────────┼───────┘
                              │  HTTPS (REST + JWT)  │  WSS (Socket.io)
                     ┌────────▼──────────────▼──────────────▼───────┐
-                    │              VERCEL (Frontend CDN)            │
+                    │            CLOUDFLARE DNS + CDN               │
                     └──────────────────────┬───────────────────────┘
                                            │
                     ┌──────────────────────▼───────────────────────┐
-                    │           RENDER (Node.js / Express)          │
+                    │          NORTHFLANK (Node.js 20 / Express)    │
                     │  ┌─────────────────────────────────────────┐  │
                     │  │  Middleware Pipeline                     │  │
                     │  │  helmet → cors → sanitize → rate-limit   │  │
@@ -30,12 +30,12 @@
                     │  └──────────┘ └──────────┘ └──────────────┘   │
                     │  ┌──────────┐ ┌──────────────────────────┐    │
                     │  │ Email    │ │ Audit / Notification svc │    │
-                    │  │(Nodemailer)└──────────────────────────┘    │
+                    │  │ (Resend) └──────────────────────────┘    │
                     └──────┬──────────────────────────┬─────────────┘
                            │                          │
               ┌────────────▼────────────┐   ┌─────────▼──────────┐
-              │   MongoDB Atlas (M10+)  │   │  Google Maps APIs  │
-              │  replica set, 2dsphere  │   │  (JS SDK, browser) │
+              │   MongoDB Atlas (M10)   │   │  Cloudflare R2     │
+              │  replica set, 2dsphere  │   │  Object Storage    │
               │  TTL + compound indexes │   └────────────────────┘
               └─────────────────────────┘
 ```

@@ -59,8 +59,8 @@ docker compose exec api node src/seed/seed.js
 
 ## 🧱 Stack
 React 18 · Vite · Tailwind · Recharts · @react-google-maps/api · socket.io-client · Axios
-Node 18+ · Express · Mongoose 8 · Socket.io · Joi · Nodemailer · ExcelJS · PDFKit · JWT
-MongoDB Atlas · Vercel (web) · Render (api) · Docker
+Node 20+ · Express · Mongoose 8 · Socket.io · Joi · Nodemailer · ExcelJS · PDFKit · JWT
+MongoDB Atlas · Cloudflare Pages (web) · Northflank (api) · Cloudflare R2 (storage) · Resend (email)
 
 ## 📚 Documentation
 | Doc | Contents |
@@ -68,7 +68,7 @@ MongoDB Atlas · Vercel (web) · Render (api) · Docker
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | system architecture, multi-tenancy, RBAC matrix, auth & tracking pipelines, folder structure |
 | [docs/ER-DIAGRAM.md](docs/ER-DIAGRAM.md) | Mermaid ER diagram + index catalog |
 | [docs/API.md](docs/API.md) | full REST + Socket.io reference |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Atlas / Render / Vercel / Docker guide + scalability roadmap |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Atlas / Northflank / Cloudflare guide + scalability roadmap |
 | [docs/business-sarthi.postman_collection.json](docs/business-sarthi.postman_collection.json) | Postman collection (auto token capture) |
 
 ## 🔐 Security notes

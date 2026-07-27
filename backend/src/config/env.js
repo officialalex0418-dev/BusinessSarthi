@@ -34,9 +34,9 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   isProd: process.env.NODE_ENV === 'production',
   port: parseInt(process.env.PORT || '5000', 10),
-  apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:5000',
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
-  mongoUri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/business_sarthi',
+  apiBaseUrl: process.env.API_BASE_URL,
+  clientUrl: process.env.CLIENT_URL,
+  mongoUri: process.env.MONGO_URI,
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'dev_secret_UNSAFE_REPLACE_ME_IN_PROD_123456789',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev_refresh_UNSAFE_REPLACE_ME_IN_PROD_123456789',

@@ -1,80 +1,78 @@
 # Business Sarthi — Deployment Guide
 
 ## 0. Prerequisites
-- MongoDB Atlas account
-- Render account (backend)
-- Vercel account (frontend)
-- Gmail account with **App Password** (or any SMTP provider — SendGrid/SES recommended at scale)
-- Google Cloud project with **Maps JavaScript API** enabled
-
-> 🔐 **Never commit `.env`.** If a credential has ever been pasted into chat, a ticket,
-> or a repo — rotate it immediately (Gmail → Security → App Passwords → revoke).
+- **MongoDB Atlas** account (Database)
+- **Northflank** account (Backend API)
+- **Cloudflare** account (DNS + Pages for Frontend + R2 for Storage)
+- **Resend** account (Email Service)
+- **Google Cloud** project with **Maps JavaScript API** enabled
 
 ---
 
 ## 1. MongoDB Atlas
-1. Create a project → build an **M0 (dev) / M10+ (prod)** cluster.
+1. Create a project → build an **M10 (prod)** cluster.
 2. **Database Access** → add user with `readWrite` on `business_sarthi`.
-3. **Network Access** → allow `0.0.0.0/0` (Render uses dynamic IPs) — rely on strong
-   credentials + TLS, or use Atlas Private Endpoint on paid tiers.
-4. Copy the connection string:
-   `mongodb+srv://USER:PASS@cluster0.xxxxx.mongodb.net/business_sarthi?retryWrites=true&w=majority`
-5. Indexes are created automatically in dev (`autoIndex`). For production run once:
-   ```js
-   // mongosh or a migration step
-   db.getCollectionNames().forEach(c => db[c].reIndex && null);
-   // or from node: mongoose.connection.syncIndexes()
-   ```
+3. **Network Access** → allow Northflank outbound IPs (or 0.0.0.0/0 for testing).
+4. Copy the connection string (MONGO_URI).
 
-## 2. Backend → Render
-1. Push the repo to GitHub.
-2. Render → **New → Web Service** → pick repo, root dir `backend`.
-3. Settings:
-   - Runtime: Node
-   - Build command: `npm install`
-   - Start command: `npm start`
-   - Health check path: `/health`
-4. Environment variables (Render dashboard → Environment):
+## 2. Backend → Northflank
+1. Connect your GitHub repository to Northflank.
+2. Create a **New Combined Service** or **Web Service**.
+3. Select the `backend` directory / Dockerfile.
+4. Settings:
+   - Node.js 20 environment.
+   - Port: 5000 (or as configured).
+5. Environment variables:
    ```
    NODE_ENV=production
-   PORT=10000                      # Render injects PORT; app reads it
+   PORT=5000
    MONGO_URI=<atlas uri>
-   CLIENT_URL=https://your-app.vercel.app
-   JWT_ACCESS_SECRET=<64+ random chars>     # openssl rand -hex 64
+   CLIENT_URL=https://app.bussinesssarthi.com
+   API_BASE_URL=https://api.bussinesssarthi.com
+   JWT_ACCESS_SECRET=<64+ random chars>
    JWT_REFRESH_SECRET=<different 64+ chars>
-   JWT_ACCESS_EXPIRES=15m
-   JWT_REFRESH_EXPIRES=7d
-   SMTP_HOST=smtp.gmail.com
-   SMTP_PORT=465
-   SMTP_SECURE=true
-   EMAIL_USER=<your gmail>
-   EMAIL_PASS=<NEW app password — rotate any leaked one>
-   EMAIL_FROM="Business Sarthi <your gmail>"
-   GOOGLE_MAPS_API_KEY=<server key, optional>
+   RESEND_API_KEY=<your resend api key>
+   EMAIL_FROM="Business Sarthi <onboarding@resend.dev>"
+   R2_ACCESS_KEY_ID=<cloudflare r2 key>
+   R2_SECRET_ACCESS_KEY=<cloudflare r2 secret>
+   R2_BUCKET=<bucket name>
+   R2_ENDPOINT=https://<account id>.r2.cloudflarestorage.com
+   R2_PUBLIC_URL=https://pub-<id>.r2.dev
+   GOOGLE_MAPS_API_KEY=<key>
    ```
-5. Deploy → note the URL, e.g. `https://business-sarthi-api.onrender.com`.
-6. Seed once (Render → Shell): `npm run seed`.
 
-**WebSockets:** Render supports them natively — no extra config; Socket.io works
-on the same service/port.
+## 3. Frontend → Cloudflare Pages
+1. Cloudflare Dashboard → **Workers & Pages**.
+2. Create **New Application** → **Pages** → **Connect to Git**.
+3. Build settings:
+   - Framework preset: **Vite**.
+   - Build command: `npm run build`
+   - Output directory: `dist`
+   - Root directory: `frontend`
+4. Environment variables:
+   ```
+   VITE_API_URL=https://api.bussinesssarthi.com
+   VITE_GOOGLE_MAPS_API_KEY=<key>
+   ```
 
-## 3. Frontend → Vercel
-1. Vercel → **New Project** → import repo, root dir `frontend`.
-2. Framework preset: **Vite**. Build `npm run build`, output `dist`.
-3. Environment variables:
-   ```
-   VITE_API_URL=https://business-sarthi-api.onrender.com
-   VITE_GOOGLE_MAPS_API_KEY=<browser key>
-   ```
-4. Add a SPA rewrite — `frontend/vercel.json`:
-   ```json
-   { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
-   ```
-5. Deploy. Then set the backend's `CLIENT_URL` to your Vercel domain (CORS + cookies).
+## 4. Cloudflare DNS & SSL
+1. Set up your domain `businesssarthi.com` in Cloudflare.
+2. Create CNAME records:
+   - `app` → Points to Cloudflare Pages.
+   - `api` → Points to Northflank service URL.
+3. Enable **Full (Strict)** SSL/TLS mode.
 
-> Cross-site cookies: the refresh cookie is `SameSite=None; Secure` in production,
-> and the frontend also sends the refresh token in the body as a fallback, so
-> Vercel↔Render cross-origin refresh works either way.
+## 5. Storage → Cloudflare R2
+1. Create an R2 bucket.
+2. Generate API credentials with Read/Write access.
+3. Use the public URL or custom domain for serving files.
+
+## 6. Post-deploy checklist
+- [ ] `GET /health` returns `{"status":"ok"}`
+- [ ] Seeded super admin login works.
+- [ ] Forgot-password email arrives via Resend.
+- [ ] Reports and photos upload/download from R2.
+- [ ] Staff app (APK) connects to `api.bussinesssarthi.com`.
 
 ## 4. Google Maps keys
 - **Browser key** (frontend): restrict by HTTP referrer (`https://your-app.vercel.app/*`),

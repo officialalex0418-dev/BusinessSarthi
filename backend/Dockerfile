@@ -23,9 +23,8 @@ COPY package.json ./
 
 USER appuser
 
-# Render provides the PORT env var, we listen on it automatically via env.port
-# We remove the hardcoded HEALTHCHECK to avoid failures if PORT != 5000
-# Render handles health checks via the dashboard settings
+# Port is provided via environment variable (PORT)
+# Health checks should be configured in the deployment platform (e.g., Northflank)
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "src/server.js"]

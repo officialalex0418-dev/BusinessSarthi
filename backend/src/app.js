@@ -14,7 +14,7 @@ import mongoose from 'mongoose';
 
 const app = express();
 
-app.set('trust proxy', 1); // behind Render / Northflank / proxies
+app.set('trust proxy', 1); // behind Cloudflare / Northflank / proxies
 
 // ---------- Security ----------
 app.use((req, res, next) => {
@@ -35,7 +35,7 @@ app.use(
         'http://localhost',
         'capacitor://localhost'
       ];
-      if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || !env.isProd) {
+      if (allowedOrigins.includes(origin) || !env.isProd) {
         return callback(null, true);
       }
       console.warn(`[CORS REJECTED] Origin: ${origin}`);
