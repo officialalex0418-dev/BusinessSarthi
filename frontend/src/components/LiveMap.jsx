@@ -4,7 +4,7 @@ import { MapContainer, Marker, Polyline, Popup, CircleMarker, TileLayer, useMap 
 import 'leaflet/dist/leaflet.css';
 import { MapPin } from 'lucide-react';
 import { Card, EmptyState } from '@/components/ui';
-import { formatDateTime, formatTime, toLocalDateString } from '@/lib/utils';
+import { formatDateTime, formatTime, toLocalDateString, fixFileUrl } from '@/lib/utils';
 
 const DEFAULT_CENTER = { lat: 27.7172, lng: 85.324 }; // Kathmandu
 
@@ -64,7 +64,7 @@ export default function LiveMap({ markers = [], route = [], attendance = [], hea
       html: `
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px;transform:translate(-50%,-100%);">
           <div style="width:${selected ? 58 : 50}px;height:${selected ? 58 : 50}px;border-radius:9999px;border:3px solid #fff;box-shadow:0 10px 24px rgba(15,23,42,.25);overflow:hidden;background:#e2e8f0;">
-            ${item.profilePhoto ? `<img src="${item.profilePhoto}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font:bold 18px Arial;color:#334155;">${(item.name || '?').slice(0, 1)}</div>`}
+            ${item.profilePhoto ? `<img src="${fixFileUrl(item.profilePhoto)}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font:bold 18px Arial;color:#334155;">${(item.name || '?').slice(0, 1)}</div>`}
           </div>
           <div style="max-width:120px;padding:4px 8px;border-radius:9999px;background:rgba(255,255,255,.95);box-shadow:0 8px 20px rgba(15,23,42,.15);font-size:12px;font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
         </div>

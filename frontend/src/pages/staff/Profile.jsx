@@ -6,7 +6,7 @@ import { api } from '@/api/client';
 import { NativeBiometric } from '@capgo/capacitor-native-biometric';
 import { Device } from '@capacitor/device';
 import { Card, Button, Badge } from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { cn, fixFileUrl } from '@/lib/utils';
 
 export default function StaffProfile() {
   const { user } = useAuth();
@@ -83,7 +83,7 @@ export default function StaffProfile() {
           <div className="absolute -bottom-12 left-8">
             <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-slate-100 shadow-lg dark:border-slate-900 dark:bg-slate-800">
               {user?.profilePhoto ? (
-                <img src={user.profilePhoto} alt="Profile" className="h-full w-full object-cover" />
+                <img src={fixFileUrl(user.profilePhoto)} alt="Profile" className="h-full w-full object-cover" />
               ) : (
                 <User className="h-12 w-12 text-slate-300" />
               )}

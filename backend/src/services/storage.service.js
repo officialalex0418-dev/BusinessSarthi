@@ -62,7 +62,7 @@ export const uploadFile = async (fileContent, folder = 'general', contentType = 
 
     const publicUrl = env.r2.publicUrl
       ? `${env.r2.publicUrl}/${fileName}`
-      : `${env.r2.endpoint}/${env.r2.bucket}/${fileName}`;
+      : `${env.apiBaseUrl}/api/v1/files/${fileName}`;
 
     logger.info(`File uploaded to R2: ${fileName}`);
     return publicUrl;
@@ -70,6 +70,28 @@ export const uploadFile = async (fileContent, folder = 'general', contentType = 
     logger.error('R2 Upload Error', error);
     throw error;
   }
+};
+
+/**
+ * Gets a file from R2 as a stream
+ * @param {string} key - The file key (folder/filename)
+ */
+export const getFileStream = async (key) => {
+  const s3 = getS3Client();
+  if (!s3) throw new Error('Storage service not configured');
+
+  const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+  const command = new GetObjectCommand({
+    Bucket: env.r2.bucket,
+    Key: key,
+  });
+
+  const response = await s3.send(command);
+  return {
+    stream: response.Body,
+    contentType: response.ContentType,
+    contentLength: response.ContentLength
+  };
 };
 
 export const deleteFile = async (fileUrl) => {

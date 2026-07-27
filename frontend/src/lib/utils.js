@@ -105,6 +105,21 @@ export const fileToDataUrl = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
+/**
+ * Fixes legacy or broken Cloudflare R2 URLs by routing them through the API proxy
+ */
+export const fixFileUrl = (url) => {
+  if (!url) return url;
+  if (url.startsWith('data:')) return url;
+  if (url.includes('r2.cloudflarestorage.com')) {
+    const parts = url.split('/');
+    const key = parts.slice(-2).join('/'); // folder/filename
+    const apiBase = import.meta.env.VITE_API_URL || '';
+    return `${apiBase}/api/v1/files/${key}`;
+  }
+  return url;
+};
+
 export const ROLE_LABELS = {
   SUPER_ADMIN: 'Super Admin',
   ADMIN_EMPLOYEE: 'Admin Employee',

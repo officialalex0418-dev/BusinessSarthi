@@ -8,7 +8,7 @@ import { Device } from '@capacitor/device';
 import { useAuth } from '@/context/AuthContext';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { Card, CardHeader, CardBody, Spinner, Badge, Button, EmptyState } from '@/components/ui';
-import { formatMoney, formatTime, formatDate, cn } from '@/lib/utils';
+import { formatMoney, formatTime, formatDate, cn, fixFileUrl } from '@/lib/utils';
 import { adToBs } from '@/lib/nepaliDate';
 import { t } from '@/lib/i18n';
 import LiveClock from '@/components/Clock';
@@ -122,7 +122,7 @@ export default function StaffDashboard() {
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
             <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white/20 bg-white/10 shadow-xl">
               {data.profile.profilePhoto
-                ? <img src={data.profile.profilePhoto} alt="" className="h-full w-full object-cover" />
+                ? <img src={fixFileUrl(data.profile.profilePhoto)} alt="" className="h-full w-full object-cover" />
                 : <span className="text-4xl font-bold">{data.profile.name?.[0]}</span>}
             </div>
             <div className="space-y-2">

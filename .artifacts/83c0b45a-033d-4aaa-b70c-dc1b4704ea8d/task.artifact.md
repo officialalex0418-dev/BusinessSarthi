@@ -1,0 +1,5 @@
+- [x] Implement File Proxy in `misc.controller.js`
+- [x] Register `/files/:folder/:key` route in `backend/src/routes/index.js`
+- [x] Update `storage.service.js` to return proxy URLs by default
+- [x] Update Frontend `Dashboard.jsx` to handle legacy URLs
+- [x] Verify fix by checking Company Dashboard

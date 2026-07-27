@@ -87,6 +87,25 @@ export const updateSettings = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { settings } });
 });
 
+// ---------- File Proxy ----------
+export const getFile = asyncHandler(async (req, res) => {
+  const { folder, key } = req.params;
+  const fileKey = `${folder}/${key}`;
+
+  try {
+    const { stream, contentType, contentLength } = await import('../services/storage.service.js').then(m => m.getFileStream(fileKey));
+
+    res.set('Content-Type', contentType);
+    if (contentLength) res.set('Content-Length', contentLength);
+    res.set('Cache-Control', 'public, max-age=31536000'); // 1 year cache
+
+    stream.pipe(res);
+  } catch (err) {
+    logger.error(`File proxy error for ${fileKey}:`, err.message);
+    throw ApiError.notFound('File not found');
+  }
+});
+
 // ---------- Profile (staff self-service) ----------
 export const updateMyProfile = asyncHandler(async (req, res) => {
   const { phone, profilePhoto } = req.body;

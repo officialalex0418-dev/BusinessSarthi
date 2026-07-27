@@ -9,7 +9,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useSocket, useSocketEvent } from '@/context/SocketContext';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { api } from '@/api/client';
-import { cn, ROLE_LABELS } from '@/lib/utils';
+import { cn, ROLE_LABELS, fixFileUrl } from '@/lib/utils';
 import { t } from '@/lib/i18n';
 
 export default function DashboardLayout({ title, nav }) {
@@ -168,7 +168,7 @@ export default function DashboardLayout({ title, nav }) {
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-sm">
               {branding.logoUrl ? (
-                <img src={branding.logoUrl} alt="Logo" className="h-full w-full object-contain" />
+                <img src={fixFileUrl(branding.logoUrl)} alt="Logo" className="h-full w-full object-contain" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-primary-600 text-white">
                   <MapPin className="h-5 w-5" />

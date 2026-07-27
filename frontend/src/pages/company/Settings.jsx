@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, Package, ShieldCheck, Mail, Phone, MapPin, Pencil, Lock, Globe, FileText } from 'lucide-react';
 import { api } from '@/api/client';
 import { Card, CardHeader, CardBody, Button, Badge, Spinner } from '@/components/ui';
+import { fixFileUrl } from '@/lib/utils';
 
 export default function CompanySettings() {
   const [company, setCompany] = useState(null);
@@ -32,7 +33,7 @@ export default function CompanySettings() {
           <div className="absolute -bottom-12 left-4 sm:-bottom-16 sm:left-8">
             <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-slate-100 shadow-xl dark:border-slate-900 dark:bg-slate-800 sm:h-32 sm:w-32 sm:rounded-3xl sm:border-8">
               {company.logo ? (
-                <img src={company.logo} alt="Company logo" className="h-full w-full object-cover" />
+                <img src={fixFileUrl(company.logo)} alt="Company logo" className="h-full w-full object-cover" />
               ) : (
                 <Building2 className="h-10 w-8 text-slate-300 sm:h-16 sm:w-12" />
               )}

@@ -50,6 +50,9 @@ r.get('/auth/settings', misc.getPublicSettings);
 r.patch('/auth/change-password', protect, validate({ body: schemas.changePassword }), auth.changePassword);
 r.post('/auth/request-device-reset', auth.requestDeviceReset);
 
+// ============ PUBLIC FILES ============
+r.get('/files/:folder/:key', misc.getFile);
+
 // ============ DASHBOARDS ============
 r.get('/dashboard/super', protect, authorize(...PLATFORM), dashboard.superDashboard);
 r.get('/dashboard/company', protect, authorize(...MANAGERS), scopeCompany, dashboard.companyDashboard);

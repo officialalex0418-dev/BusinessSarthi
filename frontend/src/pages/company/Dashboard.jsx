@@ -7,7 +7,7 @@ import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { useSocketEvent } from '@/context/SocketContext';
 import { StatCard, Card, CardHeader, CardBody, Spinner, Badge } from '@/components/ui';
-import { formatMoney, formatDateTime } from '@/lib/utils';
+import { formatMoney, formatDateTime, fixFileUrl } from '@/lib/utils';
 import { t } from '@/lib/i18n';
 import LiveClock from '@/components/Clock';
 
@@ -34,7 +34,7 @@ export default function CompanyDashboard() {
         <div className="flex flex-col items-center gap-6 p-6 sm:flex-row sm:p-8">
           <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 backdrop-blur-sm">
             {data.company?.logo ? (
-              <img src={data.company.logo} alt={data.company.name} className="h-full w-full object-cover" />
+              <img src={fixFileUrl(data.company.logo)} alt={data.company.name} className="h-full w-full object-cover" />
             ) : (
               <Building2 className="h-12 w-12 text-primary-400" />
             )}

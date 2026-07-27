@@ -18,7 +18,15 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     api.get('/auth/settings').then(({ data }) => {
-      if (data.data.branding) setBranding(data.data.branding);
+      if (data.data.branding) {
+        const { fixFileUrl } = import('@/lib/utils');
+        import('@/lib/utils').then(({ fixFileUrl }) => {
+            setBranding({
+              ...data.data.branding,
+              logoUrl: fixFileUrl(data.data.branding.logoUrl)
+            });
+        });
+      }
     }).catch(() => {});
   }, []);
 

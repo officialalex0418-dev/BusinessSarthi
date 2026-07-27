@@ -4,7 +4,7 @@ import { api } from '@/api/client';
 import { useSocketEvent } from '@/context/SocketContext';
 import { Card, CardHeader, CardBody, Button, Select, Spinner, Badge } from '@/components/ui';
 import LiveMap from '@/components/LiveMap';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, fixFileUrl } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LiveTracking() {
@@ -113,7 +113,7 @@ export default function LiveTracking() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                      {m.profilePhoto ? <img src={m.profilePhoto} alt={m.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-500">{(m.name || '?').slice(0, 1)}</div>}
+                      {m.profilePhoto ? <img src={fixFileUrl(m.profilePhoto)} alt={m.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-500">{(m.name || '?').slice(0, 1)}</div>}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{m.name}</p>
