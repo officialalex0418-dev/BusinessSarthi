@@ -1,5 +1,9 @@
-- [x] Implement File Proxy in `misc.controller.js`
-- [x] Register `/files/:folder/:key` route in `backend/src/routes/index.js`
-- [x] Update `storage.service.js` to return proxy URLs by default
-- [x] Update Frontend `Dashboard.jsx` to handle legacy URLs
-- [x] Verify fix by checking Company Dashboard
+- [x] Fix Profile Edit & Upload
+    - [x] Update `misc.controller.js` to allow more fields and verify photo upload
+    - [x] Disable email field in `EditProfile.jsx`
+- [x] Refactor Designations UI
+    - [x] Remove "Base System Role" from `Designations.jsx`
+- [x] Update Permissions Logic
+    - [x] Update `rbac.js` to allow `STAFF` with permissions to access management routes
+    - [x] Update `staff.controller.js` to handle role assignment correctly
+- [x] Verify changes

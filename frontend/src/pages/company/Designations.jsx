@@ -75,14 +75,21 @@ export default function Designations() {
 
       <Card>
         <Table
-          columns={['Designation', 'Department', 'Base Role', 'Permissions', 'Actions']}
+          columns={['Designation', 'Department', 'Permissions', 'Actions']}
           data={items}
           renderRow={(item) => (
             <tr key={item._id}>
               <td className="table-td font-bold">{item.name}</td>
               <td className="table-td text-slate-500 font-medium">{item.department?.name || '—'}</td>
-              <td className="table-td"><Badge color="blue">{item.baseRole}</Badge></td>
               <td className="table-td">
+                <div className="flex flex-wrap gap-1">
+                  {PERMISSIONS.map(p => item.permissions[p.key] && (
+                    <Badge key={p.key} color="blue" className="text-[9px] uppercase tracking-tighter">
+                      {p.label}
+                    </Badge>
+                  ))}
+                </div>
+              </td>
                 <div className="flex flex-wrap gap-1">
                   {PERMISSIONS.map(p => item.permissions[p.key] && (
                     <Badge key={p.key} color="blue" className="text-[9px] uppercase tracking-tighter">
@@ -127,11 +134,6 @@ export default function Designations() {
                 ...departments.map(d => ({ value: d._id, label: d.name }))
               ]}
             />
-            <Select label="Base System Role *" required value={form.baseRole} onChange={(e) => setForm({ ...form, baseRole: e.target.value })}
-              options={[
-                { value: 'STAFF', label: 'Staff (Standard Access)' },
-                { value: 'COMPANY_MANAGER', label: 'Manager (Administrative Access)' },
-              ]} />
           </div>
           <div>
             <p className="mb-3 text-sm font-medium">Access Permissions</p>

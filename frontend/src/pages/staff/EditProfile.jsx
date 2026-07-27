@@ -104,8 +104,7 @@ export default function EditProfile() {
               <Input label="Full Name *" required value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })} />
 
-              <Input label="Email Address *" type="email" required value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <Input label="Email Address (Non-Editable)" type="email" required value={form.email} disabled className="bg-slate-50 dark:bg-slate-800" />
 
               <Input label="Mobile Number" value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })} />

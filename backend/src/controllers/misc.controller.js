@@ -108,13 +108,16 @@ export const getFile = asyncHandler(async (req, res) => {
 
 // ---------- Profile (staff self-service) ----------
 export const updateMyProfile = asyncHandler(async (req, res) => {
-  const { phone, profilePhoto } = req.body;
+  const { name, phone, address, pan, profilePhoto } = req.body;
   const user = await User.findById(req.user._id).populate({
     path: 'designation',
     populate: { path: 'department', select: 'name' }
   }).populate('company');
 
+  if (name !== undefined) user.name = name;
   if (phone !== undefined) user.phone = phone;
+  if (address !== undefined) user.address = address;
+  if (pan !== undefined) user.pan = pan;
 
   if (profilePhoto !== undefined) {
     if (profilePhoto && profilePhoto.startsWith('data:')) {

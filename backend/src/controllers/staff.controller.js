@@ -56,6 +56,7 @@ export const createStaff = asyncHandler(async (req, res) => {
   let targetCompany = null;
   let targetRole = role || ROLES.STAFF;
 
+  // We still keep baseRole for internal compatibility, but permissions are the primary driver
   if (designation) {
     const des = await Designation.findById(designation);
     if (des) targetRole = des.baseRole;

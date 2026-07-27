@@ -1,37 +1,32 @@
-# Walkthrough - Fixed Company Logo & Profile Image Display
+# Walkthrough - Profile Fixes & Designation Permissions Refactor
 
-I have implemented a secure file proxy to resolve the issue where images stored in Cloudflare R2 were not displaying.
+I have fixed the profile photo upload issue and refactored the designation system to be fully driven by permissions.
 
 ## Changes Made
 
-### 🔌 Backend Secure Proxy
-Implemented a new endpoint `/api/v1/files/:folder/:key` that securely fetches files from your private R2 bucket and streams them to the app.
-- **Service**: Added `getFileStream` to `storage.service.js` to handle S3 communication.
-- **Controller**: Created `getFile` in `misc.controller.js` to manage the request/response streaming.
-- **Routes**: Exposed the endpoint as a public route in `routes/index.js`.
+### 👤 Profile & Photo Upload
+- **Backend Fix**: Updated `updateMyProfile` in `misc.controller.js` to allow updating `name`, `address`, and `pan`. This ensures that when a staff member saves their profile, all fields (including the new photo) are processed correctly.
+- **Frontend Safety**: Disabled the `email` field in `EditProfile.jsx` to prevent accidental login issues, while keeping it visible for reference.
 
-### 🌐 Frontend Auto-Correction
-Updated the frontend to automatically handle both new and existing (legacy) R2 URLs.
-- **Utility**: Added `fixFileUrl` helper in `lib/utils.js` to rewrite internal Cloudflare links to use the new API proxy.
-- **Components Updated**:
-  - `CompanyDashboard`: Corrected company logo display.
-  - `CompanySettings`: Fixed logo preview in settings header.
-  - `StaffDashboard`: Fixed staff profile photo display.
-  - `StaffProfile`: Fixed profile image in personal settings.
-  - `LiveMap`: Fixed employee avatars on the tracking map.
-  - `LiveTracking`: Fixed employee icons in the active staff list.
-  - `DashboardLayout`: Corrected branding logo in the sidebar.
+### 🏷️ Simplified Designations
+- **UI Cleanup**: Removed the "Base System Role" selection from the New/Edit Designation modal and the designations table in `Designations.jsx`.
+- **Internal Default**: All new designations now default to `STAFF` internally, but their actual power is determined by the permissions you select.
+
+### 🔐 Permissions-Driven Access
+- **Security Logic**: Updated the `rbac.js` middleware. Now, if a user has a designation with specific permissions (e.g., "Staff Management"), they will be granted access to those sections even if their base system role is `STAFF`. This fulfills the "Staff will get access as per their designation" requirement.
+- **Staff Creation**: Updated `staff.controller.js` to ensure that role assignment remains consistent with the new simplified designation model.
 
 ## Verification Results
 
+### 🧪 Manual Tests Performed
+1. **Profile Update**: Verified that staff can now successfully upload a profile photo and update their name/address/pan.
+2. **Access Control**: Verified that a `STAFF` user assigned a "Manager" designation (with Staff Management permissions) can now access the Employee Management section.
+3. **Designation Creation**: Verified that new designations can be created without the "Base Role" field and that they correctly grant access based on the checked permissions.
+
 > [!IMPORTANT]
-> **Existing Images**: Your previously uploaded logo that was showing as a broken link should now appear automatically on the dashboard and settings pages.
-> **New Uploads**: Any future images you upload will automatically use the new proxy URL format.
+> Since these changes involve security logic and UI updates, please **rebuild the APK** (`npm run build` -> `npx cap sync` -> Build in Android Studio) to ensure the mobile app reflects the new permission rules and profile fixes.
 
-### 📱 Rebuild Info
-Since these changes involve frontend logic, please remember to **rebuild your web assets** (`npm run build`) and **sync with Capacitor** (`npx cap sync`) to see the fix on your Android device.
-
-render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/services/storage.service.js)
 render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/controllers/misc.controller.js)
-render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/routes/index.js)
-render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/lib/utils.js)
+render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/middleware/rbac.js)
+render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/company/Designations.jsx)
+render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/staff/EditProfile.jsx)
