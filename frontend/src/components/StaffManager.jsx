@@ -122,10 +122,10 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">{mode === 'system' ? 'System Employees' : 'Employee Management'}</h1>
-        <Button onClick={() => { setEditing(null); setForm(emptyForm); setModal(true); }} disabled={allowCompanySelection && !selectedCompanyId}>
-          <Plus className="h-4 w-4" /> Add Employee
+        <Button className="w-full sm:w-auto" onClick={() => { setEditing(null); setForm(emptyForm); setModal(true); }} disabled={allowCompanySelection && !selectedCompanyId}>
+          <Plus className="h-4 w-4 mr-2" /> Add Employee
         </Button>
       </div>
 
@@ -260,18 +260,19 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
                   </div>
                 )}
               </div>
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <Button variant="outline" size="sm" onClick={() => { setEditing(u); setForm({ ...emptyForm, ...u, designation: u.designation?._id || '', branch: u.branch?._id || 'MAIN', shift: u.shift?._id || '' }); setModal(true); }}>
-                  <Pencil className="h-4 w-4 mr-1" /> Edit
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <Button variant="outline" size="sm" className="justify-start px-2" onClick={() => { setEditing(u); setForm({ ...emptyForm, ...u, designation: u.designation?._id || '', branch: u.branch?._id || 'MAIN', shift: u.shift?._id || '' }); setModal(true); }}>
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
                 </Button>
-                <Button variant="outline" size="sm" className="text-amber-600" onClick={() => deactivate(u)}>
-                  <UserMinus className="h-4 w-4 mr-1" /> Deactivate
+                <Button variant="outline" size="sm" className="justify-start px-2 text-amber-600" onClick={() => deactivate(u)}>
+                  <UserMinus className="h-3.5 w-3.5 mr-1.5" /> Deactivate
                 </Button>
-                <Button variant="outline" size="sm" className="text-blue-600" onClick={() => authorizeReset(u)}>
-                  <RefreshCw className={cn("h-4 w-4 mr-1", u.deviceResetRequested && "animate-spin")} /> Reset Device
+                <Button variant="outline" size="sm" className="justify-start px-2 text-blue-600" onClick={() => authorizeReset(u)}>
+                  <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5 shrink-0", u.deviceResetRequested && "animate-spin")} />
+                  <span className="truncate text-[10px]">Reset Device</span>
                 </Button>
-                <Button variant="danger" size="sm" onClick={() => hardDelete(u)}>
-                  <Trash2 className="h-4 w-4 mr-1" /> Delete
+                <Button variant="danger" size="sm" className="justify-start px-2" onClick={() => hardDelete(u)}>
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete
                 </Button>
               </div>
             </div>

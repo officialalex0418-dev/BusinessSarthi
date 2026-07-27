@@ -357,42 +357,53 @@ export default function InventoryPage() {
           {data.nearExpiryCount > 0 && <Badge color="yellow">{data.nearExpiryCount} Near Expiry</Badge>}
           {data.expiredCount > 0 && <Badge color="red">{data.expiredCount} Expired</Badge>}
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Button
             variant="outline"
             onClick={toggleInventorySync}
             loading={updatingSync}
-            className={inventorySync ? 'border-emerald-500 text-emerald-600' : 'text-slate-400'}
+            className={cn(
+              "justify-start sm:justify-center",
+              inventorySync ? 'border-emerald-500 text-emerald-600' : 'text-slate-400'
+            )}
           >
             {inventorySync ? <ToggleRight className="h-5 w-5 mr-2" /> : <ToggleLeft className="h-5 w-5 mr-2" />}
-            Sales {inventorySync ? 'ON' : 'OFF'}
+            <span className="truncate">Sales {inventorySync ? 'ON' : 'OFF'}</span>
           </Button>
-          <Button variant="outline" onClick={() => setModal('invoice')}><FileText className="h-4 w-4 mr-2" /> Create Invoice</Button>
-          <Button variant="outline" onClick={() => setModal('purchase')}><ShoppingCart className="h-4 w-4 mr-2" /> Purchase Entry</Button>
-          <Button variant="outline" onClick={() => setModal('bulk')}><FileUp className="h-4 w-4" /> Bulk Upload</Button>
-          <Button onClick={() => {
+          <Button variant="outline" className="justify-start sm:justify-center" onClick={() => setModal('invoice')}>
+            <FileText className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Invoice</span>
+          </Button>
+          <Button variant="outline" className="justify-start sm:justify-center" onClick={() => setModal('purchase')}>
+            <ShoppingCart className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Purchase</span>
+          </Button>
+          <Button variant="outline" className="justify-start sm:justify-center" onClick={() => setModal('bulk')}>
+            <FileUp className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Bulk</span>
+          </Button>
+          <Button className="col-span-2 sm:col-auto" onClick={() => {
             setEditing(null);
             setProductRows([{ productName: '', sku: '', batch: '', price: 0, quantity: 1, amount: 0, expiryDate: '' }]);
             setModal('form');
-          }}><Plus className="h-4 w-4" /> Add Product</Button>
+          }}><Plus className="h-4 w-4 mr-2 shrink-0" /> Add Product</Button>
         </div>
       </div>
 
       <Card>
-        <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 p-4 dark:border-slate-800">
-          <Input placeholder="Search SKU or Name…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="max-w-xs" />
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400">
-            <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={lowOnly} onChange={(e) => { setLowOnly(e.target.checked); setPage(1); }} />
-            Low stock
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400">
-            <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={expirySoon} onChange={(e) => { setExpirySoon(e.target.checked); setPage(1); }} />
-            Expiring soon
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400">
-            <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={expiredOnly} onChange={(e) => { setExpiredOnly(e.target.checked); setPage(1); }} />
-            Expired
-          </label>
+        <div className="flex flex-col gap-4 border-b border-slate-200 p-4 dark:border-slate-800 lg:flex-row lg:items-center">
+          <Input placeholder="Search SKU or Name…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="w-full lg:max-w-xs" />
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400">
+              <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={lowOnly} onChange={(e) => { setLowOnly(e.target.checked); setPage(1); }} />
+              Low stock
+            </label>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400">
+              <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={expirySoon} onChange={(e) => { setExpirySoon(e.target.checked); setPage(1); }} />
+              Expiring
+            </label>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400">
+              <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={expiredOnly} onChange={(e) => { setExpiredOnly(e.target.checked); setPage(1); }} />
+              Expired
+            </label>
+          </div>
         </div>
         <Table
           columns={['S.N', 'Name', 'Batch', 'Cost Price', 'MRP', 'Quantity', 'Expiry Date', 'Actions']}

@@ -28,27 +28,37 @@ export default function CompanySettings() {
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
 
       <Card className="overflow-hidden">
-        <div className="relative h-48 bg-gradient-to-br from-primary-600 to-primary-800">
-          <div className="absolute -bottom-16 left-8">
-            <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-3xl border-8 border-white bg-slate-100 shadow-xl dark:border-slate-900 dark:bg-slate-800">
+        <div className="relative h-40 bg-gradient-to-br from-primary-600 to-primary-800 sm:h-48">
+          <div className="absolute -bottom-12 left-4 sm:-bottom-16 sm:left-8">
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-slate-100 shadow-xl dark:border-slate-900 dark:bg-slate-800 sm:h-32 sm:w-32 sm:rounded-3xl sm:border-8">
               {company.logo ? (
                 <img src={company.logo} alt="Company logo" className="h-full w-full object-cover" />
               ) : (
-                <Building2 className="h-16 w-12 text-slate-300" />
+                <Building2 className="h-10 w-8 text-slate-300 sm:h-16 sm:w-12" />
               )}
             </div>
           </div>
-          <div className="absolute bottom-4 right-8 flex gap-2">
-            <Button variant="outline" size="sm" className="bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-md" onClick={() => navigate('/company/settings/edit')}>
-              <Pencil className="h-4 w-4" /> Edit Profile
+          <div className="absolute bottom-4 right-4 flex flex-col gap-2 sm:right-8 sm:flex-row">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 bg-white/10 text-xs text-white border-white/20 hover:bg-white/20 backdrop-blur-md sm:h-9 sm:text-sm"
+              onClick={() => navigate('/company/settings/edit')}
+            >
+              <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit Profile
             </Button>
-            <Button variant="outline" size="sm" className="bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-md" onClick={handleResetPassword}>
-              <Lock className="h-4 w-4" /> Reset Password
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 bg-white/10 text-xs text-white border-white/20 hover:bg-white/20 backdrop-blur-md sm:h-9 sm:text-sm"
+              onClick={handleResetPassword}
+            >
+              <Lock className="mr-1.5 h-3.5 w-3.5" /> Reset Password
             </Button>
           </div>
         </div>
 
-        <div className="px-8 pb-10 pt-20">
+        <div className="px-4 pb-10 pt-16 sm:px-8 sm:pt-20">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
