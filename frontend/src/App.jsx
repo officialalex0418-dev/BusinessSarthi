@@ -162,7 +162,7 @@ export default function App() {
       if (item.to === '/company/customers') return perms.customerMasterList;
       if (item.to === '/company/inventory') return perms.inventory;
       if (item.to === '/company/distributors') return perms.distributors;
-      if (item.to === '/company/vendors') return perms.distributors; // uses same permission
+      if (item.to === '/company/vendors') return perms.vendors;
       if (item.to === '/company/payroll') return perms.payroll;
       if (item.to === '/company/complaints') return perms.complaints;
       if (item.to === '/company/reports') return perms.reports;
@@ -191,7 +191,7 @@ export default function App() {
       if (perms.distributors && hasFeature('distributorManagement')) {
          finalStaffNav.push({ to: '/staff/management/distributors', label: 'Distributors', icon: Truck });
       }
-      if (perms.distributors && hasFeature('vendorManagement')) {
+      if (perms.vendors && hasFeature('vendorManagement')) {
          finalStaffNav.push({ to: '/staff/management/vendors', label: 'Vendors', icon: Building2 });
       }
       if (perms.payroll && hasFeature('payrollManagement')) finalStaffNav.push({ to: '/staff/management/payroll', label: 'Payroll', icon: Wallet });
