@@ -313,9 +313,9 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
                   <Select label="Work Mode" value={form.workMode} onChange={(e) => setForm({ ...form, workMode: e.target.value })}
                     options={[{ value: 'INDOOR', label: 'Indoor' }, { value: 'OUTDOOR', label: 'Outdoor' }]} />
 
-                  <Select label="Shift" value={form.shift} onChange={(e) => setForm({ ...form, shift: e.target.value })}
+                  <Select label="Shift *" required value={form.shift} onChange={(e) => setForm({ ...form, shift: e.target.value })}
                     options={[
-                      { value: '', label: 'No Specific Shift' },
+                      { value: '', label: 'Select Shift…' },
                       ...shifts.map(s => ({ value: s._id, label: `${s.name}` }))
                     ]} />
                </div>

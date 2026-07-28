@@ -86,6 +86,15 @@ export const login = asyncHandler(async (req, res) => {
   const refreshToken = signRefreshToken(user, isAppRequest);
   await persistRefreshToken(user, refreshToken, req);
 
+  // Add checked-in status for tracking control
+  const today = todayStr();
+  const activeAtt = await Attendance.findOne({
+    staff: user._id,
+    date: today,
+    'checkIn.time': { $exists: true },
+    'checkOut.time': { $exists: false }
+  });
+
   user.lastLoginAt = new Date();
   await user.save({ validateBeforeSave: false });
 
@@ -97,7 +106,11 @@ export const login = asyncHandler(async (req, res) => {
   });
   res.json({
     success: true,
-    data: { user: user.toSafeJSON(), accessToken, refreshToken },
+    data: {
+        user: { ...user.toSafeJSON(), isCheckedIn: !!activeAtt },
+        accessToken,
+        refreshToken
+    },
   });
 });
 
@@ -252,7 +265,14 @@ export const verifyEmail = asyncHandler(async (req, res) => {
 
 /** GET /auth/me */
 export const me = asyncHandler(async (req, res) => {
-  res.json({ success: true, data: { user: req.user.toSafeJSON() } });
+  const today = todayStr();
+  const activeAtt = await Attendance.findOne({
+    staff: req.user._id,
+    date: today,
+    'checkIn.time': { $exists: true },
+    'checkOut.time': { $exists: false }
+  });
+  res.json({ success: true, data: { user: { ...req.user.toSafeJSON(), isCheckedIn: !!activeAtt } } });
 });
 
 /** PATCH /auth/change-password */

@@ -241,7 +241,7 @@ export const heatmap = asyncHandler(async (req, res) => {
 
   const points = await LocationLog.aggregate([
     { $match: match },
-    { $sample: { size: 5000 } }, // increased sample size for better heatmap
+    { $sample: { size: 10000 } }, // increased sample size for better heatmap accuracy
     {
       $project: {
         _id: 0,

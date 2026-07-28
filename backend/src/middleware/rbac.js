@@ -48,15 +48,37 @@ export const authorize = (...roles) => (req, _res, next) => {
           permissionChecked = true;
           permissionGranted = permissions.leaves;
         }
-      } else if (path.startsWith('/sales')) {
-        const isEntry = path.includes('/me') || path.includes('/metadata') || (req.method === 'POST' && path === '/sales');
-        const isOwnList = req.method === 'GET' && path === '/sales' && role === 'STAFF';
         const dept = (designation?.department?.name || '').toLowerCase();
         const isSalesDept = dept.includes('sales') || dept.includes('marketing');
 
-        if (!(isSalesDept && (isEntry || isOwnList))) {
+        const canEntry = isSalesDept || permissions.salesEntry;
+
+        if (isEntry || isOwnList) {
+          if (!canEntry) {
+            permissionChecked = true;
+            permissionGranted = false;
+          }
+        } else {
+          // Access to all sales (Management)
           permissionChecked = true;
           permissionGranted = permissions.salesTracker;
+        }
+      } else if (path.startsWith('/customers')) {
+        const isEntry = req.method === 'POST';
+        const dept = (designation?.department?.name || '').toLowerCase();
+        const isSalesDept = dept.includes('sales') || dept.includes('marketing');
+
+        const canEntry = isSalesDept || permissions.salesEntry;
+
+        if (isEntry) {
+          if (!canEntry) {
+            permissionChecked = true;
+            permissionGranted = false;
+          }
+        } else {
+          // Master List access
+          permissionChecked = true;
+          permissionGranted = permissions.customerMasterList;
         }
       } else if (path.startsWith('/inventory')) {
         permissionChecked = true;

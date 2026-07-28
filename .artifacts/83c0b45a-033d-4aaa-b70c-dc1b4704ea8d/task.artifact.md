@@ -1,5 +1,10 @@
-- [/] Fix Overtime Request Permissions
-    - [x] Update `rbac.js` to allow self-service attendance requests
-- [ ] Verification
-- [ ] Update `memory.md`
-- [ ] Push to GitHub
+- [x] Execute System Refinement
+    - [x] Add new permissions to `Designation.js`
+    - [x] Update `isCheckedIn` status in `auth.controller.js`
+    - [x] Implement 40% Half-Day rule in `attendance.controller.js`
+    - [x] Rename and enhance responsiveness in `App.jsx` and `company/Customers.jsx`
+    - [x] Update Designation form with new checkboxes
+    - [x] Make Shift mandatory in `StaffManager.jsx`
+    - [x] Implement Check-in restricted tracking in `DashboardLayout.jsx`
+    - [x] Add 1-min refresh to `LiveTracking.jsx`
+- [x] Update `memory.md`

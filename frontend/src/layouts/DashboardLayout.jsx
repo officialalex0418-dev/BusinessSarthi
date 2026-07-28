@@ -20,8 +20,8 @@ export default function DashboardLayout({ title, nav }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Background location tracking for staff
-  const isTrackingEnabled = user?.role === 'STAFF';
+  // Background location tracking for staff - only when checked-in
+  const isTrackingEnabled = user?.role === 'STAFF' && user?.isCheckedIn;
   const { isAlerting } = useLocationTracker(isTrackingEnabled);
 
   useEffect(() => {

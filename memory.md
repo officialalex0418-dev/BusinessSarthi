@@ -25,8 +25,13 @@ This file tracks the architectural changes, refactors, and feature implementatio
 - **Staff Profile**: Fixed staff profile photo upload functionality and added support for updating Name, Address, and PAN fields. Disabled the email field in profile edits to prevent login conflicts.
 
 ### 📊 Core Module Enhancements
+- **Refined Tracking & Attendance**:
+    - Restricted background tracking to active shifts only (between Check-In and Check-Out).
+    - Updated Live Tracking to refresh every 60 seconds for near real-time monitoring.
+    - Implemented a more flexible **40% Half-Day rule** (status becomes Half-Day only if worked hours are < 40% of shift duration).
+    - Mandated **Shift Assignment** for all new employees to ensure accurate attendance tracking.
+- **Customer Master List**: Rebranded the combined customer view and enhanced its responsiveness. Added granular **Sales Entry** and **Customer Master List** permissions to the designation system.
 - **Final Stability Fixes**: Resolved persistent white-screen crashes on Attendance and Customer List pages by restoring missing imports (`DatePicker`, `Badge`, React hooks) and adding extreme null-safety to the Bikram Sambat (BS) date conversion logic.
-- **Customer Management**: Added a "Town" field to customers and created a centralized "Customer List" for the company panel. Implemented town and employee filters to track field activity across all staff.
 - **Attendance Stability**: Fixed a critical crash on the staff attendance page by adding safety checks to date formatting and the Nepali (BS) calendar components.
 - **Flexible Payroll**: Made every field in the payroll detail report editable (Absent Deduction, Tax, Allowances, etc.). Updates now persist correctly on save.
 - **Inventory "Add Product" Upgrade**: Refactored the Add Product form to support searching existing inventory and auto-filling details (Batch, Price, MRP). Added a seamless "+ Add New Product" workflow.

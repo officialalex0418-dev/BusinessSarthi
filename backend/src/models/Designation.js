@@ -19,6 +19,8 @@ const designationSchema = new mongoose.Schema(
       attendance: { type: Boolean, default: false },
       leaves: { type: Boolean, default: false },
       salesTracker: { type: Boolean, default: false },
+      salesEntry: { type: Boolean, default: false },
+      customerMasterList: { type: Boolean, default: false },
       inventory: { type: Boolean, default: false },
       distributors: { type: Boolean, default: false },
       vendors: { type: Boolean, default: false },

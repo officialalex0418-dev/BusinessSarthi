@@ -25,7 +25,11 @@ export default function LiveTracking() {
     setMarkers(data.data.items || []);
   }, []);
 
-  useEffect(() => { loadLive(); }, [loadLive]);
+  useEffect(() => {
+    loadLive();
+    const interval = setInterval(loadLive, 60000); // 1 min refresh
+    return () => clearInterval(interval);
+  }, [loadLive]);
   useEffect(() => {
     api.get('/staff?limit=100').then(({ data }) =>
       setStaffList(data.data.items.filter((u) => ['STAFF', 'COMPANY_MANAGER'].includes(u.role))));

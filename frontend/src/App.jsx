@@ -95,7 +95,7 @@ const companyNav = [
   { to: '/company/attendance', label: 'Attendance', icon: CalendarCheck },
   { to: '/company/leaves', label: 'Leave Management', icon: CalendarOff },
   { to: '/company/sales', label: 'Sales Tracker', icon: TrendingUp },
-  { to: '/company/customers', label: 'Customer List', icon: Users },
+  { to: '/company/customers', label: 'Customer Master List', icon: Users },
   { to: '/company/inventory', label: 'Inventory', icon: Boxes },
   { to: '/company/distributors', label: 'Distributors', icon: Truck },
   { to: '/company/vendors', label: 'Vendors', icon: Building2 },
@@ -159,7 +159,7 @@ export default function App() {
       if (item.to === '/company/attendance') return perms.attendance;
       if (item.to === '/company/leaves') return perms.leaves;
       if (item.to === '/company/sales') return perms.salesTracker;
-      if (item.to === '/company/customers') return perms.salesTracker; // Reuse salesTracker permission for customers
+      if (item.to === '/company/customers') return perms.customerMasterList;
       if (item.to === '/company/inventory') return perms.inventory;
       if (item.to === '/company/distributors') return perms.distributors;
       if (item.to === '/company/vendors') return perms.distributors; // uses same permission
@@ -183,7 +183,9 @@ export default function App() {
       if (perms.leaves) finalStaffNav.push({ to: '/staff/management/leaves', label: 'Leave Mgmt', icon: CalendarOff });
       if (perms.salesTracker && hasFeature('salesTracking') && user.role !== 'STAFF') {
          finalStaffNav.push({ to: '/staff/management/sales', label: 'Sales Mgmt', icon: TrendingUp });
-         finalStaffNav.push({ to: '/staff/management/customers', label: 'Customer List', icon: Users });
+      }
+      if (perms.customerMasterList && user.role !== 'STAFF') {
+         finalStaffNav.push({ to: '/staff/management/customers', label: 'Customer Master List', icon: Users });
       }
       if (perms.inventory && hasFeature('inventoryManagement')) finalStaffNav.push({ to: '/staff/management/inventory', label: 'Inventory', icon: Boxes });
       if (perms.distributors && hasFeature('distributorManagement')) {

@@ -160,8 +160,8 @@ export const checkOut = asyncHandler(async (req, res) => {
 
   attendance.workedMinutes = Math.round((now - attendance.checkIn.time) / 60000);
 
-  // Requirement: If working hour is less than half of shift hour mark as half day
-  let thresholdMinutes = 240; // Default 4 hours fallback
+  // Requirement: If working hour is less than 40% of shift hour mark as half day
+  let thresholdMinutes = 192; // Default 40% of 8 hours (3.2 hours) fallback
 
   if (req.user.shift) {
     const shift = await Shift.findById(req.user.shift);
@@ -175,7 +175,7 @@ export const checkOut = asyncHandler(async (req, res) => {
       if (endMins < startMins) endMins += 1440; // Crosses midnight
 
       const totalShiftMinutes = endMins - startMins;
-      thresholdMinutes = Math.floor(totalShiftMinutes / 2);
+      thresholdMinutes = Math.floor(totalShiftMinutes * 0.4); // 40% threshold
     }
   }
 
