@@ -1,12 +1,14 @@
-- [/] Stability Fixes
-    - [ ] Add safety checks to `ui/index.jsx` to prevent crashes
-- [ ] Customer Module Backend
-    - [ ] Update `Customer.js` model with `town` field
-    - [ ] Update `validators.js` schema
-    - [ ] Update `customer.controller.js` for filtering and population
-- [ ] Customer Module Frontend
-    - [ ] Update Staff `Customers.jsx` with Town field
-    - [ ] Create Company `Customers.jsx` with filters
-    - [ ] Add route to `App.jsx` and update navigation
-- [ ] Verification
+- [ ] Fix Stability & Crashes
+    - [ ] Update `nepaliDate.js` to ensure `adToBs` always returns year/month
+    - [ ] Add safety fallbacks to `BSCalendarInternal` in `ui/index.jsx`
+- [ ] Implement Town Field
+    - [ ] Update `Customer.js` model
+    - [ ] Update `validators.js`
+    - [ ] Update `customer.controller.js` (population & town search)
+    - [ ] Update staff `Customers.jsx` UI
+- [ ] Implement Company Customer List
+    - [ ] Fix/Verify `company/Customers.jsx`
+    - [ ] Add Employee & Town filters
+    - [ ] Update `App.jsx` navigation
+- [ ] Final Build & Verification
 - [ ] Update `memory.md`

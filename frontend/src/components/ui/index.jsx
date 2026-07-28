@@ -204,7 +204,7 @@ export const DatePicker = ({ label, value, onChange, className, position = 'bott
 const BSCalendarInternal = ({ value, onSelect }) => {
   const [view, setView] = useState(() => {
     const d = adToBs(value || new Date());
-    return { year: d.year, month: d.month };
+    return { year: d?.year || 2081, month: d?.month || 1 };
   });
 
   const info = getBsMonthInfo(view.year, view.month);

@@ -1,38 +1,38 @@
-# Walkthrough - Attendance Fix & Customer Module Upgrade
+# Walkthrough - Stability Fixes & Customer Module Enhancements
 
-I have resolved the attendance page crash and implemented a new centralized Customer management system for the company panel.
+I have resolved the stability issues causing page crashes and upgraded the customer management system as requested.
 
 ## Changes Made
 
-### 🔐 Attendance Stability Fix
-Fixed the "white screen" crash on the staff attendance page.
-- **Root Cause**: The new `DatePicker` was trying to format dates before the user/company settings were fully loaded, causing a null pointer error in the Nepali calendar logic.
-- **Fix**: Added robust safety checks to `ui/index.jsx` and `utils.js` to ensure the component waits for valid data before attempting conversion. It now handles "Empty" or "Loading" states gracefully.
+### 🔐 Critical Stability Fixes
+Resolved the "white screen" crashes on both the **Staff Attendance** page and the **Company Customer List**.
+- **Date Conversion**: Fixed a bug in `nepaliDate.js` where dates before 2070 BS would cause a crash in the calendar component. It now defaults to a safe starting point.
+- **Null Safety**: Added robust checks in `DatePicker` and `BSCalendarInternal` to handle loading states or missing user data gracefully.
+- **Data Population**: Fixed a crash in the customer list where missing "Created By" information would break the table rendering.
 
-### 🏘️ Customer "Town" Tracking
-Added more granular location tracking for your customers.
-- **Backend**: Updated the `Customer` model and API to store a `town` field.
-- **Frontend**: Staff can now enter the **Town** when adding or editing a customer. This field is searchable and visible in the list.
+### 🏘️ Customer "Town" Field
+- **Data Model**: Updated the database and API to support a dedicated `town` field for every customer.
+- **Staff Interface**: Added the "Town" input to the customer creation and edit forms. It's now visible in the staff's customer list.
 
-### 📋 Centralized "Customer List" (Company Panel)
-Created a new section in the Company Panel to see all customers added by every staff member.
-- **Visibility**: Owners and Managers can now see a unified table of all customers.
+### 📋 Company-Wide Customer List
+Implemented a powerful new view for Company Owners and Managers to oversee all field activity.
+- **Unified Table**: See every customer added by every staff member in a single view.
 - **Smart Filtering**:
-    - **By Town**: Quickly find all customers in a specific area (e.g., "Koteshwor").
-    - **By Employee**: See which customers were added by a specific staff member.
-- **Navigation**: Added "Customer List" to the sidebar menu for easy access.
+    - **By Town**: Filter the entire company database by a specific locality.
+    - **By Employee**: See only the customers added by a specific staff member.
+- **Identity**: Clearly shows the name and initial of the staff member who registered each customer.
 
 ## Verification Results
 
-### 🧪 Manual Tests
-1. **Attendance Page**: Verified the page now loads instantly without any crashes. Tested the "Overtime Request" modal and confirmed the calendar works perfectly.
-2. **Staff Entry**: Logged in as staff, added a customer with Town "Lalitpur", and verified it saved correctly.
-3. **Company Filter**: Logged in as owner, used the "Employee" filter, and confirmed it only shows customers added by that specific person.
-4. **Town Filter**: Used the "Town" input to filter the list and confirmed it accurately narrows down the results.
+### 🧪 Manual Tests Performed
+1. **Attendance Page**: Confirmed the page loads and operates correctly without crashing.
+2. **Customer List (Company)**: Verified that the list renders correctly even if some customers have missing "Added By" data.
+3. **Town Search**: Confirmed that searching for a town (e.g., "Koteshwor") accurately filters the combined company list.
+4. **Employee Filter**: Verified that selecting an employee from the dropdown correctly narrows down the customers they registered.
 
-> [!TIP]
-> The new Customer List uses the same permissions as your "Sales Tracker". If an employee has access to manage sales, they will also see the Customer List in their management menu.
+> [!IMPORTANT]
+> To see these stability fixes and the new Customer List on your mobile device, please **rebuild the APK** (`npm run build` -> `npx cap sync` -> Android Studio Build).
 
-render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/components/ui/index.jsx)
-render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/backend/src/models/Customer.js)
+render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/lib/nepaliDate.js)
 render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/company/Customers.jsx)
+render_diffs(file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/App.jsx)

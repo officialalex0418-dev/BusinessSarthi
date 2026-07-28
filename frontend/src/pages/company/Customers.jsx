@@ -17,7 +17,7 @@ export default function CompanyCustomers() {
   const loadStaff = useCallback(async () => {
     try {
       const { data } = await api.get('/staff', { params: { limit: 100 } });
-      setStaff(data.data.items);
+      setStaff(data?.data?.items || []);
     } catch {}
   }, []);
 
@@ -31,7 +31,7 @@ export default function CompanyCustomers() {
         createdBy: staffFilter || undefined
       };
       const { data } = await api.get('/customers', { params });
-      setData(data.data);
+      setData(data?.data || { items: [], pagination: { page: 1, totalPages: 1, total: 0 } });
     } catch (err) {
       console.error(err);
     } finally {
@@ -119,8 +119,8 @@ export default function CompanyCustomers() {
               </td>
               <td className="table-td">
                 <div className="flex items-center gap-2">
-                   <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                     {c.createdBy?.name?.[0] || '?'}
+                   <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
+                     {(c.createdBy?.name || 'S')[0]}
                    </div>
                    <span className="text-sm font-medium">{c.createdBy?.name || 'System'}</span>
                 </div>

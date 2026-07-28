@@ -206,8 +206,8 @@ export default function StaffAttendance() {
   };
 
   if (!data) return <Spinner />;
-  const today = data.today;
-  const restriction = data.restriction;
+  const today = data.today || {};
+  const restriction = data.restriction || {};
   const biometricActive = localStorage.getItem(`biometric_${user?._id}`) === 'true';
   const outdoorOnWeb = user?.workMode === 'OUTDOOR' && !isMobile;
 

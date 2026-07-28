@@ -51,7 +51,12 @@ export function adToBs(date) {
 
   let totalDiff = Math.floor((adTarget - adRef) / (1000 * 60 * 60 * 24));
 
-  if (totalDiff < 0) return { formatted: `${d.toLocaleDateString()} (AD)` };
+  if (totalDiff < 0) {
+    // If date is before 2070 BS, default to 2070-01-01
+    return {
+        year: 2070, month: 1, day: 1, monthName: 'Baisakh', formatted: '2070-01-01'
+    };
+  }
 
   let bsYear = 2070;
   let bsMonth = 0;
