@@ -35,6 +35,7 @@ export const listStaff = asyncHandler(async (req, res) => {
       .populate('company', 'name')
       .populate('designation')
       .populate('branch', 'name')
+      .populate('shift')
       .sort('-createdAt')
       .skip(skip)
       .limit(limit),
@@ -125,7 +126,10 @@ export const createStaff = asyncHandler(async (req, res) => {
 
 /** GET /staff/:id */
 export const getStaff = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id).populate('company', 'name').populate('designation');
+  const user = await User.findById(req.params.id)
+    .populate('company', 'name')
+    .populate('designation')
+    .populate('shift');
   if (!user) throw ApiError.notFound('User not found');
   assertSameCompanyOrPlatform(req, user);
   res.json({ success: true, data: { user: user.toSafeJSON() } });

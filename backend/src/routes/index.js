@@ -80,7 +80,7 @@ r.delete('/packages/:id', protect, authorize('SUPER_ADMIN'), pkg.deletePackage);
 r.get('/staff', protect, authorize(...MANAGERS), scopeCompany, staff.listStaff);
 r.post('/staff', protect, authorize(...MANAGERS), validate({ body: schemas.createStaff }), staff.createStaff);
 r.get('/staff/:id', protect, authorize(...MANAGERS), staff.getStaff);
-r.patch('/staff/:id', protect, authorize(...MANAGERS), staff.updateStaff);
+r.patch('/staff/:id', protect, authorize(...MANAGERS), validate({ body: schemas.updateStaff }), staff.updateStaff);
 r.patch('/staff/:id/authorize-device-reset', protect, authorize(...MANAGERS), staff.authorizeDeviceReset);
 r.delete('/staff/:id', protect, authorize(...OWNERS), staff.deleteStaff);
 r.delete('/staff/:id/hard', protect, authorize('SUPER_ADMIN', 'COMPANY_OWNER'), staff.hardDeleteStaff);

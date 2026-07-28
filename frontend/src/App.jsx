@@ -181,10 +181,10 @@ export default function App() {
       if (perms.liveTracking) finalStaffNav.push({ to: '/staff/management/tracking', label: 'Tracking Mgmt', icon: MapPin });
       if (perms.attendance) finalStaffNav.push({ to: '/staff/management/attendance', label: 'Attendance Mgmt', icon: CalendarCheck });
       if (perms.leaves) finalStaffNav.push({ to: '/staff/management/leaves', label: 'Leave Mgmt', icon: CalendarOff });
-      if (perms.salesTracker && hasFeature('salesTracking') && user.role !== 'STAFF') {
+      if (perms.salesTracker && hasFeature('salesTracking')) {
          finalStaffNav.push({ to: '/staff/management/sales', label: 'Sales Mgmt', icon: TrendingUp });
       }
-      if (perms.customerMasterList && user.role !== 'STAFF') {
+      if (perms.customerMasterList) {
          finalStaffNav.push({ to: '/staff/management/customers', label: 'Customer Master List', icon: Users });
       }
       if (perms.inventory && hasFeature('inventoryManagement')) finalStaffNav.push({ to: '/staff/management/inventory', label: 'Inventory', icon: Boxes });
