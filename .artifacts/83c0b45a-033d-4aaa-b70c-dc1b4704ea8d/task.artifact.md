@@ -1,8 +1,5 @@
-- [ ] Fix Imports & Crashes
-    - [ ] Restore missing React/Lucide imports in `company/Customers.jsx`
-    - [ ] Add missing `DatePicker` import in `staff/Attendance.jsx`
-    - [ ] Add null-safety to `selectedMonth` state in `staff/Attendance.jsx`
-    - [ ] Add final safety fallbacks to `adToBs` in `nepaliDate.js`
-- [ ] Build & Verify
+- [/] Fix Overtime Request Permissions
+    - [x] Update `rbac.js` to allow self-service attendance requests
+- [ ] Verification
 - [ ] Update `memory.md`
 - [ ] Push to GitHub

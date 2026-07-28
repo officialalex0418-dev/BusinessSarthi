@@ -17,6 +17,7 @@ This file tracks the architectural changes, refactors, and feature implementatio
 - **Settings Page**: Fixed profile header overlap where the "Edit Profile" button was colliding with the company logo. Optimized logo and header sizing for smaller screens.
 
 ### 🔐 Auth & Permissions Refactor
+- **Self-Service Requests**: Fixed a security bypass in `rbac.js` to allow staff to submit Overtime Requests without requiring full Attendance Management permissions.
 - **Session Policies**: Standardized sessions to 30 days for mobile devices and 30 minutes of inactivity for web users.
 - **User Identity**: Integrated Designation display into the Staff Dashboard and the global top-bar header.
 - **Designation System**: Removed the confusing "Base System Role" field. Designations are now fully driven by granular **Access Permissions**.

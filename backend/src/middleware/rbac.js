@@ -37,7 +37,7 @@ export const authorize = (...roles) => (req, _res, next) => {
         permissionChecked = true;
         permissionGranted = permissions.liveTracking;
       } else if (path.startsWith('/attendance')) {
-        const isSelf = path.includes('/me') || path.includes('/check-in') || path.includes('/check-out');
+        const isSelf = path.includes('/me') || path.includes('/check-in') || path.includes('/check-out') || (path === '/attendance/requests' && req.method === 'POST');
         if (!isSelf) {
           permissionChecked = true;
           permissionGranted = permissions.attendance;
