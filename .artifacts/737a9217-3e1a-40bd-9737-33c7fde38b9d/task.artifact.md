@@ -1,9 +1,0 @@
-- `[x]` Fix Backend RBAC Middleware (`rbac.js`)
-    - `[x]` Remove corrupted logic in `/leaves` block
-    - `[x]` Add proper `/sales` and `/customers` permission checks
-    - `[x]` Fix undefined variables (`isEntry`, `isOwnList`)
-- `[x]` Update Frontend Navigation Logic (`App.jsx`)
-    - `[x]` Fix visibility for "Sales Entry" and "Customers"
-    - `[x]` Ensure "Management" links appear for staff with delegated permissions
-- `[x]` Update `memory.md`
-- `[x]` Verify changes and create walkthrough
