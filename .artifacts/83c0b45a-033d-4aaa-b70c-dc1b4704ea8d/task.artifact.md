@@ -1,14 +1,7 @@
-- [ ] Fix Stability & Crashes
-    - [ ] Update `nepaliDate.js` to ensure `adToBs` always returns year/month
-    - [ ] Add safety fallbacks to `BSCalendarInternal` in `ui/index.jsx`
-- [ ] Implement Town Field
-    - [ ] Update `Customer.js` model
-    - [ ] Update `validators.js`
-    - [ ] Update `customer.controller.js` (population & town search)
-    - [ ] Update staff `Customers.jsx` UI
-- [ ] Implement Company Customer List
-    - [ ] Fix/Verify `company/Customers.jsx`
-    - [ ] Add Employee & Town filters
-    - [ ] Update `App.jsx` navigation
-- [ ] Final Build & Verification
+- [/] Fix Frontend Crashes
+    - [x] Add missing `Badge` import in `company/Customers.jsx`
+    - [x] Add null-safety to `staff/Attendance.jsx`
+    - [x] Enhance `adToBs` defensiveness in `nepaliDate.js`
+- [ ] Verification
 - [ ] Update `memory.md`
+- [ ] Push to GitHub

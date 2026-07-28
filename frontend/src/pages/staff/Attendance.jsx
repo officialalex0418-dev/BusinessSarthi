@@ -301,7 +301,7 @@ export default function StaffAttendance() {
               <p className="text-xs uppercase font-bold tracking-widest opacity-80">
                 {dateFormat === 'BS' ? toNepaliMonth(selectedMonth) : 'This Month'}
               </p>
-              <h3 className="text-3xl font-bold mt-1">{data.summary.presentDays} <span className="text-sm font-normal opacity-80">Days</span></h3>
+              <h3 className="text-3xl font-bold mt-1">{data?.summary?.presentDays || 0} <span className="text-sm font-normal opacity-80">Days</span></h3>
               <p className="text-xs mt-4 font-medium opacity-90">Present Days Record</p>
             </CardBody>
           </Card>
@@ -311,8 +311,8 @@ export default function StaffAttendance() {
               <p className="text-xs uppercase font-bold tracking-widest text-slate-400">
                 {dateFormat === 'BS' ? `${toNepaliMonth(selectedMonth)} Lates` : 'Monthly Lates'}
               </p>
-              <h3 className={`text-3xl font-bold mt-1 ${data.summary.lateDays > 0 ? 'text-red-600' : 'text-slate-600'}`}>
-                {data.summary.lateDays}
+              <h3 className={`text-3xl font-bold mt-1 ${(data?.summary?.lateDays || 0) > 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                {data?.summary?.lateDays || 0}
               </h3>
             </CardBody>
           </Card>
@@ -336,7 +336,7 @@ export default function StaffAttendance() {
         />
         <Table
           columns={['Date', 'Time In', 'Time Out', 'Working Hours', 'Status']}
-          data={data.items}
+          data={data?.items || []}
           renderRow={(a) => (
             <tr key={a._id}>
               <td className="table-td font-medium">{formatDate(a.date, dateFormat)}</td>

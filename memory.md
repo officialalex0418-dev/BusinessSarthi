@@ -24,7 +24,7 @@ This file tracks the architectural changes, refactors, and feature implementatio
 - **Staff Profile**: Fixed staff profile photo upload functionality and added support for updating Name, Address, and PAN fields. Disabled the email field in profile edits to prevent login conflicts.
 
 ### 📊 Core Module Enhancements
-- **Stability Fixes**: Resolved critical crashes on the Staff Attendance page and Company Customer List by adding robust safety checks to date conversion and data population logic.
+- **Stability Fixes**: Resolved critical crashes on the Staff Attendance page and Company Customer List by fixing missing `Badge` imports and adding robust null-safety for dashboard summary data.
 - **Customer Management**: Added a "Town" field to customers and created a centralized "Customer List" for the company panel. Implemented town and employee filters to track field activity across all staff.
 - **Attendance Stability**: Fixed a critical crash on the staff attendance page by adding safety checks to date formatting and the Nepali (BS) calendar components.
 - **Flexible Payroll**: Made every field in the payroll detail report editable (Absent Deduction, Tax, Allowances, etc.). Updates now persist correctly on save.

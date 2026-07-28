@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Search, User, Phone, MapPin, Hash, Briefcase, Filter, X } from 'lucide-react';
 import { api } from '@/api/client';
-import { Card, Button, Input, Select, Table, Spinner, Pagination } from '@/components/ui';
+import { Card, Button, Input, Select, Table, Spinner, Pagination, Badge } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 
 export default function CompanyCustomers() {

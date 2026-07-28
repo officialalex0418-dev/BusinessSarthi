@@ -43,8 +43,18 @@ export function adToBs(date) {
     day: 'numeric'
   }).formatToParts(d);
 
-  const getPart = (type) => parseInt(parts.find(p => p.type === type).value);
-  const adTarget = Date.UTC(getPart('year'), getPart('month') - 1, getPart('day'));
+  const getPart = (type) => {
+    const part = parts.find(p => p.type === type);
+    return part ? parseInt(part.value) : null;
+  };
+
+  const y = getPart('year');
+  const m = getPart('month');
+  const day = getPart('day');
+
+  if (y === null || m === null || day === null) return null;
+
+  const adTarget = Date.UTC(y, m - 1, day);
 
   // BASE REFERENCE: 2070-01-01 BS = 2013-04-14 AD
   const adRef = Date.UTC(2013, 3, 14);
