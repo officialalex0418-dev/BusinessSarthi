@@ -18,6 +18,7 @@ This file tracks the architectural changes, refactors, and feature implementatio
 
 ### 🔐 Auth & Permissions Refactor
 - **Self-Service Requests**: Fixed a security bypass in `rbac.js` to allow staff to submit Overtime Requests without requiring full Attendance Management permissions.
+- **Designation Permission Fix**: Resolved a critical bug where staff with specific designation permissions (Sales Entry, Customer List, etc.) were unable to access their respective modules. Fixed corrupted RBAC logic in `rbac.js` and updated frontend navigation filtering in `App.jsx` to respect these granular permissions.
 - **Session Policies**: Standardized sessions to 30 days for mobile devices and 30 minutes of inactivity for web users.
 - **User Identity**: Integrated Designation display into the Staff Dashboard and the global top-bar header.
 - **Designation System**: Removed the confusing "Base System Role" field. Designations are now fully driven by granular **Access Permissions**.
@@ -41,5 +42,8 @@ This file tracks the architectural changes, refactors, and feature implementatio
 - **RBAC Refinement**: Fixed a "Role Mismatch" bug where staff with delegated permissions couldn't record vendor payments or update sales invoices.
 - **BS Date Support**: Overtime requests now correctly use the company's preferred calendar (AD or BS) via a new DatePicker integration.
 
-### 🚀 DevOps & CI/CD
-- **Build Fix**: Resolved a syntax error in `Designations.jsx` (redundant `<td>` content) that was causing the frontend build to fail in CI/CD.
+### 🔍 Codebase Analysis & Knowledge Base
+- **Deep Analysis**: Performed a comprehensive analysis of the entire codebase, covering backend architecture, frontend navigation, tracking logic, payroll engine, and RBAC implementation.
+- **Knowledge Base Creation**: Created a structured [analysis_results.artifact.md](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/.artifacts/737a9217-3e1a-40bd-9737-33c7fde38b9d/analysis_results.artifact.md) documenting the system's core logic and recommendations.
+- **Tracking Logic Review**: Analyzed the Capacitor-based background tracking and its alert mechanism for internet/location availability.
+- **Payroll Logic Review**: Verified the salary calculation formulas, multi-calendar support (AD/BS), and audit history implementation.

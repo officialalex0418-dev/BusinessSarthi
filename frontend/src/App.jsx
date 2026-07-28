@@ -202,14 +202,21 @@ export default function App() {
 
   const finalFilteredStaffNav = finalStaffNav.filter(item => {
     if (item.to === '/staff/complaints' && !hasFeature('complaintChat')) return false;
-    if (item.to === '/staff/customers' && !hasFeature('salesTracking')) return false;
+
+    const dept = (user?.designation?.department?.name || '').toLowerCase();
+    const isSalesDept = dept.includes('sales') || dept.includes('marketing');
+    const perms = user?.designation?.permissions || {};
+
+    if (item.to === '/staff/customers') {
+      if (!hasFeature('salesTracking')) return false;
+      return isSalesDept || perms.salesEntry || perms.customerMasterList;
+    }
+
     if (item.to === '/staff/sales') {
       if (!hasFeature('salesTracking')) return false;
-      const dept = (user?.designation?.department?.name || '').toLowerCase();
-      const isSalesMarketing = dept.includes('sales') || dept.includes('marketing');
-      // Only sales/marketing staff or managers with salesTracker permission can see sales entry
-      if (!isSalesMarketing && !user?.designation?.permissions?.salesTracker) return false;
+      return isSalesDept || perms.salesEntry || perms.salesTracker;
     }
+
     return true;
   });
 

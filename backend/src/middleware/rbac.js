@@ -48,6 +48,9 @@ export const authorize = (...roles) => (req, _res, next) => {
           permissionChecked = true;
           permissionGranted = permissions.leaves;
         }
+      } else if (path.startsWith('/sales')) {
+        const isEntry = req.method === 'POST' && path === '/sales';
+        const isOwnList = req.method === 'GET' && (path === '/sales' || path === '/sales/me/summary');
         const dept = (designation?.department?.name || '').toLowerCase();
         const isSalesDept = dept.includes('sales') || dept.includes('marketing');
 
@@ -64,7 +67,7 @@ export const authorize = (...roles) => (req, _res, next) => {
           permissionGranted = permissions.salesTracker;
         }
       } else if (path.startsWith('/customers')) {
-        const isEntry = req.method === 'POST';
+        const isEntry = req.method === 'POST' && path === '/customers';
         const dept = (designation?.department?.name || '').toLowerCase();
         const isSalesDept = dept.includes('sales') || dept.includes('marketing');
 
