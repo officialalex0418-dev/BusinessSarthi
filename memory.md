@@ -18,7 +18,7 @@ This file tracks the architectural changes, refactors, and feature implementatio
 
 ### 🔐 Auth & Permissions Refactor
 - **Self-Service Requests**: Fixed a security bypass in `rbac.js` to allow staff to submit Overtime Requests without requiring full Attendance Management permissions.
-- **Designation Permission Fix**: Resolved a critical bug where staff with specific designation permissions (Sales Entry, Customer List, etc.) were unable to access their respective modules. Fixed corrupted RBAC logic in `rbac.js` and updated frontend navigation filtering in `App.jsx` to respect these granular permissions.
+- **Designation Permission Fix**: Resolved a critical bug where staff with specific designation permissions (Sales Entry, Customer List, etc.) were unable to access their respective modules. Fixed corrupted RBAC logic in `rbac.js` and updated frontend navigation filtering in `App.jsx` to respect these granular permissions. Changes have been committed and pushed to GitHub.
 - **Session Policies**: Standardized sessions to 30 days for mobile devices and 30 minutes of inactivity for web users.
 - **User Identity**: Integrated Designation display into the Staff Dashboard and the global top-bar header.
 - **Designation System**: Removed the confusing "Base System Role" field. Designations are now fully driven by granular **Access Permissions**.
