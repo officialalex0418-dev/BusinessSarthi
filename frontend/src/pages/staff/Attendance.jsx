@@ -5,7 +5,7 @@ import { NativeBiometric } from '@capgo/capacitor-native-biometric';
 import { Device } from '@capacitor/device';
 import { useAuth } from '@/context/AuthContext';
 import { useAppPermissions } from '@/hooks/useAppPermissions';
-import { Card, CardHeader, CardBody, Button, Table, Badge, Spinner, Modal, Input, Textarea, MonthPicker } from '@/components/ui';
+import { Card, CardHeader, CardBody, Button, Table, Badge, Spinner, Modal, Input, Textarea, MonthPicker, DatePicker } from '@/components/ui';
 import { formatTime, formatDate, toNepaliMonth, toNepaliDate, todayStr } from '@/lib/utils';
 import { adToBs, getBsMonthInfo, bsToAd } from '@/lib/nepaliDate';
 
@@ -41,7 +41,9 @@ export default function StaffAttendance() {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     if (dateFormat === 'BS') {
       const bs = adToBs(new Date());
-      return `${bs.year}-${String(bs.month).padStart(2, '0')}`;
+      if (bs && bs.year) {
+        return `${bs.year}-${String(bs.month).padStart(2, '0')}`;
+      }
     }
     return new Date().toISOString().slice(0, 7);
   });

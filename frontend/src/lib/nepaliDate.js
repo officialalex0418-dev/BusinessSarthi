@@ -30,9 +30,10 @@ export const nepaliMonths = ['Baisakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra',
 export const nepaliYears = Array.from({ length: 21 }, (_, i) => 2070 + i);
 
 export function adToBs(date) {
-  if (!date) return null;
+  const fallback = { year: 2081, month: 1, day: 1, monthName: 'Baisakh', formatted: '2081-01-01' };
+  if (!date) return fallback;
   const d = new Date(date);
-  if (isNaN(d.getTime())) return null;
+  if (isNaN(d.getTime())) return fallback;
 
   // Use Intl.DateTimeFormat to reliably get the date in Nepal timezone
   // This ensures that regardless of where the browser/server is, we convert the Nepal day.
@@ -52,7 +53,9 @@ export function adToBs(date) {
   const m = getPart('month');
   const day = getPart('day');
 
-  if (y === null || m === null || day === null) return null;
+  if (y === null || m === null || day === null) {
+      return { year: 2070, month: 1, day: 1, monthName: 'Baisakh', formatted: '2070-01-01' };
+  }
 
   const adTarget = Date.UTC(y, m - 1, day);
 

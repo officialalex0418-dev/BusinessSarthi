@@ -1,7 +1,8 @@
-- [/] Fix Frontend Crashes
-    - [x] Add missing `Badge` import in `company/Customers.jsx`
-    - [x] Add null-safety to `staff/Attendance.jsx`
-    - [x] Enhance `adToBs` defensiveness in `nepaliDate.js`
-- [ ] Verification
+- [ ] Fix Imports & Crashes
+    - [ ] Restore missing React/Lucide imports in `company/Customers.jsx`
+    - [ ] Add missing `DatePicker` import in `staff/Attendance.jsx`
+    - [ ] Add null-safety to `selectedMonth` state in `staff/Attendance.jsx`
+    - [ ] Add final safety fallbacks to `adToBs` in `nepaliDate.js`
+- [ ] Build & Verify
 - [ ] Update `memory.md`
 - [ ] Push to GitHub

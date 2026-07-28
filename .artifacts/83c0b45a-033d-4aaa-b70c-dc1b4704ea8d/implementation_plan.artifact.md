@@ -1,29 +1,25 @@
-# Implementation Plan - Fix Crashes & Finalize Customer Module
+# Implementation Plan - Resolve Persistent Crashes
 
-This plan focuses on resolving the "white screen" crashes on the Customer List and Attendance pages by fixing missing imports and adding robust null-safety.
+I have identified the root causes of the crashes on the Customer List and Attendance pages. Both were caused by **missing component imports** and a lack of null-safety in the initial state logic.
 
 ## Proposed Changes
 
-### 🛠️ Frontend Crash Fixes
+### 🛠️ Frontend Import & Stability Fixes
 
 #### [MODIFY] [Company/Customers.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/company/Customers.jsx)
-- **CRITICAL**: Add `Badge` to the list of components imported from `@/components/ui`. This is the primary cause of the crash on this page.
-- Add additional safety checks for `data.items` and `c.createdBy`.
+- **RESTORE**: Re-add the accidentally removed React (`useEffect`, `useState`, `useCallback`) and Lucide-React (`Search`, `User`, etc.) imports.
+- **VERIFY**: Ensure `Badge` is included in the `@/components/ui` import list.
 
 #### [MODIFY] [Staff/Attendance.jsx](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/pages/staff/Attendance.jsx)
-- Add null-safety to `data.summary` usage (e.g., `data.summary?.presentDays || 0`).
-- Ensure `Table` data prop always receives an array using `data?.items || []`.
-- Wrap the initial state logic for `selectedMonth` in a try-catch block for extra resilience.
+- **ADD MISSING IMPORT**: Add `DatePicker` to the `@/components/ui` import list.
+- **NULL SAFETY**: Add a null check for the `adToBs` result in the `useState` initializer for `selectedMonth` to prevent a crash if the calendar data is not yet ready.
 
-#### [MODIFY] [nepaliDate.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/lib/nepaliDate.js)
-- Enhance `adToBs` to be even more defensive against environments where `Intl.DateTimeFormat` might behave unexpectedly.
-
-### 🏘️ Customer Module Refinement
-- Verify that the `town` field is correctly displayed and searchable in both Staff and Company views.
+#### [MODIFY] [lib/nepaliDate.js](file:///C:/Users/laxmi/Downloads/workspace-019ebb3e-63d6-7b41-ac61-ef22f1a177b8/business-sarthi/frontend/src/lib/nepaliDate.js)
+- **DEFENSIVE CODING**: Update `adToBs` to return a safe default object instead of `null` if timezone extraction fails. This will prevent "cannot read property of null" errors across the entire app.
 
 ## Verification Plan
 
 ### Manual Verification
-- **Company Panel**: Navigate to `/company/customers`. Verify the "white screen" is gone and the table loads with Town and Added By info.
-- **Staff Panel**: Navigate to `/staff/attendance`. Verify the page renders correctly and the monthly summary counts are visible.
-- **Filters**: Test the Town and Employee filters in the Company Customer List again.
+- **Attendance Page**: Navigate to the staff panel and verify the page loads instantly. Open the "Overtime Request" and ensure the DatePicker works.
+- **Customer List**: Navigate to the company panel and verify the "Customer List" renders with Town and Employee data.
+- **Filters**: Test the Town and Employee filters in the Customer List.
