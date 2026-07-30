@@ -15,6 +15,7 @@ const settingSchema = new mongoose.Schema(
     branding: {
       appName: { type: String, default: 'Business Sarthi' },
       logoUrl: String,
+      tagline: { type: String, default: 'Driving Business Forward' },
       primaryColor: { type: String, default: '#2563eb' },
     },
     security: {

@@ -167,7 +167,7 @@ export default function DistributorDetails() {
                 </div>
                 <div style="line-height: 1.1">
                   <div style="font-size: 12px; text-transform: uppercase;">Business Sarthi</div>
-                  <div style="font-size: 8px; font-weight: normal; font-style: italic; opacity: 0.9;">Driving Your Business Forward</div>
+                  <div style="font-size: 8px; font-weight: normal; font-style: italic; opacity: 0.9;">Driving Business Forward</div>
                 </div>
               </div>
               <div class="footer-part-2">

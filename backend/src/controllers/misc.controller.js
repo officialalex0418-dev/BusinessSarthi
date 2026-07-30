@@ -55,7 +55,7 @@ export const getPublicSettings = asyncHandler(async (req, res) => {
       branding: settings?.branding || {
         appName: 'Business Sarthi',
         logoUrl: '/logo.png',
-        tagline: 'Driving Your Business Forward'
+        tagline: 'Driving Business Forward'
       }
     }
   });

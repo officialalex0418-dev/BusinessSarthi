@@ -8,7 +8,7 @@ export function ThemeProvider({ children }) {
   const [branding, setBranding] = useState({
     appName: 'Business Sarthi',
     logoUrl: '/logo.png',
-    tagline: 'Driving Your Business Forward'
+    tagline: 'Driving Business Forward'
   });
 
   useEffect(() => {

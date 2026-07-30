@@ -48,7 +48,7 @@ export default function Login() {
             {branding.logoUrl ? <img src={branding.logoUrl} alt="Logo" className="h-full w-full object-contain" /> : <MapPin className="h-7 w-7 text-primary-600" />}
           </div>
           <h1 className="text-2xl font-bold">{branding.appName}</h1>
-          <p className="text-sm text-slate-500">{branding.tagline || 'Driving Your Business Forward'}</p>
+          <p className="text-sm text-slate-500">{branding.tagline || 'Driving Business Forward'}</p>
         </div>
 
         {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-300">{error}</div>}

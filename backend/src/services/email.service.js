@@ -6,7 +6,7 @@ let transporter = null;
 let globalBranding = {
   appName: 'Business Sarthi',
   logoUrl: '',
-  tagline: 'Driving Your Business Forward'
+  tagline: 'Driving Business Forward'
 };
 
 async function loadBranding() {
