@@ -125,31 +125,8 @@ export default function VendorDetails() {
     printWindow.document.close();
   };
 
-  const exportLedgerCSV = () => {
-    const csvRows = [];
-    csvRows.push(`"VENDOR ACCOUNT LEDGER - ${vendor.name}"`);
-    csvRows.push(`"Generated On:",${new Date().toLocaleString()}`);
-    csvRows.push(`"Outstanding Balance:",${formatMoney(vendor.outstandingBalance)}`);
-    csvRows.push("");
-    csvRows.push("Date,Type,Reference,Debit (+),Credit (-)");
-
-    for (const item of history) {
-      const row = [
-        formatDateTime(item.date, dateFormat),
-        item.type,
-        `"${item.ref || ''}"`,
-        item.type === 'PURCHASE' ? item.amount : 0,
-        item.type === 'PAYMENT' ? item.amount : 0
-      ];
-      csvRows.push(row.join(','));
-    }
-
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Ledger_${vendor.name.replace(/\s+/g, '_')}.csv`;
-    a.click();
+  const exportLedgerExcel = () => {
+    downloadFile(`/reports/vendors/${id}/ledger/excel`, `Ledger_${vendor.name}.xlsx`);
   };
 
   const submitPayment = async (e) => {
@@ -323,8 +300,8 @@ export default function VendorDetails() {
               <Button variant="outline" size="sm" onClick={handlePrintLedger}>
                 <Printer className="h-4 w-4 mr-2" /> Print
               </Button>
-              <Button variant="outline" size="sm" onClick={exportLedgerCSV}>
-                <Download className="h-4 w-4 mr-2" /> CSV
+              <Button variant="outline" size="sm" onClick={exportLedgerExcel}>
+                <FileDown className="h-4 w-4 mr-2" /> Excel
               </Button>
            </div>
         </div>

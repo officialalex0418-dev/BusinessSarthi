@@ -249,6 +249,11 @@ r.get('/reports/tracking/excel', protect, authorize(...MANAGERS), scopeCompany, 
 r.get('/reports/attendance/excel', protect, authorize(...MANAGERS), scopeCompany, report.attendanceExcel);
 r.get('/reports/sales/excel', protect, authorize(...MANAGERS), scopeCompany, report.salesExcel);
 r.get('/reports/payroll/excel', protect, authorize(...MANAGERS), scopeCompany, requireFeature('payrollManagement'), report.payrollExcel);
+
+// Ledger Exports
+r.get('/reports/distributors/:id/ledger/excel', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.exportLedgerExcel);
+r.get('/reports/vendors/:id/ledger/excel', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('vendorManagement'), vendor.exportLedgerExcel);
+
 r.get('/reports/payroll/:payrollId/pdf', protect, authorize(...MANAGERS), scopeCompany, requireFeature('payrollManagement'), report.payrollDetailPdf);
 r.get('/reports/employee/:staffId/pdf', protect, authorize(...MANAGERS), report.employeeSummaryPdf);
 r.get('/reports/company/:companyId/pdf', protect, authorize(...PLATFORM), report.companySummaryPdf);

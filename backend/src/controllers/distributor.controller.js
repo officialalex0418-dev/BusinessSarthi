@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
-import { Distributor, Invoice, Payment, SalesInvoice, Cheque } from '../models/index.js';
+import { Distributor, Invoice, Payment, SalesInvoice, Cheque, Company } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
+import { sendAccountLedgerExcel } from '../services/report.service.js';
 
 /** GET /distributors */
 export const listDistributors = asyncHandler(async (req, res) => {
@@ -145,6 +146,42 @@ export const getLedger = asyncHandler(async (req, res) => {
   });
 
   res.json({ success: true, data: { entries, finalBalance: balance } });
+});
+
+/** GET /reports/distributors/:id/ledger/excel */
+export const exportLedgerExcel = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const [distributor, company, invoices, payments] = await Promise.all([
+    Distributor.findOne({ _id: id, company: req.companyId }),
+    Company.findById(req.companyId),
+    SalesInvoice.find({ distributor: id, company: req.companyId }).sort('saleDate'),
+    Payment.find({ distributor: id, company: req.companyId }).sort('paymentDate'),
+  ]);
+
+  if (!distributor) throw ApiError.notFound('Distributor not found');
+
+  const rawLedger = [
+    ...invoices.map(i => ({ type: 'INVOICE', date: i.saleDate, amount: i.netTotal, ref: i.invoiceNumber })),
+    ...payments.map(p => ({ type: 'PAYMENT', date: p.paymentDate, amount: p.amount, ref: p.method }))
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  let balance = 0;
+  const entries = rawLedger.map(item => {
+    if (item.type === 'INVOICE') balance += item.amount;
+    else balance -= item.amount;
+    return { ...item, runningBalance: balance };
+  });
+
+  audit({ req, action: 'EXPORT_DISTRIBUTOR_LEDGER_EXCEL', entity: 'Distributor', entityId: id });
+
+  await sendAccountLedgerExcel(res, {
+    filename: `Ledger_${distributor.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}`,
+    company,
+    entity: distributor,
+    entries,
+    finalBalance: balance,
+    type: 'DISTRIBUTOR'
+  });
 });
 
 /** POST /invoices */

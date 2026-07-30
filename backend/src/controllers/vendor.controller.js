@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
-import { Vendor, Purchase, VendorPayment } from '../models/index.js';
+import { Vendor, Purchase, VendorPayment, Company } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
+import { sendAccountLedgerExcel } from '../services/report.service.js';
 
 /** GET /vendors */
 export const listVendors = asyncHandler(async (req, res) => {
@@ -214,6 +215,42 @@ export const updateVendorPayment = asyncHandler(async (req, res) => {
 
   audit({ req, action: 'UPDATE_VENDOR_PAYMENT', entity: 'VendorPayment', entityId: id, meta: { oldAmount, newAmount } });
   res.json({ success: true, data: { payment } });
+});
+
+/** GET /reports/vendors/:id/ledger/excel */
+export const exportLedgerExcel = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const [vendor, company, purchases, payments] = await Promise.all([
+    Vendor.findOne({ _id: id, company: req.companyId }),
+    Company.findById(req.companyId),
+    Purchase.find({ vendor: id, company: req.companyId }).sort('createdAt'),
+    VendorPayment.find({ vendor: id, company: req.companyId }).sort('paymentDate'),
+  ]);
+
+  if (!vendor) throw ApiError.notFound('Vendor not found');
+
+  const rawLedger = [
+    ...purchases.map(p => ({ type: 'PURCHASE', date: p.createdAt, amount: p.netTotal, ref: 'PURCHASE' })),
+    ...payments.map(p => ({ type: 'PAYMENT', date: p.paymentDate, amount: p.amount, ref: p.method }))
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  let balance = 0;
+  const entries = rawLedger.map(item => {
+    if (item.type === 'PURCHASE') balance += item.amount;
+    else balance -= item.amount;
+    return { ...item, runningBalance: balance };
+  });
+
+  audit({ req, action: 'EXPORT_VENDOR_LEDGER_EXCEL', entity: 'Vendor', entityId: id });
+
+  await sendAccountLedgerExcel(res, {
+    filename: `Vendor_Ledger_${vendor.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}`,
+    company,
+    entity: vendor,
+    entries,
+    finalBalance: balance,
+    type: 'VENDOR'
+  });
 });
 
 /** GET /vendors/analytics */
