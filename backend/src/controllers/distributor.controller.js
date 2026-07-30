@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import { Distributor, Invoice, Payment, SalesInvoice, Cheque } from '../models/index.js';
+import ExcelJS from 'exceljs';
+import { Distributor, Invoice, Payment, SalesInvoice, Cheque, Company, Inventory } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
@@ -265,6 +266,86 @@ export const recordPayment = asyncHandler(async (req, res) => {
 
   audit({ req, action: 'RECORD_PAYMENT', entity: 'Payment', entityId: payment._id, company: req.companyId });
   res.status(201).json({ success: true, data: { payment } });
+});
+
+/** POST /distributors/:id/bulk-transactions */
+export const bulkUploadTransactions = asyncHandler(async (req, res) => {
+  if (!req.file) throw ApiError.badRequest('No file uploaded');
+
+  const { id } = req.params;
+  const distributor = await Distributor.findOne({ _id: id, company: req.companyId });
+  if (!distributor) throw ApiError.notFound('Distributor not found');
+
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(req.file.buffer);
+  const worksheet = workbook.getWorksheet(1);
+
+  const transactions = [];
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return; // skip header
+
+    const date = row.getCell(1).value;
+    const type = String(row.getCell(2).value || '').toUpperCase();
+    const ref = String(row.getCell(3).value || '');
+    const amount = Number(row.getCell(4).value) || 0;
+
+    if (amount > 0) {
+      transactions.push({ date: new Date(date), type, ref, amount });
+    }
+  });
+
+  let addedInvoices = 0;
+  let addedPayments = 0;
+  let balanceChange = 0;
+
+  for (const t of transactions) {
+    if (t.type === 'INVOICE') {
+      await SalesInvoice.create({
+        company: req.companyId,
+        staff: req.user._id,
+        invoiceNumber: t.ref || `LEGACY-${Date.now()}-${addedInvoices}`,
+        distributor: id,
+        items: [{
+          productName: 'Legacy Transaction',
+          price: t.amount,
+          quantity: 1,
+          amount: t.amount
+        }],
+        totalAmount: t.amount,
+        taxableAmount: t.amount,
+        netTotal: t.amount,
+        paymentMethod: 'Credit',
+        saleDate: t.date,
+        remarks: 'old transaction'
+      });
+      balanceChange += t.amount;
+      addedInvoices++;
+    } else if (t.type === 'PAYMENT') {
+      await Payment.create({
+        company: req.companyId,
+        distributor: id,
+        amount: t.amount,
+        method: t.ref.includes('CHEQUE') ? 'CHEQUE' : (t.ref.includes('BANK') ? 'BANK_TRANSFER' : 'CASH'),
+        paymentDate: t.date,
+        remarks: 'old transaction',
+        createdBy: req.user._id
+      });
+      balanceChange -= t.amount;
+      addedPayments++;
+    }
+  }
+
+  // Update distributor balance
+  distributor.outstandingBalance += balanceChange;
+  await distributor.save();
+
+  audit({ req, action: 'BULK_UPLOAD_DISTRIBUTOR_TRANSACTIONS', entity: 'Distributor', entityId: id, meta: { addedInvoices, addedPayments } });
+
+  res.json({
+    success: true,
+    message: `Successfully imported ${addedInvoices} invoices and ${addedPayments} payments.`,
+    data: { addedInvoices, addedPayments }
+  });
 });
 
 /** DELETE /payments/:id */

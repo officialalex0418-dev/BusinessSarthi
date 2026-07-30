@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, ShoppingCart, CreditCard, History, Phone, Mail,
-  MapPin, Hash, Plus, Printer, Download, Trash2, Edit
+  MapPin, Hash, Plus, Printer, Download, Trash2, Edit, FileUp
 } from 'lucide-react';
 import { api } from '@/api/client';
 import {
@@ -23,6 +23,7 @@ export default function VendorDetails() {
   const [payForm, setPayForm] = useState(emptyPayment);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [allProducts, setAllProducts] = useState([]);
   const [purchaseRows, setPurchaseRows] = useState([]);
@@ -184,6 +185,25 @@ export default function VendorDetails() {
     }
   };
 
+  const handleBulkUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploading(true);
+    try {
+      const res = await api.post(`/vendors/${id}/bulk-transactions`, formData);
+      alert(res.data.message);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const startEdit = (item) => {
     setEditingItem(item);
     if (item.type === 'PAYMENT') {
@@ -320,6 +340,16 @@ export default function VendorDetails() {
               <button className="px-4 py-4 text-sm font-bold border-b-2 border-primary-600 text-primary-600">Full Ledger</button>
            </div>
            <div className="flex gap-2 py-2">
+              <input
+                type="file"
+                id="bulk-upload-vendor"
+                className="hidden"
+                accept=".xlsx, .xls"
+                onChange={handleBulkUpload}
+              />
+              <Button variant="outline" size="sm" onClick={() => document.getElementById('bulk-upload-vendor').click()} loading={uploading}>
+                <FileUp className="h-4 w-4 mr-2" /> Upload Record
+              </Button>
               <Button variant="outline" size="sm" onClick={handlePrintLedger}>
                 <Printer className="h-4 w-4 mr-2" /> Print
               </Button>

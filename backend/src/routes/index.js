@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { protect } from '../middleware/auth.js';
 import { authorize, scopeCompany, requireFeature } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
@@ -35,6 +36,8 @@ const PLATFORM = ['SUPER_ADMIN', 'ADMIN_EMPLOYEE'];
 const ALL_STAFF = ['COMPANY_OWNER', 'COMPANY_MANAGER', 'STAFF'];
 const MANAGERS = ['SUPER_ADMIN', 'ADMIN_EMPLOYEE', 'COMPANY_OWNER', 'COMPANY_MANAGER'];
 const OWNERS = ['SUPER_ADMIN', 'ADMIN_EMPLOYEE', 'COMPANY_OWNER'];
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // ============ AUTH ============
 r.post('/auth/login', authLimiter, validate({ body: schemas.login }), auth.login);
@@ -149,6 +152,7 @@ r.delete('/distributors/:id', protect, authorize(...OWNERS), scopeCompany, requi
 r.delete('/distributors/:id/hard', protect, authorize(...OWNERS), scopeCompany, requireFeature('distributorManagement'), distributor.hardDeleteDistributor);
 r.get('/distributors/analytics', protect, authorize(...MANAGERS), scopeCompany, requireFeature('distributorManagement'), distributor.distributorAnalytics);
 r.get('/distributors/:id', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.getDistributorDetails);
+r.post('/distributors/:id/bulk-transactions', protect, authorize(...MANAGERS), scopeCompany, requireFeature('distributorManagement'), upload.single('file'), distributor.bulkUploadTransactions);
 r.get('/distributors/:id/ledger', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.getLedger);
 
 // ============ CHEQUES ============
@@ -173,6 +177,7 @@ r.get('/vendors', protect, authorize(...MANAGERS), scopeCompany, requireFeature(
 r.post('/vendors', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.createVendor);
 r.get('/vendors/analytics', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.vendorAnalytics);
 r.get('/vendors/:id', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.getVendorDetails);
+r.post('/vendors/:id/bulk-transactions', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), upload.single('file'), vendor.bulkUploadLedger);
 r.patch('/vendors/:id', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.updateVendor);
 r.delete('/vendors/:id', protect, authorize(...OWNERS), scopeCompany, requireFeature('vendorManagement'), vendor.deleteVendor);
 

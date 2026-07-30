@@ -25,7 +25,8 @@ const purchaseSchema = new mongoose.Schema({
   vatPct: { type: Number, default: 0 },
   vatAmount: { type: Number, default: 0 },
   netTotal: { type: Number, required: true, min: 0 },
-  purchaseDate: { type: Date, default: Date.now }
+  purchaseDate: { type: Date, default: Date.now },
+  remarks: { type: String, default: '' }
 }, { timestamps: true });
 
 export default mongoose.model('Purchase', purchaseSchema);

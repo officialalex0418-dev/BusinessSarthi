@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Receipt, History, AlertCircle, Pencil, Save, X, Phone, MapPin, Hash, Trash2, Plus, User, Printer, Download, Eye, FileText, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, CreditCard, Receipt, History, AlertCircle, Pencil, Save, X, Phone, MapPin, Hash, Trash2, Plus, User, Printer, Download, Eye, FileText, ShoppingCart, FileUp } from 'lucide-react';
 import { api } from '@/api/client';
 import { Card, Button, Input, Modal, Table, Spinner, Badge, Select, Textarea, DatePicker, Checkbox } from '@/components/ui';
 import { formatMoney, formatDate, toLocalDateString } from '@/lib/utils';
@@ -29,6 +29,7 @@ export default function DistributorDetails() {
     dueDate: ''
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const dateFormat = user?.company?.settings?.dateFormat || 'BS';
   const printRef = useRef();
@@ -345,6 +346,25 @@ export default function DistributorDetails() {
     }
   };
 
+  const handleBulkUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploading(true);
+    try {
+      const res = await api.post(`/distributors/${id}/bulk-transactions`, formData);
+      alert(res.data.message);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+      e.target.value = ''; // reset
+    }
+  };
+
   const addEditRow = () => {
     const next = { ...editingInvoice };
     next.items.push({ productName: '', price: 0, mrp: 0, quantity: 1, amount: 0 });
@@ -477,6 +497,25 @@ export default function DistributorDetails() {
               <Button className="w-full" variant="outline" onClick={() => { setEditingCheque(null); setChequeForm({ chequeNumber: '', bankName: '', issueDate: '', cashDate: '', amount: 0, remarks: '', status: 'ISSUED' }); setModal('cheque'); }}>
                 <Plus className="h-4 w-4 mr-2" /> Add Cheque
               </Button>
+
+              <div className="pt-2">
+                <input
+                  type="file"
+                  id="bulk-upload-dist"
+                  className="hidden"
+                  accept=".xlsx, .xls"
+                  onChange={handleBulkUpload}
+                />
+                <Button
+                  className="w-full border-dashed"
+                  variant="outline"
+                  loading={uploading}
+                  onClick={() => document.getElementById('bulk-upload-dist').click()}
+                >
+                  <FileUp className="h-4 w-4 mr-2" /> Upload Record
+                </Button>
+                <p className="text-[10px] text-slate-400 mt-1 text-center italic">Upload Ledger Excel (Old Transactions)</p>
+              </div>
             </div>
           </div>
         </Card>

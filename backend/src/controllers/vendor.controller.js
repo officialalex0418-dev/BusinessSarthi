@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import { Vendor, Purchase, VendorPayment } from '../models/index.js';
+import ExcelJS from 'exceljs';
+import { Vendor, Purchase, VendorPayment, Company } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
@@ -150,6 +151,87 @@ export const recordVendorPayment = asyncHandler(async (req, res) => {
 
   audit({ req, action: 'RECORD_VENDOR_PAYMENT', entity: 'VendorPayment', entityId: payment._id });
   res.status(201).json({ success: true, data: { payment } });
+});
+
+/** POST /vendors/:id/bulk-transactions */
+export const bulkUploadLedger = asyncHandler(async (req, res) => {
+  if (!req.file) throw ApiError.badRequest('No file uploaded');
+
+  const { id } = req.params;
+  const vendor = await Vendor.findOne({ _id: id, company: req.companyId });
+  if (!vendor) throw ApiError.notFound('Vendor not found');
+
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(req.file.buffer);
+  const worksheet = workbook.getWorksheet(1);
+
+  const transactions = [];
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return; // skip header
+
+    const date = row.getCell(1).value;
+    const type = String(row.getCell(2).value || '').toUpperCase();
+    const ref = String(row.getCell(3).value || '');
+    const amount = Number(row.getCell(4).value) || 0;
+
+    if (amount > 0) {
+      transactions.push({ date: new Date(date), type, ref, amount });
+    }
+  });
+
+  let addedPurchases = 0;
+  let addedPayments = 0;
+  let balanceChange = 0;
+
+  for (const t of transactions) {
+    if (t.type === 'PURCHASE') {
+      await Purchase.create({
+        company: req.companyId,
+        staff: req.user._id,
+        vendor: id,
+        billNumber: t.ref || `LEGACY-${Date.now()}-${addedPurchases}`,
+        items: [{
+          productName: 'Legacy Transaction',
+          batch: 'LEGACY',
+          price: t.amount,
+          mrp: t.amount,
+          quantity: 1,
+          amount: t.amount
+        }],
+        totalAmount: t.amount,
+        taxableAmount: t.amount,
+        netTotal: t.amount,
+        purchaseDate: t.date,
+        remarks: 'old transaction'
+      });
+      balanceChange += t.amount;
+      addedPurchases++;
+    } else if (t.type === 'PAYMENT') {
+      await VendorPayment.create({
+        company: req.companyId,
+        vendor: id,
+        amount: t.amount,
+        method: t.ref.includes('CHEQUE') ? 'CHEQUE' : (t.ref.includes('BANK') ? 'BANK_TRANSFER' : 'CASH'),
+        paymentDate: t.date,
+        remarks: 'old transaction',
+        createdBy: req.user._id
+      });
+      balanceChange -= t.amount;
+      addedPayments++;
+    }
+  }
+
+  // Update vendor balance
+  vendor.outstandingBalance += balanceChange;
+  await vendor.save();
+
+  audit({ req, action: 'BULK_UPLOAD_VENDOR_TRANSACTIONS', entity: 'Vendor', entityId: id, meta: { addedPurchases, addedPayments } });
+
+  res.json({
+    success: true,
+    message: `Successfully imported ${addedPurchases} purchases and ${addedPayments} payments.`,
+    data: { addedPurchases, addedPayments }
+  });
 });
 
 /** DELETE /vendor-payments/:id */

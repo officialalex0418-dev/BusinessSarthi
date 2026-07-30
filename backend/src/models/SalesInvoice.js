@@ -26,7 +26,8 @@ const salesInvoiceSchema = new mongoose.Schema({
   netTotal: { type: Number, required: true, min: 0 },
   paymentMethod: { type: String, enum: ['Cash', 'Online/QR', 'Cheque', 'Credit'], required: true },
   saleDate: { type: Date, default: Date.now },
-  dueDate: { type: Date }
+  dueDate: { type: Date },
+  remarks: { type: String, default: '' }
 }, { timestamps: true });
 
 salesInvoiceSchema.index({ company: 1, invoiceNumber: 1 }, { unique: true });

@@ -6,7 +6,7 @@ import { Card, Button, Input, Modal, Table, Spinner, Pagination, EmptyState, Bad
 import { formatMoney, formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
-const emptyDistributor = { name: '', phone: '', email: '', address: '', panVat: '', creditLimit: 0 };
+const emptyDistributor = { name: '', phone: '', email: '', address: '', panVat: '', registrationNumber: '', creditLimit: 0 };
 const emptyPayment = { distributorId: '', amount: 0, method: 'CASH', remarks: '', chequeDetails: { number: '', bankName: '', issueDate: '', depositDate: '', maturityDate: '' } };
 const emptyCheque = { distributor: '', chequeNumber: '', bankName: '', issueDate: '', cashDate: '', amount: 0, remarks: '', status: 'ISSUED' };
 
@@ -411,6 +411,10 @@ export default function Distributors() {
           <div className="grid grid-cols-2 gap-4">
             <Input label="Phone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
             <Input label="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="PAN/VAT" value={form.panVat} onChange={e => setForm({...form, panVat: e.target.value})} />
+            <Input label="Registration NO" value={form.registrationNumber} onChange={e => setForm({...form, registrationNumber: e.target.value})} />
           </div>
           <Input label="Credit Limit" type="number" value={form.creditLimit} onChange={e => setForm({...form, creditLimit: e.target.value})} />
           <Textarea label="Address" value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
