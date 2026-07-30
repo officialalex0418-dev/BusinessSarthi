@@ -12,318 +12,79 @@ function imageBuffer(source) {
 }
 
 /**
- * Stream a professionally formatted Excel workbook to the response.
- * Follows the "Account Ledger" screenshot style.
+ * Stream an Excel workbook to the response.
  */
-export async function sendExcel(res, { filename, sheetName, company, summaryItems = [], columns, rows }) {
+export async function sendExcel(res, { filename, sheetName, columns, rows }) {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Business Sarthi';
   const ws = wb.addWorksheet(sheetName || 'Report', {
+    views: [{ state: 'frozen', ySplit: 2 }],
     pageSetup: { paperSize: 9, orientation: 'landscape' }
   });
 
-  // Styles
-  const bold = { bold: true };
-  const center = { vertical: 'middle', horizontal: 'center' };
-  const left = { vertical: 'middle', horizontal: 'left' };
-  const right = { vertical: 'middle', horizontal: 'right' };
-  const blueFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAF7' } };
-  const greyFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
-  const borderThin = {
-    top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-    left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-    bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-    right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
-  };
+  // 1. Add Report Title Row
+  const title = (sheetName || 'Business Report').toUpperCase();
+  ws.addRow([title]);
+  ws.mergeCells(1, 1, 1, columns.length);
+  const titleRow = ws.getRow(1);
+  titleRow.height = 35;
+  titleRow.getCell(1).font = { size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+  titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }; // Slate 900
+  titleRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
 
-  const colCount = columns.length;
-  const lastCol = String.fromCharCode(64 + Math.min(colCount, 26));
+  // 2. Setup Columns & Headers
+  ws.columns = columns.map(c => ({
+    header: c.header.toUpperCase(),
+    key: c.key,
+    width: c.width || 15
+  }));
 
-  // 1. Main Title
-  ws.mergeCells(`A1:${lastCol}1`);
-  const titleCell = ws.getCell('A1');
-  titleCell.value = (sheetName || 'Business Report').toUpperCase();
-  titleCell.font = { size: 18, bold: true };
-  titleCell.alignment = center;
+  const headerRow = ws.getRow(2);
+  headerRow.height = 25;
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } }; // Blue 500
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-  // 2. Company Info
-  if (company) {
-    ws.mergeCells(`A2:${lastCol}2`);
-    const compNameCell = ws.getCell('A2');
-    compNameCell.value = `Name:${company.name}`;
-    compNameCell.font = { size: 16, bold: true };
-    compNameCell.alignment = center;
-    compNameCell.fill = blueFill;
-
-    ws.mergeCells(`A3:C3`);
-    const addrCell = ws.getCell('A3');
-    addrCell.value = `Address: ${company.address || '—'}`;
-    addrCell.font = bold;
-    addrCell.alignment = left;
-
-    if (colCount >= 4) {
-      ws.mergeCells(`D3:${lastCol}3`);
-      const panCell = ws.getCell('D3');
-      panCell.value = `Pan/Vat: ${company.panVat || '—'}`;
-      panCell.font = bold;
-      panCell.alignment = right;
-    }
-  }
-
-  // 3. Report Details Section
-  let currentRow = 4;
-  if (summaryItems.length > 0) {
-    ws.mergeCells(`A${currentRow}:${lastCol}${currentRow}`);
-    const detailsHeader = ws.getCell(`A${currentRow}`);
-    detailsHeader.value = 'REPORT DETAILS';
-    detailsHeader.font = bold;
-    detailsHeader.alignment = center;
-    detailsHeader.fill = greyFill;
-    currentRow++;
-
-    summaryItems.forEach(item => {
-      const labelCell = ws.getCell(`A${currentRow}`);
-      labelCell.value = item.label;
-      labelCell.font = bold;
-      labelCell.alignment = left;
-
-      ws.mergeCells(`B${currentRow}:${lastCol}${currentRow}`);
-      const valueCell = ws.getCell(`B${currentRow}`);
-      valueCell.value = item.value;
-      valueCell.alignment = right;
-
-      ws.getRow(currentRow).fill = blueFill;
-      currentRow++;
-    });
-  }
-
-  currentRow += 1; // Spacer
-
-  // 4. Table Header
-  const tableHeaderRow = currentRow;
-  columns.forEach((c, i) => {
-    const cell = ws.getCell(tableHeaderRow, i + 1);
-    cell.value = c.header.toUpperCase();
-    cell.font = bold;
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } }; // Blue 500
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.alignment = center;
-    cell.border = borderThin;
-  });
-  ws.getRow(tableHeaderRow).height = 25;
-
-  // 5. Data Rows
-  currentRow++;
+  // 3. Add Data Rows
   rows.forEach((r, idx) => {
-    const row = ws.getRow(currentRow);
-    columns.forEach((col, i) => {
-      const cell = row.getCell(i + 1);
-      cell.value = r[col.key];
-      cell.border = borderThin;
-      cell.alignment = { vertical: 'middle' };
-
-      if (typeof cell.value === 'number') {
-        cell.alignment = right;
-        if (cell.value > 1000) cell.numFmt = '#,##0.00';
-      }
-    });
-
-    if (idx % 2 === 1) {
+    const row = ws.addRow(r);
+    // Alternate row colors
+    if (idx % 2 === 0) {
       row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }; // Slate 100
     }
     row.height = 20;
-    currentRow++;
+    row.alignment = { vertical: 'middle' };
+
+    // Format numbers
+    row.eachCell((cell) => {
+      if (typeof cell.value === 'number') {
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        if (cell.value > 1000) cell.numFmt = '#,##0.00';
+      }
+    });
   });
 
-  // 6. Footer
-  currentRow += 2;
-  const footerStartCol = Math.max(1, colCount - 1);
-  ws.mergeCells(currentRow, footerStartCol, currentRow, colCount);
-  const poweredBy = ws.getCell(currentRow, footerStartCol);
-  poweredBy.value = 'Powered By:';
-  poweredBy.alignment = right;
-  poweredBy.font = bold;
+  // 4. Style all cells & Auto-width estimation
+  ws.eachRow((row, rowNumber) => {
+    row.eachCell((cell) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+      };
+    });
+  });
 
-  currentRow++;
-  ws.mergeCells(currentRow, footerStartCol, currentRow, colCount);
-  const bsCell = ws.getCell(currentRow, footerStartCol);
-  bsCell.value = 'Business Sarthi';
-  bsCell.alignment = right;
-  bsCell.font = { size: 12, bold: true };
-
-  currentRow++;
-  ws.mergeCells(currentRow, footerStartCol, currentRow, colCount);
-  const taglineCell = ws.getCell(currentRow, footerStartCol);
-  taglineCell.value = 'Driving Business Forward';
-  taglineCell.alignment = right;
-  taglineCell.font = { size: 9, italic: true };
-
-  // 7. Auto-width adjustment
-  columns.forEach((column, i) => {
+  // Auto-width adjustment based on content
+  ws.columns.forEach(column => {
     let maxLen = 0;
-    const col = ws.getColumn(i + 1);
-    col.eachCell({ includeEmpty: true }, cell => {
+    column.eachCell({ includeEmpty: true }, cell => {
       const len = cell.value ? String(cell.value).length : 0;
       if (len > maxLen) maxLen = len;
     });
-    col.width = Math.min(Math.max(columns[i].width || 15, maxLen + 2), 60);
+    column.width = Math.min(Math.max(column.width || 15, maxLen + 2), 50);
   });
-
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}.xlsx"`);
-  await wb.xlsx.write(res);
-  res.end();
-}
-
-/**
- * Professional Account Ledger Excel Export
- * matches the provided "Account Ledger" screenshot.
- */
-export async function sendAccountLedgerExcel(res, { filename, company, entity, entries, finalBalance, type = 'DISTRIBUTOR' }) {
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Business Sarthi';
-  const ws = wb.addWorksheet('Ledger', {
-    pageSetup: { paperSize: 9, orientation: 'portrait' }
-  });
-
-  // Styles
-  const bold = { bold: true };
-  const center = { vertical: 'middle', horizontal: 'center' };
-  const left = { vertical: 'middle', horizontal: 'left' };
-  const right = { vertical: 'middle', horizontal: 'right' };
-  const whiteText = { color: { argb: 'FFFFFFFF' } };
-  const greyFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
-  const blueFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAF7' } };
-  const borderThin = {
-    top: { style: 'thin' },
-    left: { style: 'thin' },
-    bottom: { style: 'thin' },
-    right: { style: 'thin' }
-  };
-
-  // 1. Main Title
-  ws.mergeCells('A1:E1');
-  const titleCell = ws.getCell('A1');
-  titleCell.value = 'ACCOUNT LEDGER';
-  titleCell.font = { size: 18, bold: true };
-  titleCell.alignment = center;
-
-  // 2. Company Info
-  ws.mergeCells('A2:E2');
-  const compNameCell = ws.getCell('A2');
-  compNameCell.value = `Name:${company.name}`;
-  compNameCell.font = { size: 16, bold: true };
-  compNameCell.alignment = center;
-  compNameCell.fill = blueFill;
-
-  ws.mergeCells('A3:C3');
-  const addrCell = ws.getCell('A3');
-  addrCell.value = `Address: ${company.address || '—'}`;
-  addrCell.font = bold;
-  addrCell.alignment = left;
-
-  ws.mergeCells('D3:E3');
-  const panCell = ws.getCell('D3');
-  panCell.value = `Pan/Vat: ${company.panVat || '—'}`;
-  panCell.font = bold;
-  panCell.alignment = right;
-
-  // 3. Entity Section Header
-  ws.mergeCells('A4:E4');
-  const entityHeaderCell = ws.getCell('A4');
-  entityHeaderCell.value = `${type} INFORMATION`;
-  entityHeaderCell.font = { size: 14, bold: true };
-  entityHeaderCell.alignment = center;
-  entityHeaderCell.fill = greyFill;
-
-  // 4. Entity Details
-  const detailRows = [
-    { label: 'Name:', value: entity.name },
-    { label: 'Phone:', value: entity.contactNumber || entity.phone || '—' },
-    { label: 'Closing Balance:', value: `${company.settings?.currency || 'NPR'} ${finalBalance.toLocaleString()}` },
-    { label: 'Pan/Vat:', value: entity.panVat || '—' },
-    { label: 'Exported On:', value: new Date().toLocaleString() },
-  ];
-
-  detailRows.forEach((row, i) => {
-    const rowNum = 5 + i;
-    const labelCell = ws.getCell(`A${rowNum}`);
-    labelCell.value = row.label;
-    labelCell.font = bold;
-    labelCell.alignment = left;
-
-    ws.mergeCells(`B${rowNum}:E${rowNum}`);
-    const valueCell = ws.getCell(`B${rowNum}`);
-    valueCell.value = row.value;
-    valueCell.alignment = right;
-
-    ws.getRow(rowNum).fill = blueFill;
-  });
-
-  // Spacer
-  ws.addRow([]);
-
-  // 5. Table Header
-  const tableHeaderRow = 11;
-  const headers = ['Date', 'Ref/Type', 'Debit (+)', 'Credit (-)', 'Balance'];
-  headers.forEach((h, i) => {
-    const cell = ws.getCell(tableHeaderRow, i + 1);
-    cell.value = h;
-    cell.font = bold;
-    cell.alignment = left;
-    cell.border = borderThin;
-  });
-
-  // 6. Data Rows
-  let currentRow = tableHeaderRow + 1;
-  entries.forEach(e => {
-    const row = ws.getRow(currentRow);
-    row.getCell(1).value = e.date instanceof Date ? e.date.toLocaleDateString() : e.date;
-    row.getCell(2).value = `${e.type} ${e.ref || ''}`.toUpperCase();
-    row.getCell(3).value = e.type === 'INVOICE' || e.type === 'PURCHASE' ? e.amount : '';
-    row.getCell(4).value = e.type === 'PAYMENT' ? e.amount : '';
-    row.getCell(5).value = e.runningBalance;
-
-    row.eachCell({ includeEmpty: true }, cell => {
-      cell.border = borderThin;
-      cell.alignment = { vertical: 'middle' };
-      if (typeof cell.value === 'number') {
-        cell.alignment = right;
-      }
-    });
-    currentRow++;
-  });
-
-  // 7. Footer
-  currentRow += 2;
-  ws.mergeCells(`D${currentRow}:E${currentRow}`);
-  const poweredBy = ws.getCell(`D${currentRow}`);
-  poweredBy.value = 'Powered By:';
-  poweredBy.alignment = right;
-  poweredBy.font = bold;
-
-  currentRow++;
-  ws.mergeCells(`D${currentRow}:E${currentRow}`);
-  const bsCell = ws.getCell(`D${currentRow}`);
-  bsCell.value = 'Business Sarthi';
-  bsCell.alignment = right;
-  bsCell.font = { size: 12, bold: true };
-
-  currentRow++;
-  ws.mergeCells(`D${currentRow}:E${currentRow}`);
-  const taglineCell = ws.getCell(`D${currentRow}`);
-  taglineCell.value = 'Driving Business Forward';
-  taglineCell.alignment = right;
-  taglineCell.font = { size: 8, italic: true };
-
-  // Adjust Column Widths
-  ws.columns = [
-    { width: 15 }, // Date
-    { width: 35 }, // Ref/Type
-    { width: 15 }, // Debit
-    { width: 15 }, // Credit
-    { width: 15 }, // Balance
-  ];
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}.xlsx"`);

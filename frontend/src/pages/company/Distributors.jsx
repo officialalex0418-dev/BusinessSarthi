@@ -248,9 +248,49 @@ export default function Distributors() {
     printWindow.document.close();
   };
 
-  const exportLedgerExcel = () => {
-    if (!editing) return;
-    downloadFile(`/reports/distributors/${editing._id}/ledger/excel`, `Ledger_${editing.name}.xlsx`);
+  const exportLedgerToCSV = () => {
+    const csvRows = [];
+
+    // Header Branding & Info
+    csvRows.push(`"BUSINESS SARTHI - PROFESSIONAL ACCOUNT LEDGER"`);
+    csvRows.push(`"Company:",${JSON.stringify(user?.company?.name || '')}`);
+    csvRows.push(`"Address:",${JSON.stringify(user?.company?.address || '')}`);
+    csvRows.push("");
+    csvRows.push(`"DISTRIBUTOR INFORMATION"`);
+    csvRows.push(`"Name:",${JSON.stringify(editing.name)}`);
+    csvRows.push(`"Phone:",${JSON.stringify(editing.phone || '')}`);
+    csvRows.push(`"Closing Balance:",${JSON.stringify(formatMoney(ledger.finalBalance))}`);
+    csvRows.push("");
+    csvRows.push(`"Exported On:",${JSON.stringify(new Date().toLocaleString())}`);
+    csvRows.push("");
+
+    const headers = ['Date', 'Ref/Type', 'Debit (+)', 'Credit (-)', 'Balance'];
+    csvRows.push(headers.join(','));
+
+    for (const e of ledger.entries) {
+      const row = [
+        formatDate(e.date, dateFormat),
+        `${e.type} ${e.ref}`,
+        e.type === 'INVOICE' ? e.amount : 0,
+        e.type === 'PAYMENT' ? e.amount : 0,
+        e.runningBalance
+      ];
+      csvRows.push(row.map(v => JSON.stringify(v || '')).join(','));
+    }
+
+    csvRows.push("");
+    csvRows.push(`"--- END OF STATEMENT ---"`);
+    csvRows.push(`"Powered by Business Sarthi"`);
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `Ledger_${editing.name}.csv`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   if (featureBlocked) {
@@ -416,10 +456,10 @@ export default function Distributors() {
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="bg-white/10 border-white/20 hover:bg-white/20 text-white" onClick={(e) => handlePrintLedger(e)}>
-                    <FileDown className="h-4 w-4 mr-2" /> Print
+                    <Printer className="h-4 w-4 mr-2" /> Print
                   </Button>
-                  <Button variant="outline" size="sm" className="bg-white/10 border-white/20 hover:bg-white/20 text-white" onClick={exportLedgerExcel}>
-                    <FileDown className="h-4 w-4 mr-2" /> Excel
+                  <Button variant="outline" size="sm" className="bg-white/10 border-white/20 hover:bg-white/20 text-white" onClick={exportLedgerToCSV}>
+                    <Download className="h-4 w-4 mr-2" /> Download CSV
                   </Button>
                 </div>
              </div>

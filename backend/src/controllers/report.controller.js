@@ -56,14 +56,7 @@ export const trackingExcel = asyncHandler(async (req, res) => {
   audit({ req, action: 'EXPORT_TRACKING_EXCEL', entity: 'Report' });
   await sendExcel(res, {
     filename: `tracking-${req.query.period || 'daily'}-${Date.now()}`,
-    sheetName: 'Tracking Report',
-    company,
-    summaryItems: [
-      { label: 'Period:', value: (req.query.period || 'daily').toUpperCase() },
-      { label: 'Tracking Interval:', value: `${interval} Minutes` },
-      { label: 'Total Logs:', value: filtered.length },
-      { label: 'Exported On:', value: new Date().toLocaleString() },
-    ],
+    sheetName: 'Tracking',
     columns: [
       { header: 'Staff', key: 'staff', width: 25 },
       { header: 'Position', key: 'position', width: 18 },
@@ -97,21 +90,12 @@ export const attendanceExcel = asyncHandler(async (req, res) => {
     filename += `-${month}`;
   }
 
-  const [records, company] = await Promise.all([
-    Attendance.find(filter).populate('staff', 'name position').sort('date').lean(),
-    Company.findById(req.companyId).lean()
-  ]);
+  const records = await Attendance.find(filter).populate('staff', 'name position').sort('date').lean();
 
   audit({ req, action: 'EXPORT_ATTENDANCE_EXCEL', entity: 'Report' });
   await sendExcel(res, {
     filename,
-    sheetName: 'Attendance Report',
-    company,
-    summaryItems: [
-      { label: 'Filter:', value: req.query.fromDate ? `${req.query.fromDate} to ${req.query.toDate}` : (req.query.month || 'Current Month') },
-      { label: 'Total Records:', value: records.length },
-      { label: 'Exported On:', value: new Date().toLocaleString() },
-    ],
+    sheetName: 'Attendance',
     columns: [
       { header: 'Date', key: 'date', width: 14 },
       { header: 'Staff', key: 'staff', width: 25 },
@@ -152,23 +136,12 @@ export const salesExcel = asyncHandler(async (req, res) => {
   if (req.companyId) filter.company = req.companyId;
   if (staffId && staffId !== 'all') filter.staff = staffId;
 
-  const [sales, company] = await Promise.all([
-    Sale.find(filter).populate('staff', 'name').sort('-saleDate').limit(10000).lean(),
-    Company.findById(req.companyId).lean()
-  ]);
+  const sales = await Sale.find(filter).populate('staff', 'name').sort('-saleDate').limit(10000).lean();
 
   audit({ req, action: 'EXPORT_SALES_EXCEL', entity: 'Report' });
   await sendExcel(res, {
     filename: `sales-${req.query.period || 'monthly'}-${Date.now()}`,
-    sheetName: 'Sales Report',
-    company,
-    summaryItems: [
-      { label: 'Period:', value: (period || 'monthly').toUpperCase() },
-      { label: 'Filter Date:', value: startDate ? `${startDate} to ${endDate}` : 'N/A' },
-      { label: 'Staff Member:', value: staffId && staffId !== 'all' ? (sales[0]?.staff?.name || 'Selected Staff') : 'All Staff' },
-      { label: 'Total Sales Count:', value: sales.length },
-      { label: 'Total Amount:', value: sales.reduce((sum, s) => sum + s.amount, 0).toLocaleString() },
-    ],
+    sheetName: 'Sales',
     columns: [
       { header: 'Date', key: 'date', width: 20 },
       { header: 'Staff', key: 'staff', width: 22 },
@@ -193,22 +166,12 @@ export const payrollExcel = asyncHandler(async (req, res) => {
   if (req.companyId) filter.company = req.companyId;
   if (req.query.month) filter.month = req.query.month;
 
-  const [records, company] = await Promise.all([
-    Payroll.find(filter).populate('staff', 'name position').sort('-month').lean(),
-    Company.findById(req.companyId).lean()
-  ]);
+  const records = await Payroll.find(filter).populate('staff', 'name position').sort('-month').lean();
 
   audit({ req, action: 'EXPORT_PAYROLL_EXCEL', entity: 'Report' });
   await sendExcel(res, {
     filename: `payroll-${req.query.month || 'all'}`,
-    sheetName: 'Payroll Report',
-    company,
-    summaryItems: [
-      { label: 'Month:', value: req.query.month || 'All Months' },
-      { label: 'Total Records:', value: records.length },
-      { label: 'Total Net Salary:', value: records.reduce((sum, p) => sum + p.netSalary, 0).toLocaleString() },
-      { label: 'Exported On:', value: new Date().toLocaleString() },
-    ],
+    sheetName: 'Payroll',
     columns: [
       { header: 'Month', key: 'month', width: 12 },
       { header: 'Staff', key: 'staff', width: 24 },
