@@ -370,3 +370,36 @@ export const companySummaryPdf = asyncHandler(async (req, res) => {
     ],
   });
 });
+
+/** GET /reports/bulk-upload-sample */
+export const bulkUploadSample = asyncHandler(async (req, res) => {
+  const { type = 'TRANSACTION' } = req.query;
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet('Sample Format');
+
+  ws.columns = [
+    { header: 'Date (YYYY-MM-DD)', key: 'date', width: 20 },
+    { header: 'Type (INVOICE/PAYMENT/PURCHASE)', key: 'type', width: 25 },
+    { header: 'Ref / Method', key: 'ref', width: 25 },
+    { header: 'Amount', key: 'amount', width: 15 },
+  ];
+
+  // Sample Rows
+  if (type === 'VENDOR') {
+    ws.addRow({ date: '2026-07-25', type: 'PURCHASE', ref: 'BILL-001', amount: 55000 });
+    ws.addRow({ date: '2026-07-26', type: 'PAYMENT', ref: 'CASH', amount: 20000 });
+  } else {
+    ws.addRow({ date: '2026-07-30', type: 'INVOICE', ref: 'SB00001', amount: 15000 });
+    ws.addRow({ date: '2026-07-31', type: 'PAYMENT', ref: 'CHEQUE-9988', amount: 5000 });
+  }
+
+  // Styling
+  const headerRow = ws.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAF7' } };
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', 'attachment; filename="Bulk_Upload_Template.xlsx"');
+  await workbook.xlsx.write(res);
+  res.end();
+});

@@ -4,6 +4,7 @@ import { Distributor, Invoice, Payment, SalesInvoice, Cheque, Company, Inventory
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
+import { adToBs, getBsMonthRange } from '../utils/nepaliDate.js';
 
 /** GET /distributors */
 export const listDistributors = asyncHandler(async (req, res) => {
@@ -368,8 +369,21 @@ export const deletePayment = asyncHandler(async (req, res) => {
 /** GET /distributors/analytics */
 export const distributorAnalytics = asyncHandler(async (req, res) => {
   const companyId = new mongoose.Types.ObjectId(req.companyId);
+  const company = await Company.findById(companyId).select('settings');
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  let startOfMonth, endOfMonth;
+
+  if (company?.settings?.dateFormat === 'BS') {
+    const currentBs = adToBs(now);
+    const range = getBsMonthRange(`${currentBs.year}-${String(currentBs.month).padStart(2, '0')}`);
+    startOfMonth = range.start;
+    endOfMonth = range.end;
+  } else {
+    startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  }
+
   const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
   const [
@@ -386,11 +400,11 @@ export const distributorAnalytics = asyncHandler(async (req, res) => {
       { $group: { _id: null, total: { $sum: '$outstandingBalance' } } }
     ]),
     SalesInvoice.aggregate([
-      { $match: { company: companyId, saleDate: { $gte: startOfMonth }, distributor: { $ne: null } } },
+      { $match: { company: companyId, saleDate: { $gte: startOfMonth, $lte: endOfMonth }, distributor: { $ne: null } } },
       { $group: { _id: null, total: { $sum: '$netTotal' } } }
     ]),
     Payment.aggregate([
-      { $match: { company: companyId, paymentDate: { $gte: startOfMonth } } },
+      { $match: { company: companyId, paymentDate: { $gte: startOfMonth, $lte: endOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]),
     Distributor.countDocuments({ company: companyId, isActive: true }),

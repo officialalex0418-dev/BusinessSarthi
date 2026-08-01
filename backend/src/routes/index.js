@@ -257,6 +257,7 @@ r.get('/reports/payroll/excel', protect, authorize(...MANAGERS), scopeCompany, r
 r.get('/reports/payroll/:payrollId/pdf', protect, authorize(...MANAGERS), scopeCompany, requireFeature('payrollManagement'), report.payrollDetailPdf);
 r.get('/reports/employee/:staffId/pdf', protect, authorize(...MANAGERS), report.employeeSummaryPdf);
 r.get('/reports/company/:companyId/pdf', protect, authorize(...PLATFORM), report.companySummaryPdf);
+r.get('/reports/bulk-upload-sample', protect, report.bulkUploadSample);
 
 // ============ NOTIFICATIONS / SETTINGS / AUDIT ============
 r.get('/notifications', protect, misc.myNotifications);

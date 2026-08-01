@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Receipt, History, AlertCircle, Pencil, Save, X, Phone, MapPin, Hash, Trash2, Plus, User, Printer, Download, Eye, FileText, ShoppingCart, FileUp } from 'lucide-react';
-import { api } from '@/api/client';
+import { ArrowLeft, CreditCard, Receipt, History, AlertCircle, Pencil, Save, X, Phone, MapPin, Hash, Trash2, Plus, User, Printer, Download, Eye, FileText, ShoppingCart, FileUp, FileDown } from 'lucide-react';
+import { api, downloadFile } from '@/api/client';
 import { Card, Button, Input, Modal, Table, Spinner, Badge, Select, Textarea, DatePicker, Checkbox } from '@/components/ui';
 import { formatMoney, formatDate, toLocalDateString } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -30,6 +30,7 @@ export default function DistributorDetails() {
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
   const [error, setError] = useState('');
   const dateFormat = user?.company?.settings?.dateFormat || 'BS';
   const printRef = useRef();
@@ -347,22 +348,27 @@ export default function DistributorDetails() {
   };
 
   const handleBulkUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    e?.preventDefault();
+    if (!bulkFile) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', bulkFile);
     setUploading(true);
     try {
       const res = await api.post(`/distributors/${id}/bulk-transactions`, formData);
       alert(res.data.message);
+      setModal(null);
+      setBulkFile(null);
       load();
     } catch (err) {
       alert(err.response?.data?.message || 'Upload failed');
     } finally {
       setUploading(false);
-      e.target.value = ''; // reset
     }
+  };
+
+  const downloadTemplate = () => {
+    downloadFile('/reports/bulk-upload-sample?type=TRANSACTION', 'Distributor_Bulk_Template.xlsx');
   };
 
   const addEditRow = () => {
@@ -499,18 +505,10 @@ export default function DistributorDetails() {
               </Button>
 
               <div className="pt-2">
-                <input
-                  type="file"
-                  id="bulk-upload-dist"
-                  className="hidden"
-                  accept=".xlsx, .xls"
-                  onChange={handleBulkUpload}
-                />
                 <Button
                   className="w-full border-dashed"
                   variant="outline"
-                  loading={uploading}
-                  onClick={() => document.getElementById('bulk-upload-dist').click()}
+                  onClick={() => setModal('bulk-upload')}
                 >
                   <FileUp className="h-4 w-4 mr-2" /> Upload Record
                 </Button>
@@ -1111,6 +1109,64 @@ export default function DistributorDetails() {
             <Button type="submit" loading={saving}>{editingCheque ? 'Update Cheque' : 'Add Cheque'}</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Bulk Upload Modal */}
+      <Modal open={modal === 'bulk-upload'} onClose={() => setModal(null)} title="Bulk Upload Transaction History">
+        <div className="space-y-6">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-start gap-3 border border-blue-100 dark:border-blue-800">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div className="text-sm text-blue-800 dark:text-blue-300">
+              <p className="font-bold">Instructions:</p>
+              <ul className="list-disc ml-4 mt-1 space-y-1">
+                <li>Use the official template for best results.</li>
+                <li>Dates should be in <b>YYYY-MM-DD</b> format.</li>
+                <li>Types allowed: <b>INVOICE</b> or <b>PAYMENT</b>.</li>
+                <li>Records will be marked with <b>"old transaction"</b> remark.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <Button variant="outline" size="sm" onClick={downloadTemplate}>
+              <FileDown className="h-4 w-4 mr-2" /> Download Template
+            </Button>
+          </div>
+
+          <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center space-y-4">
+            <input
+              type="file"
+              id="bulk-file-input"
+              className="hidden"
+              accept=".xlsx, .xls"
+              onChange={(e) => setBulkFile(e.target.files[0])}
+            />
+            {!bulkFile ? (
+              <div className="cursor-pointer" onClick={() => document.getElementById('bulk-file-input').click()}>
+                <div className="mx-auto w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                  <FileUp className="h-6 w-6 text-slate-500" />
+                </div>
+                <p className="text-sm font-medium">Click to select Excel file</p>
+                <p className="text-xs text-slate-400 mt-1">.xlsx or .xls files only</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2 text-primary-600 font-bold">
+                  <FileText className="h-5 w-5" />
+                  <span>{bulkFile.name}</span>
+                </div>
+                <Button variant="ghost" size="sm" className="text-red-500" onClick={() => setBulkFile(null)}>Remove file</Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+            <Button onClick={handleBulkUpload} loading={uploading} disabled={!bulkFile}>
+              Start Upload & Process
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Credit Limit Warning Modal */}

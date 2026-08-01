@@ -2,9 +2,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, ShoppingCart, CreditCard, History, Phone, Mail,
-  MapPin, Hash, Plus, Printer, Download, Trash2, Edit, FileUp
+  MapPin, Hash, Plus, Printer, Download, Trash2, Edit, FileUp, FileDown, AlertCircle, FileText
 } from 'lucide-react';
-import { api } from '@/api/client';
+import { api, downloadFile } from '@/api/client';
 import {
   Card, Button, Spinner, Table, Badge,
   EmptyState, Modal, Input, Select, Textarea, DatePicker
@@ -24,6 +24,7 @@ export default function VendorDetails() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [allProducts, setAllProducts] = useState([]);
   const [purchaseRows, setPurchaseRows] = useState([]);
@@ -186,22 +187,27 @@ export default function VendorDetails() {
   };
 
   const handleBulkUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    e?.preventDefault();
+    if (!bulkFile) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', bulkFile);
     setUploading(true);
     try {
       const res = await api.post(`/vendors/${id}/bulk-transactions`, formData);
       alert(res.data.message);
+      setModal(null);
+      setBulkFile(null);
       load();
     } catch (err) {
       alert(err.response?.data?.message || 'Upload failed');
     } finally {
       setUploading(false);
-      e.target.value = '';
     }
+  };
+
+  const downloadTemplate = () => {
+    downloadFile('/reports/bulk-upload-sample?type=VENDOR', 'Vendor_Bulk_Template.xlsx');
   };
 
   const startEdit = (item) => {
@@ -340,14 +346,7 @@ export default function VendorDetails() {
               <button className="px-4 py-4 text-sm font-bold border-b-2 border-primary-600 text-primary-600">Full Ledger</button>
            </div>
            <div className="flex gap-2 py-2">
-              <input
-                type="file"
-                id="bulk-upload-vendor"
-                className="hidden"
-                accept=".xlsx, .xls"
-                onChange={handleBulkUpload}
-              />
-              <Button variant="outline" size="sm" onClick={() => document.getElementById('bulk-upload-vendor').click()} loading={uploading}>
+              <Button variant="outline" size="sm" onClick={() => setModal('bulk-upload')}>
                 <FileUp className="h-4 w-4 mr-2" /> Upload Record
               </Button>
               <Button variant="outline" size="sm" onClick={handlePrintLedger}>
@@ -403,6 +402,64 @@ export default function VendorDetails() {
           />
         </div>
       </Card>
+
+      {/* Bulk Upload Modal */}
+      <Modal open={modal === 'bulk-upload'} onClose={() => setModal(null)} title="Bulk Upload Vendor Ledger">
+        <div className="space-y-6">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-start gap-3 border border-blue-100 dark:border-blue-800">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div className="text-sm text-blue-800 dark:text-blue-300">
+              <p className="font-bold">Instructions:</p>
+              <ul className="list-disc ml-4 mt-1 space-y-1">
+                <li>Use the vendor-specific template for best results.</li>
+                <li>Dates should be in <b>YYYY-MM-DD</b> format.</li>
+                <li>Types allowed: <b>PURCHASE</b> or <b>PAYMENT</b>.</li>
+                <li>Records will be marked with <b>"old transaction"</b> remark.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <Button variant="outline" size="sm" onClick={downloadTemplate}>
+              <FileDown className="h-4 w-4 mr-2" /> Download Template
+            </Button>
+          </div>
+
+          <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center space-y-4">
+            <input
+              type="file"
+              id="bulk-file-input-vendor"
+              className="hidden"
+              accept=".xlsx, .xls"
+              onChange={(e) => setBulkFile(e.target.files[0])}
+            />
+            {!bulkFile ? (
+              <div className="cursor-pointer" onClick={() => document.getElementById('bulk-file-input-vendor').click()}>
+                <div className="mx-auto w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                  <FileUp className="h-6 w-6 text-slate-500" />
+                </div>
+                <p className="text-sm font-medium">Click to select Excel file</p>
+                <p className="text-xs text-slate-400 mt-1">.xlsx or .xls files only</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2 text-primary-600 font-bold">
+                  <FileText className="h-5 w-5" />
+                  <span>{bulkFile.name}</span>
+                </div>
+                <Button variant="ghost" size="sm" className="text-red-500" onClick={() => setBulkFile(null)}>Remove file</Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+            <Button onClick={handleBulkUpload} loading={uploading} disabled={!bulkFile}>
+              Start Upload & Process
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Payment Modal */}
       <Modal open={modal === 'payment'} onClose={() => { setModal(null); setError(''); }} title="Record Payment to Vendor">
