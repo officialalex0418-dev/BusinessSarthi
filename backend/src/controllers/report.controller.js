@@ -139,6 +139,9 @@ export const salesExcel = asyncHandler(async (req, res) => {
   if (customerId && customerId !== 'all') filter.customer = customerId;
 
   const [sales, company] = await Promise.all([
+    Sale.find(filter).populate('staff', 'name').sort('-saleDate').limit(10000).lean(),
+    Company.findById(req.companyId).lean()
+  ]);
 
   audit({ req, action: 'EXPORT_SALES_EXCEL', entity: 'Report' });
   await sendExcel(res, {
