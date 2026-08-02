@@ -119,7 +119,7 @@ export const attendanceExcel = asyncHandler(async (req, res) => {
 
 /** GET /reports/sales/excel?period= */
 export const salesExcel = asyncHandler(async (req, res) => {
-  const { period, startDate, endDate, staffId } = req.query;
+  const { period, startDate, endDate, staffId, customerId } = req.query;
 
   let start, end;
   if (startDate && endDate) {
@@ -136,13 +136,23 @@ export const salesExcel = asyncHandler(async (req, res) => {
   const filter = { saleDate: { $gte: start, $lte: end } };
   if (req.companyId) filter.company = req.companyId;
   if (staffId && staffId !== 'all') filter.staff = staffId;
+  if (customerId && customerId !== 'all') filter.customer = customerId;
 
-  const sales = await Sale.find(filter).populate('staff', 'name').sort('-saleDate').limit(10000).lean();
+  const [sales, company] = await Promise.all([
 
   audit({ req, action: 'EXPORT_SALES_EXCEL', entity: 'Report' });
   await sendExcel(res, {
     filename: `sales-${req.query.period || 'monthly'}-${Date.now()}`,
-    sheetName: 'Sales',
+    sheetName: 'Sales Report',
+    company,
+    summaryItems: [
+      { label: 'Period:', value: (period || 'monthly').toUpperCase() },
+      { label: 'Filter Date:', value: startDate ? `${startDate} to ${endDate}` : 'N/A' },
+      { label: 'Staff Member:', value: staffId && staffId !== 'all' ? (sales[0]?.staff?.name || 'Selected Staff') : 'All Staff' },
+      { label: 'Customer:', value: customerId && customerId !== 'all' ? (sales[0]?.customerName || 'Selected Customer') : 'All Customers' },
+      { label: 'Total Sales Count:', value: sales.length },
+      { label: 'Total Amount:', value: sales.reduce((sum, s) => sum + s.amount, 0).toLocaleString() },
+    ],
     columns: [
       { header: 'Date', key: 'date', width: 20 },
       { header: 'Staff', key: 'staff', width: 22 },

@@ -25,9 +25,11 @@ export default function SalesTracker() {
   const [analytics, setAnalytics] = useState(null);
   const [sales, setSales] = useState(null);
   const [staffList, setStaffList] = useState([]);
+  const [customerList, setCustomerList] = useState([]);
 
   const [period, setPeriod] = useState('monthly');
   const [staffId, setStaffId] = useState('all');
+  const [customerId, setCustomerId] = useState('all');
   const [dates, setDates] = useState({
     start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -36,16 +38,20 @@ export default function SalesTracker() {
   const [page, setPage] = useState(1);
   const [featureBlocked, setFeatureBlocked] = useState(false);
 
-  const loadStaff = useCallback(async () => {
+  const loadMetadata = useCallback(async () => {
     try {
-      const { data } = await api.get('/staff');
-      setStaffList(data.data.items || []);
+      const [sRes, mRes] = await Promise.all([
+        api.get('/staff'),
+        api.get('/sales/metadata')
+      ]);
+      setStaffList(sRes.data.data.items || []);
+      setCustomerList(mRes.data.data.customers || []);
     } catch {}
   }, []);
 
   const load = useCallback(async () => {
     try {
-      const params = { period, staffId, page };
+      const params = { period, staffId, customerId, page };
       if (period === 'custom') {
         params.startDate = dates.start;
         params.endDate = dates.end;
@@ -64,20 +70,20 @@ export default function SalesTracker() {
         else setFeatureBlocked('Access denied: You do not have permission to view sales management.');
       }
     }
-  }, [period, staffId, dates, page]);
+  }, [period, staffId, customerId, dates, page]);
 
   useEffect(() => {
-    loadStaff();
-  }, [loadStaff]);
+    loadMetadata();
+  }, [loadMetadata]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleDownload = () => {
-    let url = `/reports/sales/excel?period=${period}&staffId=${staffId}`;
+    let url = `/reports/sales/excel?period=${period}&staffId=${staffId}&customerId=${customerId}`;
     if (period === 'custom') {
       url += `&startDate=${dates.start}&endDate=${dates.end}`;
     }
-    downloadFile(url, `sales-report-${staffId}-${period}.xlsx`);
+    downloadFile(url, `sales-report-${staffId}-${customerId}-${period}.xlsx`);
   };
 
   if (featureBlocked) {
@@ -99,6 +105,19 @@ export default function SalesTracker() {
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <h1 className="text-2xl font-bold">Sales Tracker</h1>
         <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-400 uppercase">Customer:</span>
+            <Select
+              value={customerId}
+              onChange={(e) => { setCustomerId(e.target.value); setPage(1); }}
+              options={[
+                { value: 'all', label: 'All Customers' },
+                ...customerList.map(c => ({ value: c._id, label: c.name }))
+              ]}
+              className="w-40 h-9 text-xs"
+            />
+          </div>
+
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-400 uppercase">Staff:</span>
             <Select

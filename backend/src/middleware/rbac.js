@@ -58,10 +58,8 @@ export const authorize = (...roles) => (req, _res, next) => {
         const canEntry = isSalesDept || permissions.salesEntry;
 
         if (isEntry || isOwnList || isMetadata) {
-          if (!canEntry) {
-            permissionChecked = true;
-            permissionGranted = false;
-          }
+          permissionChecked = true;
+          permissionGranted = canEntry;
         } else {
           // Access to all sales (Management)
           permissionChecked = true;

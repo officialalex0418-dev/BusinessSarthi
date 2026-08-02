@@ -141,13 +141,15 @@ export const listSales = asyncHandler(async (req, res) => {
     filter.staff = req.user._id;
   }
 
-  const { period, startDate, endDate } = req.query;
+  const { period, startDate, endDate, staffId, customerId } = req.query;
   if (startDate && endDate) {
     filter.saleDate = { $gte: new Date(startDate), $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) };
   } else if (period) {
     const { start, end } = rangeFromPeriod(period);
     filter.saleDate = { $gte: start, $lte: end };
   }
+
+  if (customerId) filter.customer = customerId;
 
   const [items, total] = await Promise.all([
     Sale.find(filter).populate('staff', 'name').sort('-saleDate').skip(skip).limit(limit),
@@ -161,7 +163,7 @@ export const salesAnalytics = asyncHandler(async (req, res) => {
   const companyId = req.companyId;
   if (!companyId) throw ApiError.badRequest('companyId required');
 
-  const { period, startDate, endDate, staffId } = req.query;
+  const { period, startDate, endDate, staffId, customerId } = req.query;
   let start, end;
   if (startDate && endDate) {
     start = new Date(startDate);
@@ -174,6 +176,7 @@ export const salesAnalytics = asyncHandler(async (req, res) => {
 
   const match = { company: oid(companyId), saleDate: { $gte: start, $lte: end } };
   if (staffId && staffId !== 'all') match.staff = oid(staffId);
+  if (customerId && customerId !== 'all') match.customer = oid(customerId);
 
   const [byStaff, byProduct, monthly, totals] = await Promise.all([
     Sale.aggregate([
