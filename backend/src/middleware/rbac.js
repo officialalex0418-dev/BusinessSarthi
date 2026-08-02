@@ -47,6 +47,7 @@ export const authorize = (...roles) => (req, _res, next) => {
         if (!isSelf) {
           permissionChecked = true;
           permissionGranted = permissions.leaves;
+        }
       } else if (path.startsWith('/sales')) {
         const isEntry = req.method === 'POST' && path === '/sales';
         const isMetadata = path === '/sales/metadata';
