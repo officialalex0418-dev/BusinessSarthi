@@ -3,7 +3,10 @@ import { Geolocation } from '@capacitor/geolocation';
 import { Device } from '@capacitor/device';
 import { Network } from '@capacitor/network';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { api } from '@/api/client';
+
+const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 
 const QUEUE_KEY = 'bs_location_queue';
 // A simple short high-pitched beep sound in base64
@@ -24,10 +27,32 @@ export function useLocationTracker(enabled = true) {
   const timerRef = useRef(null);
   const audioRef = useRef(null);
   const alertTimerRef = useRef(null);
+  const gpsOffStartTimeRef = useRef(null);
+  const checkOutTimerRef = useRef(null);
 
-  const playAlert = useCallback(() => {
+  const notifyUser = useCallback(async (title, message) => {
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: Math.floor(Math.random() * 1000),
+        title,
+        body: message,
+        schedule: { at: new Date(Date.now() + 100) },
+        sound: 'beep.wav',
+        channelId: 'bs_alerts',
+      }]
+    }).catch(() => {});
+  }, []);
+
+  const playAlert = useCallback((reason) => {
     if (isAlerting) return;
     setIsAlerting(true);
+
+    // Specific notification based on reason
+    if (reason === 'GPS_OFF') {
+      notifyUser('GPS Turned Off', 'Please turn on GPS/Location Services to continue tracking your shift.');
+    } else if (reason === 'NO_INTERNET') {
+      notifyUser('Internet Disconnected', 'Please enable Mobile Data or Wi-Fi to sync your tracking data.');
+    }
 
     // Play sound
     if (!audioRef.current) {
@@ -41,7 +66,7 @@ export function useLocationTracker(enabled = true) {
     alertTimerRef.current = setTimeout(() => {
       stopAlert();
     }, 30000);
-  }, [isAlerting]);
+  }, [isAlerting, notifyUser]);
 
   const stopAlert = useCallback(() => {
     setIsAlerting(false);
@@ -74,7 +99,7 @@ export function useLocationTracker(enabled = true) {
     try {
       const net = await Network.getStatus();
       if (!net.connected) {
-        playAlert();
+        playAlert('NO_INTERNET');
         throw new Error('NO_INTERNET');
       }
 
@@ -82,36 +107,66 @@ export function useLocationTracker(enabled = true) {
       const isNative = info.platform === 'android' || info.platform === 'ios';
       if (!isNative) return null;
 
-      const pos = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
-      });
+      try {
+        const pos = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
 
-      stopAlert(); // Location and Internet are fine
+        // GPS is ON - Reset 45-min timer
+        gpsOffStartTimeRef.current = null;
+        if (checkOutTimerRef.current) {
+          clearTimeout(checkOutTimerRef.current);
+          checkOutTimerRef.current = null;
+        }
 
-      return {
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        accuracy: pos.coords.accuracy,
-        recordedAt: new Date(pos.timestamp).toISOString(),
-        deviceInfo: {
-          platform: info.platform,
-          model: info.model,
-          osVersion: info.osVersion,
-        },
-        source: 'BACKGROUND',
-      };
+        stopAlert(); // Location and Internet are fine
+
+        return {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          recordedAt: new Date(pos.timestamp).toISOString(),
+          deviceInfo: {
+            platform: info.platform,
+            model: info.model,
+            osVersion: info.osVersion,
+          },
+          source: 'BACKGROUND',
+        };
+      } catch (geoErr) {
+        // GPS is OFF or Unreachable
+        if (!gpsOffStartTimeRef.current) {
+          gpsOffStartTimeRef.current = Date.now();
+          playAlert('GPS_OFF');
+
+          // Start 45-minute countdown for auto-checkout
+          const FORTY_FIVE_MINS = 45 * 60 * 1000;
+          checkOutTimerRef.current = setTimeout(async () => {
+            try {
+              await api.post('/attendance/check-out', {
+                auto: true,
+                reason: 'GPS_OFF_45MIN_TIMEOUT'
+              });
+              notifyUser('Auto Checkout', 'You have been automatically checked out due to GPS being disabled for 45 minutes.');
+            } catch (e) {
+              console.error('Auto-checkout failed', e);
+            }
+          }, FORTY_FIVE_MINS);
+        }
+        throw geoErr;
+      }
     } catch (e) {
       if (e.message === 'location_denied' || e.code === 1) {
         setStatus('denied');
-        playAlert();
+        playAlert('GPS_OFF');
       } else if (e.message === 'POSITION_UNAVAILABLE' || e.code === 2) {
-        playAlert();
+        playAlert('GPS_OFF');
       }
       throw e;
     }
-  }, [playAlert, stopAlert]);
+  }, [playAlert, stopAlert, notifyUser]);
 
   const flush = useCallback(async () => {
     const queue = readQueue();
@@ -172,7 +227,7 @@ export function useLocationTracker(enabled = true) {
           stopAlert();
           flush();
         } else {
-          playAlert();
+          playAlert('NO_INTERNET');
         }
       };
       const netHandler = Network.addListener('networkStatusChange', onNetChange);

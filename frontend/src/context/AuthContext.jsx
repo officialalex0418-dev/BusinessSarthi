@@ -58,10 +58,10 @@ export function AuthProvider({ children }) {
       try {
         const { data: att } = await api.get('/attendance/me');
         if (att.data.today?.checkIn?.time && !att.data.today?.checkOut?.time) {
-          // Perform automatic checkout
+          // Perform automatic checkout on manual logout
           await api.post('/attendance/check-out', {
             auto: true,
-            remarks: 'Auto-checkout on logout'
+            reason: 'MANUAL_LOGOUT_AUTO_CHECKOUT'
           });
         }
       } catch (e) {

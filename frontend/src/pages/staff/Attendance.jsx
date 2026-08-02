@@ -25,7 +25,7 @@ async function getPosition() {
 }
 
 export default function StaffAttendance() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const dateFormat = user?.company?.settings?.dateFormat || 'BS';
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -170,6 +170,7 @@ export default function StaffAttendance() {
         },
       });
       setMessage(endpoint === 'check-in' ? 'Checked in successfully ✓' : 'Checked out successfully ✓');
+      await refreshUser();
       load();
     } catch (err) {
       const msg = err.response?.data?.message?.toLowerCase() || '';

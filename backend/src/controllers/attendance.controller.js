@@ -140,16 +140,16 @@ export const checkOut = asyncHandler(async (req, res) => {
   if (!attendance?.checkIn?.time) throw ApiError.badRequest('You have not checked in today');
   if (attendance.checkOut?.time) throw ApiError.conflict('Already checked out today');
 
-  const { latitude, longitude, deviceInfo } = req.body;
+  const { latitude, longitude, deviceInfo, auto, reason } = req.body;
 
-  // Outdoor staff cannot check-out from web
+  // Outdoor staff cannot check-out from web unless it's an auto-checkout
   const isAppRequest = !!deviceInfo?.platform && (deviceInfo.platform.toLowerCase() === 'android' || deviceInfo.platform.toLowerCase() === 'ios');
-  if (req.user.workMode === 'OUTDOOR' && !isAppRequest) {
+  if (!auto && req.user.workMode === 'OUTDOOR' && !isAppRequest) {
     throw ApiError.forbidden('Outdoor staff can only check out via the mobile application.');
   }
 
   const now = new Date();
-  const address = await reverseGeocode(latitude, longitude);
+  const address = latitude != null ? await reverseGeocode(latitude, longitude) : (auto ? 'System Auto Checkout' : 'Location Unknown');
 
   attendance.checkOut = {
     time: now,
@@ -157,6 +157,10 @@ export const checkOut = asyncHandler(async (req, res) => {
     address,
     deviceInfo,
   };
+
+  if (auto) {
+    attendance.remarks = reason || 'Auto-checkout by system';
+  }
 
   attendance.workedMinutes = Math.round((now - attendance.checkIn.time) / 60000);
 

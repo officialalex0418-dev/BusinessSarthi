@@ -137,24 +137,9 @@ export default function DashboardLayout({ title, nav }) {
 
   useEffect(() => {
     if (!user) return undefined;
-    const idleTimeoutMs = 30 * 60 * 1000;
-    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
-    let timeoutId;
-
-    const resetTimer = () => {
-      window.clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(async () => {
-        await logout();
-        navigate('/login', { replace: true });
-      }, idleTimeoutMs);
-    };
-
-    resetTimer();
-    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetTimer, { passive: true }));
-    return () => {
-      window.clearTimeout(timeoutId);
-      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetTimer));
-    };
+    // Removed 30-minute idle auto-logout as requested.
+    // Session is now persistent until manual logout.
+    return undefined;
   }, [user, logout, navigate]);
 
   return (
@@ -267,18 +252,18 @@ export default function DashboardLayout({ title, nav }) {
               </div>
 
               {/* User menu */}
-              <div className="flex items-center gap-1 sm:gap-2">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700 dark:bg-primary-900/50 dark:text-primary-300">
-                  {user?.name?.[0]?.toUpperCase()}
-                </div>
-                <div className="hidden text-left md:block">
-                  <p className="text-sm font-medium leading-tight">{user?.name}</p>
-                  <p className="text-[10px] text-slate-400">
-                    {user?.designation?.name || ROLE_LABELS[user?.role]}
-                  </p>
-                </div>
-                <ChevronDown className="hidden h-4 w-4 text-slate-400 md:block" />
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700 dark:bg-primary-900/50 dark:text-primary-300">
+                {user?.name?.[0]?.toUpperCase()}
               </div>
+              <div className="hidden text-left sm:block">
+                <p className="text-[10px] font-medium leading-tight md:text-sm">{user?.name}</p>
+                <p className="text-[9px] text-slate-400 md:text-[10px]">
+                  {user?.designation?.name || ROLE_LABELS[user?.role]}
+                </p>
+              </div>
+              <ChevronDown className="hidden h-4 w-4 text-slate-400 sm:block" />
+            </div>
               <button onClick={handleLogout} title={t('Logout', language)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30">
                 <LogOut className="h-5 w-5" />
               </button>
