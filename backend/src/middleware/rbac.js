@@ -47,16 +47,16 @@ export const authorize = (...roles) => (req, _res, next) => {
         if (!isSelf) {
           permissionChecked = true;
           permissionGranted = permissions.leaves;
-        }
       } else if (path.startsWith('/sales')) {
         const isEntry = req.method === 'POST' && path === '/sales';
+        const isMetadata = path === '/sales/metadata';
         const isOwnList = req.method === 'GET' && (path === '/sales' || path === '/sales/me/summary');
         const dept = (designation?.department?.name || '').toLowerCase();
         const isSalesDept = dept.includes('sales') || dept.includes('marketing');
 
         const canEntry = isSalesDept || permissions.salesEntry;
 
-        if (isEntry || isOwnList) {
+        if (isEntry || isOwnList || isMetadata) {
           if (!canEntry) {
             permissionChecked = true;
             permissionGranted = false;
