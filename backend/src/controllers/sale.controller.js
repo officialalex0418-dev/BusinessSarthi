@@ -149,7 +149,7 @@ export const listSales = asyncHandler(async (req, res) => {
     filter.saleDate = { $gte: start, $lte: end };
   }
 
-  if (customerId) filter.customer = customerId;
+  if (customerId && customerId !== 'all') filter.customer = customerId;
 
   const [items, total] = await Promise.all([
     Sale.find(filter).populate('staff', 'name').sort('-saleDate').skip(skip).limit(limit),

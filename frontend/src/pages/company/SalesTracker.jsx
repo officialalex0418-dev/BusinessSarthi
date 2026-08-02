@@ -37,6 +37,7 @@ export default function SalesTracker() {
 
   const [page, setPage] = useState(1);
   const [featureBlocked, setFeatureBlocked] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const loadMetadata = useCallback(async () => {
     try {
@@ -51,6 +52,7 @@ export default function SalesTracker() {
 
   const load = useCallback(async () => {
     try {
+      setLoadError('');
       const params = { period, staffId, customerId, page };
       if (period === 'custom') {
         params.startDate = dates.start;
@@ -68,6 +70,8 @@ export default function SalesTracker() {
         const msg = err.response?.data?.message || '';
         if (msg.toLowerCase().includes('package')) setFeatureBlocked(true);
         else setFeatureBlocked('Access denied: You do not have permission to view sales management.');
+      } else {
+        setLoadError('Failed to load sales data. Please check your connection or try again.');
       }
     }
   }, [period, staffId, customerId, dates, page]);
@@ -94,6 +98,19 @@ export default function SalesTracker() {
           title={typeof featureBlocked === 'string' ? 'Access Denied' : "Sales tracking not included in your package"}
           subtitle={typeof featureBlocked === 'string' ? featureBlocked : "Upgrade your package to unlock the sales tracker."}
         />
+      </Card>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Card className="p-12 text-center space-y-4">
+        <div className="mx-auto w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
+          <TrendingUp className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800">Oops! Something went wrong</h2>
+        <p className="text-slate-500 max-w-md mx-auto">{loadError}</p>
+        <Button onClick={() => load()} variant="outline">Try Again</Button>
       </Card>
     );
   }
