@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ExcelJS from 'exceljs';
 import Attendance from '../models/Attendance.js';
 import Sale from '../models/Sale.js';
 import Payroll from '../models/Payroll.js';
@@ -378,28 +379,37 @@ export const bulkUploadSample = asyncHandler(async (req, res) => {
   const ws = workbook.addWorksheet('Sample Format');
 
   ws.columns = [
-    { header: 'Date (YYYY-MM-DD)', key: 'date', width: 20 },
-    { header: 'Type (INVOICE/PAYMENT/PURCHASE)', key: 'type', width: 25 },
+    { header: 'Date (YYYY-MM-DD)', key: 'date', width: 25 },
+    { header: 'Type', key: 'type', width: 25 },
     { header: 'Ref / Method', key: 'ref', width: 25 },
     { header: 'Amount', key: 'amount', width: 15 },
   ];
 
-  // Sample Rows
+  // Add a helper row with instructions
   if (type === 'VENDOR') {
-    ws.addRow({ date: '2026-07-25', type: 'PURCHASE', ref: 'BILL-001', amount: 55000 });
-    ws.addRow({ date: '2026-07-26', type: 'PAYMENT', ref: 'CASH', amount: 20000 });
+    ws.addRow({ date: '2026-07-25', type: 'PURCHASE', ref: 'BILL-101', amount: 5000 });
+    ws.addRow({ date: '2026-07-26', type: 'PAYMENT', ref: 'CASH', amount: 2000 });
+    ws.addRow({ date: '', type: 'Allowed: PURCHASE, PAYMENT', ref: 'Method: CASH, CHEQUE, BANK', amount: '' });
   } else {
     ws.addRow({ date: '2026-07-30', type: 'INVOICE', ref: 'SB00001', amount: 15000 });
     ws.addRow({ date: '2026-07-31', type: 'PAYMENT', ref: 'CHEQUE-9988', amount: 5000 });
+    ws.addRow({ date: '', type: 'Allowed: INVOICE, PAYMENT', ref: 'Method: CASH, CHEQUE, BANK', amount: '' });
   }
 
   // Styling
-  const headerRow = ws.getRow(1);
-  headerRow.font = { bold: true };
-  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAF7' } };
+  ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } }; // Primary Blue
+
+  // Align all cells
+  ws.eachRow((row) => {
+    row.eachCell((cell) => {
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      if (typeof cell.value === 'number') cell.alignment.horizontal = 'right';
+    });
+  });
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', 'attachment; filename="Bulk_Upload_Template.xlsx"');
+  res.setHeader('Content-Disposition', `attachment; filename="${type}_Upload_Template.xlsx"`);
   await workbook.xlsx.write(res);
   res.end();
 });
