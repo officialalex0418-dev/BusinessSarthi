@@ -141,7 +141,7 @@ export const listSales = asyncHandler(async (req, res) => {
     filter.staff = req.user._id;
   }
 
-  const { period, startDate, endDate, staffId, customerId } = req.query;
+  const { period, startDate, endDate, customerId } = req.query;
   if (startDate && endDate) {
     filter.saleDate = { $gte: new Date(startDate), $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) };
   } else if (period) {
