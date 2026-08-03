@@ -99,23 +99,29 @@ export default function Vendors() {
             </tr>
           )}
           mobileRender={(v) => (
-            <div key={v._id} className="p-4 space-y-3 border-b dark:border-slate-800">
-              <div className="flex items-center justify-between">
-                <Link to={`${v._id}`} className="font-bold text-primary-600 hover:underline">{v.name}</Link>
-                <Badge color="red" className="font-bold">{formatMoney(v.outstandingBalance)}</Badge>
+            <div key={v._id} className="p-4 space-y-3 border-b dark:border-slate-800 last:border-0 transition active:bg-slate-50">
+              <div className="flex items-start justify-between">
+                <div className="min-w-0 flex-1">
+                  <Link to={`${v._id}`} className="font-bold text-slate-900 dark:text-slate-100 hover:text-primary-600 block truncate">{v.name}</Link>
+                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">{v.phone || 'No phone'}</p>
+                </div>
+                <div className="text-right ml-4">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Payable</p>
+                  <p className="font-black text-red-600 text-sm">{formatMoney(v.outstandingBalance)}</p>
+                </div>
               </div>
-              <div className="flex justify-between text-xs text-slate-600">
-                <p>{v.phone || 'No phone'}</p>
-                <p className="truncate max-w-[150px]">{v.address || 'No address'}</p>
+              <div className="flex items-center gap-2 text-[11px] text-slate-500 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
+                <MapPin className="h-3 w-3 shrink-0" />
+                <span className="truncate">{v.address || 'Address not set'}</span>
               </div>
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                  <Link to={`${v._id}`} className="btn-outline px-2.5 py-1.5 text-xs flex items-center justify-center rounded-md border border-slate-200">
-                    <History className="h-3.5 w-3.5" />
+              <div className="grid grid-cols-3 gap-2">
+                  <Link to={`${v._id}`} className="btn-outline h-9 text-xs flex items-center justify-center rounded-lg border border-slate-200 bg-white shadow-sm active:scale-95 transition-all">
+                    <History className="h-3.5 w-3.5 mr-1" /> Ledger
                   </Link>
-                  <Button variant="outline" size="sm" onClick={() => { setEditing(v); setForm({ ...emptyForm, ...v }); setModal(true); }}>
+                  <Button variant="outline" className="h-9 shadow-sm active:scale-95 transition-all" onClick={() => { setEditing(v); setForm({ ...emptyForm, ...v }); setModal(true); }}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="danger" size="sm" onClick={() => remove(v)}>
+                  <Button variant="danger" className="h-9 shadow-sm active:scale-95 transition-all" onClick={() => remove(v)}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
               </div>

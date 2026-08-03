@@ -384,19 +384,31 @@ export default function Distributors() {
             </tr>
           )}
           mobileRender={(v) => (
-            <div key={v._id} className="p-4 space-y-3 border-b dark:border-slate-800">
-               <div className="flex items-center justify-between">
-                  <Link to={`${v._id}`} className="font-bold text-primary-600 hover:underline">{v.name}</Link>
-                  <Badge color={v.status === 'ACTIVE' ? 'green' : 'red'}>{v.status}</Badge>
+            <div key={v._id} className="p-4 space-y-3 border-b dark:border-slate-800 last:border-0 transition active:bg-slate-50">
+               <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <Link to={`${v._id}`} className="font-bold text-slate-900 dark:text-slate-100 hover:text-primary-600 block truncate">{v.name}</Link>
+                    <Badge color={v.status === 'ACTIVE' ? 'green' : 'red'} className="text-[8px] mt-1">{v.status}</Badge>
+                  </div>
+                  <div className="text-right ml-4">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Due</p>
+                    <p className="font-black text-red-600 text-sm">{formatMoney(v.outstandingBalance)}</p>
+                  </div>
                </div>
-               <div className="flex justify-between text-sm">
-                  <p className="text-slate-500">Outstanding: <span className="font-bold text-red-600">{formatMoney(v.outstandingBalance)}</span></p>
-                  <p className="text-slate-400">Limit: {formatMoney(v.creditLimit)}</p>
+               <div className="flex justify-between items-center text-[11px] text-slate-500 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg">
+                  <p>Limit: <span className="font-bold text-slate-700 dark:text-slate-300">{formatMoney(v.creditLimit)}</span></p>
+                  <p>{v.phone || 'No Phone'}</p>
                </div>
-               <div className="grid grid-cols-3 gap-2 pt-2">
-                  <Button variant="outline" size="sm" onClick={() => { setPayForm({ ...emptyPayment, distributorId: v._id }); setModal('payment'); }}><CreditCard className="h-3.5 w-3.5" /></Button>
-                  <Button variant="outline" size="sm" onClick={() => viewLedger(v)}><History className="h-3.5 w-3.5" /></Button>
-                  <Button variant="outline" size="sm" onClick={() => { setEditing(v); setForm({ ...emptyDistributor, ...v }); setModal('form'); }}><Pencil className="h-3.5 w-3.5" /></Button>
+               <div className="grid grid-cols-3 gap-2">
+                  <Button variant="outline" className="h-9 shadow-sm active:scale-95 transition-all" onClick={() => { setPayForm({ ...emptyPayment, distributorId: v._id }); setModal('payment'); }}>
+                    <CreditCard className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="outline" className="h-9 shadow-sm active:scale-95 transition-all" onClick={() => viewLedger(v)}>
+                    <History className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="outline" className="h-9 shadow-sm active:scale-95 transition-all" onClick={() => { setEditing(v); setForm({ ...emptyDistributor, ...v }); setModal('form'); }}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
                </div>
             </div>
           )}

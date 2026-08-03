@@ -58,10 +58,10 @@ export default function Shifts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Work Shifts</h1>
-        <Button onClick={() => { setEditing(null); setForm(emptyForm); setModal(true); }}>
-          <Plus className="h-4 w-4" /> New Shift
+        <Button onClick={() => { setEditing(null); setForm(emptyForm); setModal(true); }} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" /> New Shift
         </Button>
       </div>
 
@@ -70,7 +70,7 @@ export default function Shifts() {
           columns={['Shift Name', 'Timing', 'Working Days', 'Late Buffer', 'Actions']}
           data={items}
           renderRow={(item) => (
-            <tr key={item._id}>
+            <tr key={item._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
               <td className="table-td font-bold">{item.name}</td>
               <td className="table-td text-sm">
                 <div className="flex items-center gap-1">
@@ -97,6 +97,37 @@ export default function Shifts() {
                 </div>
               </td>
             </tr>
+          )}
+          mobileRender={(item) => (
+            <div key={item._id} className="p-4 space-y-3 border-b dark:border-slate-800 last:border-0">
+               <div className="flex items-center justify-between">
+                  <p className="font-bold text-slate-900 dark:text-slate-100">{item.name}</p>
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => { setEditing(item); setForm({ ...item }); setModal(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => remove(item)}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+               </div>
+               <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Timing</p>
+                    <div className="flex items-center gap-1.5 mt-0.5 text-slate-700 dark:text-slate-300 font-medium">
+                       <Clock className="h-3 w-3" /> {item.startTime} - {item.endTime}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Buffer</p>
+                    <p className="mt-0.5 text-slate-700 dark:text-slate-300 font-medium">{item.bufferTime} minutes</p>
+                  </div>
+                  <div className="col-span-2 pt-1">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Working Days</p>
+                    <div className="flex flex-wrap gap-1">
+                       {item.workingDays.map(d => (
+                         <span key={d} className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[9px] font-medium">{d.substring(0,3)}</span>
+                       ))}
+                    </div>
+                  </div>
+               </div>
+            </div>
           )}
         />
       </Card>

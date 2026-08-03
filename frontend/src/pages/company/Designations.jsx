@@ -68,10 +68,10 @@ export default function Designations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Designations</h1>
-        <Button onClick={() => { setEditing(null); setForm(emptyForm); setModal(true); }}>
-          <Plus className="h-4 w-4" /> New Designation
+        <Button onClick={() => { setEditing(null); setForm(emptyForm); setModal(true); }} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" /> New Designation
         </Button>
       </div>
 
@@ -80,7 +80,7 @@ export default function Designations() {
           columns={['Designation', 'Department', 'Permissions', 'Actions']}
           data={items}
           renderRow={(item) => (
-            <tr key={item._id}>
+            <tr key={item._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
               <td className="table-td font-bold">{item.name}</td>
               <td className="table-td text-slate-500 font-medium">{item.department?.name || '—'}</td>
               <td className="table-td">
@@ -110,6 +110,34 @@ export default function Designations() {
                 </div>
               </td>
             </tr>
+          )}
+          mobileRender={(item) => (
+            <div key={item._id} className="p-4 space-y-3 border-b dark:border-slate-800 last:border-0">
+               <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-slate-900 dark:text-slate-100">{item.name}</p>
+                    <p className="text-xs text-slate-500 font-medium">{item.department?.name || 'No Department'}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => {
+                      setEditing(item);
+                      setForm({ ...item, department: item.department?._id || item.department || '' });
+                      setModal(true);
+                    }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => remove(item)}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+               </div>
+               <div className="flex flex-wrap gap-1">
+                  {PERMISSIONS.filter(p => item.permissions[p.key]).map(p => (
+                    <Badge key={p.key} color="blue" className="text-[8px] uppercase px-1.5 py-0">
+                      {p.label}
+                    </Badge>
+                  ))}
+                  {PERMISSIONS.filter(p => item.permissions[p.key]).length === 0 && (
+                    <p className="text-[10px] text-slate-400 italic">No permissions assigned</p>
+                  )}
+               </div>
+            </div>
           )}
         />
       </Card>

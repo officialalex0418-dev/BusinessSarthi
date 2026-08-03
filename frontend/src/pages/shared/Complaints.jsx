@@ -270,7 +270,7 @@ function ChatView({ item, mode, onBack }) {
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-2"
+        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2"
         style={{ backgroundImage: 'radial-gradient(#00000010 1px, transparent 0)', backgroundSize: '20px 20px' }}
       >
         {messages.map((m, idx) => {
@@ -279,7 +279,7 @@ function ChatView({ item, mode, onBack }) {
           return (
             <div key={m._id} className={cn('flex w-full mb-1', isMe ? 'justify-end' : 'justify-start')}>
               <div className={cn(
-                'relative max-w-[85%] rounded-lg px-3 py-1.5 shadow-sm',
+                'relative max-w-[92%] sm:max-w-[85%] rounded-lg px-3 py-1.5 shadow-sm',
                 isMe ? 'bg-[#dcf8c6] dark:bg-emerald-900/80 rounded-tr-none' : 'bg-white dark:bg-slate-800 rounded-tl-none'
               )}>
                 {showSender && <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mb-0.5">{m.sender.name}</p>}
@@ -349,26 +349,26 @@ export default function Complaints() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between px-2">
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+      <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-full sm:w-auto">
           <button
             onClick={() => { setTab('CHAT'); setLoading(true); }}
-            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-all", tab === 'CHAT' ? "bg-white dark:bg-slate-700 shadow-sm text-primary-600 dark:text-primary-400" : "text-slate-500")}
+            className={cn("flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-all", tab === 'CHAT' ? "bg-white dark:bg-slate-700 shadow-sm text-primary-600 dark:text-primary-400" : "text-slate-500")}
           >
             Chat
           </button>
           <button
             onClick={() => { setTab('COMPLAINT'); setLoading(true); }}
-            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-all", tab === 'COMPLAINT' ? "bg-white dark:bg-slate-700 shadow-sm text-primary-600 dark:text-primary-400" : "text-slate-500")}
+            className={cn("flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-all", tab === 'COMPLAINT' ? "bg-white dark:bg-slate-700 shadow-sm text-primary-600 dark:text-primary-400" : "text-slate-500")}
           >
             Complaint
           </button>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="bg-white" onClick={() => setModal({ open: true, mode: 'CHAT' })}>
+          <Button size="sm" variant="outline" className="flex-1 bg-white sm:flex-none" onClick={() => setModal({ open: true, mode: 'CHAT' })}>
             <MessageSquare className="h-4 w-4 mr-1" /> New Chat
           </Button>
-          <Button size="sm" onClick={() => setModal({ open: true, mode: 'COMPLAINT' })}>
+          <Button size="sm" className="flex-1 sm:flex-none" onClick={() => setModal({ open: true, mode: 'COMPLAINT' })}>
             <Plus className="h-4 w-4 mr-1" /> Add Complaint
           </Button>
         </div>
