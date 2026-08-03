@@ -142,25 +142,25 @@ export default function StaffDashboard() {
           </div>
         </div>
         <CardBody className="grid grid-cols-2 gap-3 sm:grid-cols-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="text-center">
-            <Badge color={data.checkInStatus ? 'green' : 'gray'}>
+          <div className="text-center p-1">
+            <Badge color={data.checkInStatus ? 'green' : 'gray'} className="text-[10px] sm:text-xs">
               {data.checkInStatus ? `In ${formatTime(data.checkInTime)}` : 'Not checked in'}
             </Badge>
-            <p className="mt-1 text-xs text-slate-400">Check-In</p>
+            <p className="mt-1 text-[10px] text-slate-400 uppercase tracking-tighter sm:tracking-normal">Check-In</p>
           </div>
-          <div className="text-center">
-            <Badge color={data.checkOutStatus ? 'blue' : 'gray'}>
+          <div className="text-center p-1">
+            <Badge color={data.checkOutStatus ? 'blue' : 'gray'} className="text-[10px] sm:text-xs">
               {data.checkOutStatus ? `Out ${formatTime(data.checkOutTime)}` : 'Not yet'}
             </Badge>
-            <p className="mt-1 text-xs text-slate-400">Check-Out</p>
+            <p className="mt-1 text-[10px] text-slate-400 uppercase tracking-tighter sm:tracking-normal">Check-Out</p>
           </div>
-          <div className="text-center">
-            <p className="font-bold">{data.leaveBalance?.paid ?? 0} / {data.leaveBalance?.sick ?? 0}</p>
-            <p className="text-xs text-slate-400">Paid / Sick leave</p>
+          <div className="text-center p-1 border-t sm:border-none pt-3 sm:pt-0">
+            <p className="font-bold text-sm sm:text-base">{data.leaveBalance?.paid ?? 0} / {data.leaveBalance?.sick ?? 0}</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-tighter sm:tracking-normal">Paid / Sick</p>
           </div>
-          <div className="text-center">
-            <p className={`font-bold ${data.lateDays > 3 ? 'text-red-500' : ''}`}>{data.lateDays}</p>
-            <p className="text-xs text-slate-400">Late days</p>
+          <div className="text-center p-1 border-t sm:border-none pt-3 sm:pt-0">
+            <p className={`font-bold text-sm sm:text-base ${data.lateDays > 3 ? 'text-red-500' : ''}`}>{data.lateDays}</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-tighter sm:tracking-normal">Late days</p>
           </div>
         </CardBody>
       </Card>
@@ -197,13 +197,13 @@ export default function StaffDashboard() {
       <Card>
         <CardHeader title={t('Monthly Performance', language)} />
         <CardBody>
-          <div className="flex flex-wrap items-center justify-around gap-6">
+          <div className="flex flex-col items-center justify-around gap-8 sm:flex-row sm:gap-6">
             <ProgressRing value={data.salesProgressPct} color="#2563eb" label={t('Sales Progress', language)}
               sub={`${formatMoney(data.achievedTarget)} / ${formatMoney(data.monthlyTarget)}`} />
             <ProgressRing value={data.attendanceProgressPct} color="#059669" label={t('Attendance', language)}
               sub={`${data.presentDays} days present`} />
           </div>
-          <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+          <div className="mt-8 grid grid-cols-3 gap-3 text-center sm:mt-6">
             <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
               <p className="text-sm font-bold">{formatMoney(data.monthlyTarget)}</p>
               <p className="text-xs text-slate-400">Target</p>

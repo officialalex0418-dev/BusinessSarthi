@@ -286,47 +286,49 @@ export default function VendorDetails() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="flex items-center gap-4">
-        <Link to="/company/vendors" className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold">{vendor.name}</h1>
-          <p className="text-sm text-slate-500">Vendor Account Details</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-4">
+          <Link to="/company/vendors" className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold sm:text-2xl">{vendor.name}</h1>
+            <p className="text-xs text-slate-500 sm:text-sm">Vendor Account Details</p>
+          </div>
         </div>
-        <div className="ml-auto flex gap-2">
-          <Button onClick={() => setModal('payment')}>
+        <div className="flex gap-2 sm:ml-auto">
+          <Button onClick={() => setModal('payment')} className="w-full sm:w-auto">
             <CreditCard className="h-4 w-4 mr-2" /> Pay Vendor
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+        <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-bold border-b pb-2">Profile Information</h3>
           <div className="space-y-3 text-sm">
             <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-              <Phone className="h-4 w-4" /> {vendor.phone || 'N/A'}
+              <Phone className="h-4 w-4 shrink-0" /> {vendor.phone || 'N/A'}
             </div>
             <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-              <Mail className="h-4 w-4" /> {vendor.email || 'N/A'}
+              <Mail className="h-4 w-4 shrink-0" /> {vendor.email || 'N/A'}
+            </div>
+            <div className="flex items-start gap-3 text-slate-600 dark:text-slate-400">
+              <MapPin className="h-4 w-4 shrink-0 mt-0.5" /> {vendor.address || 'N/A'}
             </div>
             <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-              <MapPin className="h-4 w-4" /> {vendor.address || 'N/A'}
-            </div>
-            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-              <Hash className="h-4 w-4" /> PAN/VAT: {vendor.panVat || 'N/A'}
+              <Hash className="h-4 w-4 shrink-0" /> PAN/VAT: {vendor.panVat || 'N/A'}
             </div>
           </div>
         </Card>
 
-        <Card className="p-6 bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30">
+        <Card className="p-4 sm:p-6 bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30">
           <p className="text-xs font-bold text-red-600 uppercase tracking-wider">Total Outstanding (Payable)</p>
-          <p className="text-3xl font-black text-red-700 dark:text-red-400 mt-1">{formatMoney(vendor.outstandingBalance)}</p>
-          <p className="text-xs text-red-500 mt-2 italic">How much you owe to this vendor.</p>
+          <p className="text-2xl sm:text-3xl font-black text-red-700 dark:text-red-400 mt-1">{formatMoney(vendor.outstandingBalance)}</p>
+          <p className="text-[10px] sm:text-xs text-red-500 mt-2 italic">How much you owe to this vendor.</p>
         </Card>
 
-        <Card className="p-6 bg-slate-900 text-white">
+        <Card className="p-4 sm:p-6 bg-slate-900 text-white sm:col-span-2 lg:col-span-1">
           <div className="flex justify-between items-start">
              <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Business Summary</p>
@@ -341,18 +343,18 @@ export default function VendorDetails() {
       </div>
 
       <Card>
-        <div className="border-b px-4 flex justify-between items-center">
-           <div className="flex gap-6 overflow-x-auto no-scrollbar">
+        <div className="flex flex-col border-b sm:flex-row sm:items-center sm:justify-between sm:px-4">
+           <div className="flex gap-6 overflow-x-auto no-scrollbar border-b sm:border-none">
               <button className="px-4 py-4 text-sm font-bold border-b-2 border-primary-600 text-primary-600">Full Ledger</button>
            </div>
-           <div className="flex gap-2 py-2">
-              <Button variant="outline" size="sm" onClick={() => setModal('bulk-upload')}>
-                <FileUp className="h-4 w-4 mr-2" /> Upload Record
+           <div className="flex flex-wrap gap-2 p-3 sm:py-2">
+              <Button variant="outline" size="sm" onClick={() => setModal('bulk-upload')} className="flex-1 sm:flex-none">
+                <FileUp className="h-4 w-4 mr-2" /> Upload
               </Button>
-              <Button variant="outline" size="sm" onClick={handlePrintLedger}>
+              <Button variant="outline" size="sm" onClick={handlePrintLedger} className="flex-1 sm:flex-none">
                 <Printer className="h-4 w-4 mr-2" /> Print
               </Button>
-              <Button variant="outline" size="sm" onClick={exportLedgerCSV}>
+              <Button variant="outline" size="sm" onClick={exportLedgerCSV} className="flex-1 sm:flex-none">
                 <Download className="h-4 w-4 mr-2" /> CSV
               </Button>
            </div>
@@ -398,6 +400,32 @@ export default function VendorDetails() {
                   </div>
                 </td>
               </tr>
+            )}
+            mobileRender={(item) => (
+              <div key={item.id} className="p-4 space-y-3 border-b dark:border-slate-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-slate-400">{formatDateTime(item.date, dateFormat)}</p>
+                    <p className="font-bold text-xs uppercase">{item.type} {item.ref && `· ${item.ref}`}</p>
+                  </div>
+                  <Badge color={item.type === 'PURCHASE' ? 'blue' : 'green'}>{item.type === 'PURCHASE' ? 'Purchase' : 'Payment'}</Badge>
+                </div>
+                <div className="flex justify-between items-end">
+                   <div>
+                     {item.method && <p className="text-[10px] text-slate-500">Method: {item.method}</p>}
+                     {item.chequeDetails?.number && <p className="text-[10px] text-blue-500"># {item.chequeDetails.number}</p>}
+                   </div>
+                   <p className={cn("font-bold", item.type === 'PURCHASE' ? 'text-red-600' : 'text-emerald-600')}>
+                      {item.type === 'PURCHASE' ? '+' : '-'}{formatMoney(item.amount)}
+                   </p>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" size="sm" onClick={() => startEdit(item)} className="flex-1 py-1">Edit</Button>
+                  {item.type === 'PAYMENT' && (
+                    <Button variant="outline" size="sm" onClick={() => deletePayment(item.id)} className="flex-1 py-1 text-red-500 hover:text-red-600">Delete</Button>
+                  )}
+                </div>
+              </div>
             )}
           />
         </div>

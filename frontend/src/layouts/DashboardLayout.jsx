@@ -203,28 +203,28 @@ export default function DashboardLayout({ title, nav }) {
             </div>
           )}
           {/* Topbar */}
-          <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
-            <div className="flex items-center gap-3">
+          <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-2 sm:px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+            <div className="flex items-center gap-1 sm:gap-3">
               <button className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(true)}>
                 <Menu className="h-5 w-5" />
               </button>
-              <span className={cn('hidden items-center gap-1.5 text-xs sm:flex', connected ? 'text-emerald-500' : 'text-slate-400')}>
+              <span className={cn('hidden items-center gap-1.5 text-[10px] sm:flex sm:text-xs', connected ? 'text-emerald-500' : 'text-slate-400')}>
                 <span className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-slate-400')} />
                 {connected ? 'Live' : 'Offline'}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button onClick={toggle} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button onClick={toggle} className="rounded-lg p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
                 {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </button>
 
               {/* Notifications */}
               <div className="relative">
-                <button onClick={markRead} className="relative rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <button onClick={markRead} className="relative rounded-lg p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
                   <Bell className="h-5 w-5" />
                   {unread > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                    <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white sm:h-4 sm:min-w-[16px] sm:text-[10px]">
                       {unread}
                     </span>
                   )}

@@ -357,7 +357,7 @@ export const Modal = ({ open, onClose, title, children, wide }) => {
       <div
         className={cn(
           'card flex max-h-[95vh] w-full flex-col overflow-visible rounded-b-none sm:rounded-xl shadow-2xl print:max-h-none print:overflow-visible print:shadow-none print:border-none animate-in zoom-in-95 slide-in-from-bottom-10 duration-200',
-          wide ? 'max-w-7xl' : 'max-w-lg'
+          wide ? 'max-w-[95vw] lg:max-w-7xl' : 'max-w-lg'
         )}
         onClick={(e) => e.stopPropagation()}
       >

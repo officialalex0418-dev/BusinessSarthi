@@ -443,31 +443,35 @@ export default function DistributorDetails() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="flex items-center gap-4 no-print">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-bold">{distributor.name}</h1>
-        <Badge color={distributor.status === 'ACTIVE' ? 'green' : 'red'}>{distributor.status}</Badge>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center no-print">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="p-2">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold sm:text-2xl">{distributor.name}</h1>
+            <Badge color={distributor.status === 'ACTIVE' ? 'green' : 'red'}>{distributor.status}</Badge>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3 no-print">
         {/* Profile Card */}
-        <Card className="md:col-span-1 p-5 space-y-4">
+        <Card className="md:col-span-1 p-4 sm:p-5 space-y-4">
           <h3 className="font-bold border-b pb-2 flex items-center gap-2">
             <User className="h-4 w-4 text-primary-600" /> Basic Info
           </h3>
           <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-2 text-slate-600">
-              <Phone className="h-4 w-4 mt-0.5" />
+            <div className="flex items-center gap-2 text-slate-600">
+              <Phone className="h-4 w-4 shrink-0" />
               <span>{distributor.phone || 'N/A'}</span>
             </div>
             <div className="flex items-start gap-2 text-slate-600">
-              <MapPin className="h-4 w-4 mt-0.5" />
+              <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
               <span>{distributor.address || 'N/A'}</span>
             </div>
             <div className="flex items-start gap-2 text-slate-600">
-              <Hash className="h-4 w-4 mt-0.5" />
+              <Hash className="h-4 w-4 shrink-0 mt-0.5" />
               <div>
                 <p>PAN: {distributor.panVat || 'N/A'}</p>
                 <p>Reg: {distributor.registrationNumber || 'N/A'}</p>
@@ -521,13 +525,13 @@ export default function DistributorDetails() {
         {/* Aging & Recent Invoices */}
         <div className="md:col-span-2 space-y-6">
           <Card className="p-0 overflow-hidden" id="aging-report">
-             <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b flex justify-between items-center">
-                <h3 className="font-bold flex items-center gap-2"><AlertCircle className="h-4 w-4 text-orange-500" /> Aging Report (Unpaid Invoices)</h3>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={(e) => handlePrintSection(e, 'Aging Report')}>
+             <div className="bg-slate-50 dark:bg-slate-900/50 p-3 sm:p-4 border-b flex flex-wrap justify-between items-center gap-2">
+                <h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><AlertCircle className="h-4 w-4 text-orange-500" /> Aging Report (Unpaid)</h3>
+                <div className="flex gap-1 sm:gap-2 ml-auto">
+                  <Button size="sm" variant="ghost" className="p-1.5 h-8 w-8" onClick={(e) => handlePrintSection(e, 'Aging Report')}>
                     <Printer className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => exportToCSV(aging, `Aging_${distributor.name}`, [
+                  <Button size="sm" variant="ghost" className="p-1.5 h-8 w-8" onClick={() => exportToCSV(aging, `Aging_${distributor.name}`, [
                     { label: 'Invoice #', key: 'invoiceNumber' },
                     { label: 'Date', key: (r) => formatDate(r.date, dateFormat) },
                     { label: 'Age (Days)', key: 'ageDays' },
@@ -565,13 +569,13 @@ export default function DistributorDetails() {
           </Card>
 
           <Card className="p-0 overflow-hidden" id="transaction-history">
-             <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b flex justify-between items-center">
-                <h3 className="font-bold flex items-center gap-2"><Receipt className="h-4 w-4 text-blue-500" /> Transaction History</h3>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={(e) => handlePrintSection(e, 'Transaction History')}>
+             <div className="bg-slate-50 dark:bg-slate-900/50 p-3 sm:p-4 border-b flex flex-wrap justify-between items-center gap-2">
+                <h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><Receipt className="h-4 w-4 text-blue-500" /> Transaction History</h3>
+                <div className="flex gap-1 sm:gap-2 ml-auto">
+                  <Button size="sm" variant="ghost" className="p-1.5 h-8 w-8" onClick={(e) => handlePrintSection(e, 'Transaction History')}>
                     <Printer className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => exportToCSV(history, `History_${distributor.name}`, [
+                  <Button size="sm" variant="ghost" className="p-1.5 h-8 w-8" onClick={() => exportToCSV(history, `History_${distributor.name}`, [
                     { label: 'Date', key: (r) => formatDate(r.date, dateFormat) },
                     { label: 'Type', key: 'type' },
                     { label: 'Ref', key: 'ref' },
