@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Truck, History } from 'lucide-react';
+import { Plus, Pencil, Trash2, Truck, History, MapPin } from 'lucide-react';
 import { api } from '@/api/client';
 import { Card, Button, Input, Modal, Table, Spinner, Pagination, EmptyState, Badge } from '@/components/ui';
 import { formatMoney } from '@/lib/utils';

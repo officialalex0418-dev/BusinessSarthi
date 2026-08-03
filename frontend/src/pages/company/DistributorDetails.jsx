@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, CreditCard, Receipt, History, AlertCircle, Pencil, Save, X, Phone, MapPin, Hash, Trash2, Plus, User, Printer, Download, Eye, FileText, ShoppingCart, FileUp, FileDown } from 'lucide-react';
 import { api, downloadFile } from '@/api/client';
 import { Card, Button, Input, Modal, Table, Spinner, Badge, Select, Textarea, DatePicker, Checkbox } from '@/components/ui';
-import { formatMoney, formatDate, toLocalDateString } from '@/lib/utils';
+import { formatMoney, formatDate, toLocalDateString, cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { InvoicePreview } from '@/components/InvoicePreview';
 
@@ -488,9 +488,9 @@ export default function DistributorDetails() {
               <span className="text-slate-500 text-sm">Outstanding:</span>
               <span className="font-bold text-red-600 text-lg">{formatMoney(distributor.outstandingBalance)}</span>
             </div>
-            <div className="pt-2 flex flex-col gap-2">
+            <div className="pt-2 grid grid-cols-1 xs:grid-cols-2 gap-2">
               <Button
-                className="w-full"
+                className="col-span-1 xs:col-span-2 w-full"
                 onClick={() => {
                   if (distributor.outstandingBalance > distributor.creditLimit) {
                     setModal('credit-limit-warning');
@@ -502,13 +502,13 @@ export default function DistributorDetails() {
                 <Plus className="h-4 w-4 mr-2" /> New Invoice
               </Button>
               <Button className="w-full" variant="outline" onClick={() => setModal('payment')}>
-                <CreditCard className="h-4 w-4 mr-2" /> Record Payment
+                <CreditCard className="h-4 w-4 mr-1 sm:mr-2" /> <span className="truncate">Pay</span>
               </Button>
               <Button className="w-full" variant="outline" onClick={() => { setEditingCheque(null); setChequeForm({ chequeNumber: '', bankName: '', issueDate: '', cashDate: '', amount: 0, remarks: '', status: 'ISSUED' }); setModal('cheque'); }}>
-                <Plus className="h-4 w-4 mr-2" /> Add Cheque
+                <Plus className="h-4 w-4 mr-1 sm:mr-2" /> <span className="truncate">Cheque</span>
               </Button>
 
-              <div className="pt-2">
+              <div className="col-span-1 xs:col-span-2 pt-2">
                 <Button
                   className="w-full border-dashed"
                   variant="outline"

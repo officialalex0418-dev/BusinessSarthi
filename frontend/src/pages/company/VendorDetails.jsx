@@ -9,7 +9,7 @@ import {
   Card, Button, Spinner, Table, Badge,
   EmptyState, Modal, Input, Select, Textarea, DatePicker
 } from '@/components/ui';
-import { formatMoney, formatDate, formatDateTime, fixFileUrl } from '@/lib/utils';
+import { formatMoney, formatDate, formatDateTime, fixFileUrl, cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
 const emptyPayment = { amount: 0, method: 'CASH', remarks: '', paymentDate: '', chequeNumber: '', bankName: '', maturityDate: '' };
@@ -520,7 +520,7 @@ export default function VendorDetails() {
             />
 
             {payForm.method === 'CHEQUE' && (
-              <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
                 <Input
                   label="Cheque Number"
                   value={payForm.chequeNumber}
@@ -580,7 +580,7 @@ export default function VendorDetails() {
             />
 
             {payForm.method === 'CHEQUE' && (
-              <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
                 <Input
                   label="Cheque Number"
                   value={payForm.chequeNumber}

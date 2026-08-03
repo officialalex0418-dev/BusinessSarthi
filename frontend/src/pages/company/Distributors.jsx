@@ -399,15 +399,15 @@ export default function Distributors() {
                   <p>Limit: <span className="font-bold text-slate-700 dark:text-slate-300">{formatMoney(v.creditLimit)}</span></p>
                   <p>{v.phone || 'No Phone'}</p>
                </div>
-               <div className="grid grid-cols-3 gap-2">
-                  <Button variant="outline" className="h-9 shadow-sm active:scale-95 transition-all" onClick={() => { setPayForm({ ...emptyPayment, distributorId: v._id }); setModal('payment'); }}>
-                    <CreditCard className="h-3.5 w-3.5" />
+               <div className="grid grid-cols-3 gap-2 pt-2">
+                  <Button variant="outline" className="h-9 w-full shadow-sm active:scale-95 transition-all" onClick={() => { setPayForm({ ...emptyPayment, distributorId: v._id }); setModal('payment'); }}>
+                    <CreditCard className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" className="h-9 shadow-sm active:scale-95 transition-all" onClick={() => viewLedger(v)}>
-                    <History className="h-3.5 w-3.5" />
+                  <Button variant="outline" className="h-9 w-full shadow-sm active:scale-95 transition-all" onClick={() => viewLedger(v)}>
+                    <History className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" className="h-9 shadow-sm active:scale-95 transition-all" onClick={() => { setEditing(v); setForm({ ...emptyDistributor, ...v }); setModal('form'); }}>
-                    <Pencil className="h-3.5 w-3.5" />
+                  <Button variant="outline" className="h-9 w-full shadow-sm active:scale-95 transition-all" onClick={() => { setEditing(v); setForm({ ...emptyDistributor, ...v }); setModal('form'); }}>
+                    <Pencil className="h-4 w-4" />
                   </Button>
                </div>
             </div>
@@ -447,7 +447,7 @@ export default function Distributors() {
             {payForm.method === 'CHEQUE' && (
               <div className="space-y-4 rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
                 <Input label="Cheque Number" value={payForm.chequeDetails.number} onChange={e => setPayForm({...payForm, chequeDetails: {...payForm.chequeDetails, number: e.target.value}})} />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
                   <DatePicker label="Deposit Date" value={payForm.chequeDetails.depositDate} onChange={(val) => setPayForm({...payForm, chequeDetails: {...payForm.chequeDetails, depositDate: val}})} />
                   <DatePicker label="Maturity Date" value={payForm.chequeDetails.maturityDate} onChange={(val) => setPayForm({...payForm, chequeDetails: {...payForm.chequeDetails, maturityDate: val}})} />
                 </div>

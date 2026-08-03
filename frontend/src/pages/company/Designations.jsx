@@ -159,12 +159,12 @@ export default function Designations() {
           </div>
           <div>
             <p className="mb-3 text-sm font-medium">Access Permissions</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 xs:grid-cols-2 lg:grid-cols-3">
               {PERMISSIONS.map((p) => (
-                <label key={p.key} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-2.5 hover:bg-slate-50 dark:border-slate-800">
+                <label key={p.key} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-2.5 hover:bg-slate-50 dark:border-slate-800 transition-colors">
                   <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={form.permissions[p.key]}
                     onChange={(e) => setForm({ ...form, permissions: { ...form.permissions, [p.key]: e.target.checked } })} />
-                  <span className="text-sm">{p.label}</span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{p.label}</span>
                 </label>
               ))}
             </div>

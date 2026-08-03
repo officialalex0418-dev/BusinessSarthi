@@ -76,13 +76,13 @@ function ConversationModal({ open, onClose, onSuccess, mode = 'CHAT' }) {
       <form onSubmit={submit} className="space-y-4">
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Select Recipient</label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
             <Button
               type="button"
               variant={form.recipientType === 'group' ? 'primary' : 'outline'}
               size="sm"
               onClick={() => setForm({ ...form, recipientType: 'group' })}
-              className="text-[10px] px-1"
+              className="text-[10px] px-2 py-2"
             >
               Company Group
             </Button>
@@ -91,7 +91,7 @@ function ConversationModal({ open, onClose, onSuccess, mode = 'CHAT' }) {
               variant={form.recipientType === 'individual' ? 'primary' : 'outline'}
               size="sm"
               onClick={() => setForm({ ...form, recipientType: 'individual' })}
-              className="text-[10px] px-1"
+              className="text-[10px] px-2 py-2"
             >
               Specific Person
             </Button>
@@ -100,7 +100,7 @@ function ConversationModal({ open, onClose, onSuccess, mode = 'CHAT' }) {
               variant={form.recipientType === 'create_group' ? 'primary' : 'outline'}
               size="sm"
               onClick={() => setForm({ ...form, recipientType: 'create_group' })}
-              className="text-[10px] px-1"
+              className="text-[10px] px-2 py-2"
             >
               Create Group
             </Button>
