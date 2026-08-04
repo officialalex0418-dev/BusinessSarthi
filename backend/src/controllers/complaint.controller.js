@@ -43,6 +43,22 @@ export const createComplaint = asyncHandler(async (req, res) => {
   complaint.lastMessageSender = req.user._id;
   await complaint.save();
 
+  // Notify recipient
+  const notificationPayload = {
+    company: req.user.company,
+    type: 'COMPLAINT_NEW',
+    title: `New Complaint: ${subject}`,
+    message: message || 'See details in complaints',
+    link: '/staff/complaints',
+  };
+
+  if (complaint.recipient) {
+    notify({ ...notificationPayload, recipient: complaint.recipient }).catch(e => console.error('Complaint notification failed:', e));
+  } else if (complaint.isGroup) {
+      // If it's a company-wide complaint, we might notify owners/managers
+      // For now, only notify specific recipient if set.
+  }
+
   return res.status(201).json({ success: true, data: complaint });
 });
 
@@ -107,6 +123,19 @@ export const addReply = asyncHandler(async (req, res) => {
   await complaint.save();
 
   await ComplaintMessage.updateMany({ complaint: complaint._id }, { expiresAt });
+
+  // Notify other party
+  const recipientId = complaint.sender.toString() === req.user._id.toString() ? complaint.recipient : complaint.sender;
+  if (recipientId) {
+    notify({
+      recipient: recipientId,
+      company: req.user.company,
+      type: 'COMPLAINT_REPLY',
+      title: `Reply to: ${complaint.subject}`,
+      message: message || 'Sent an attachment',
+      link: '/staff/complaints',
+    }).catch(e => console.error('Complaint notification failed:', e));
+  }
 
   res.status(201).json({ success: true, data: reply });
 });

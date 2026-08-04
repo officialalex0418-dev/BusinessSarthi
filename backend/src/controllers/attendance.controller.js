@@ -8,7 +8,7 @@ import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
 import { realtime } from '../sockets/index.js';
-import { todayStr } from '../utils/dates.js';
+import { todayStr, getNepalMinutes } from '../utils/dates.js';
 import { getDistanceMeters } from '../utils/geo.js';
 
 import { reverseGeocode } from '../utils/geocoder.js';
@@ -77,19 +77,32 @@ export const checkIn = asyncHandler(async (req, res) => {
   const now = new Date();
   const address = await reverseGeocode(latitude, longitude);
 
-  // 2. Shift Window Restriction (1 hour prior)
+  // 2. Shift Window Restriction (1 hour prior until shift end)
   if (req.user.shift) {
     const shift = await Shift.findById(req.user.shift);
     if (shift) {
-      const now = new Date();
+      const nowNepal = getNepalMinutes();
       const [sh, sm] = shift.startTime.split(':').map(Number);
-      const shiftStart = new Date(now);
-      shiftStart.setHours(sh, sm, 0, 0);
+      const [eh, em] = shift.endTime.split(':').map(Number);
 
-      const oneHourPrior = new Date(shiftStart.getTime() - 60 * 60 * 1000);
+      const shiftStartMins = sh * 60 + sm;
+      let shiftEndMins = eh * 60 + em;
 
-      if (now < oneHourPrior) {
-        throw ApiError.badRequest(`Check-in not allowed yet. Your shift starts at ${shift.startTime}. You can check in from ${oneHourPrior.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} onwards.`);
+      // Handle shifts crossing midnight
+      if (shiftEndMins < shiftStartMins) shiftEndMins += 1440;
+
+      const oneHourPrior = shiftStartMins - 60;
+
+      // Check if current time is within [start-60, end]
+      // Note: If shift crosses midnight, and we are in the "late" part of it (after midnight),
+      // nowNepal might be small (e.g. 1 AM = 60).
+      // We check both current day and "previous day shift carryover" logic if needed,
+      // but usually check-in happens around the start time.
+      const isWithinWindow = (nowNepal >= oneHourPrior && nowNepal <= shiftEndMins) ||
+                             (nowNepal + 1440 >= oneHourPrior && nowNepal + 1440 <= shiftEndMins);
+
+      if (!isWithinWindow) {
+        throw ApiError.badRequest(`Check-in not allowed yet. Your shift is from ${shift.startTime} to ${shift.endTime}. You can check in from 1 hour prior until the shift ends.`);
       }
     }
   }

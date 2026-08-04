@@ -1,6 +1,6 @@
 import { Chat, ChatMessage, User, Company } from '../models/index.js';
 import { asyncHandler, ApiError } from '../utils/ApiError.js';
-import { notify } from '../services/notification.service.js';
+import { notify, notifyMany } from '../services/notification.service.js';
 
 export const createChat = asyncHandler(async (req, res) => {
   const { recipientId, participants, groupName, message, isGroup, attachments } = req.body;
@@ -47,6 +47,24 @@ export const createChat = asyncHandler(async (req, res) => {
   chat.lastMessageAt = new Date();
   chat.lastMessageSender = req.user._id;
   await chat.save();
+
+  // Notify recipients
+  const notificationPayload = {
+    company: req.user.company,
+    type: 'CHAT_MESSAGE',
+    title: chat.isGroup ? `New message in ${chat.groupName}` : `New message from ${req.user.name}`,
+    message: message || 'Sent an attachment',
+    link: '/staff/complaints', // Chat and complaints share the same page
+  };
+
+  if (chat.isGroup) {
+    const recipients = chat.participants.filter(p => p.toString() !== req.user._id.toString());
+    if (recipients.length > 0) {
+      notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
+    }
+  } else {
+    notify({ ...notificationPayload, recipient: chat.recipient }).catch(e => console.error('Chat notification failed:', e));
+  }
 
   return res.status(201).json({ success: true, data: chat });
 });
@@ -101,6 +119,27 @@ export const addChatMessage = asyncHandler(async (req, res) => {
   await chat.save();
 
   await ChatMessage.updateMany({ chat: chat._id }, { expiresAt });
+
+  // Notify recipients
+  const notificationPayload = {
+    company: req.user.company,
+    type: 'CHAT_MESSAGE',
+    title: chat.isGroup ? `New message in ${chat.groupName}` : `New message from ${req.user.name}`,
+    message: message || 'Sent an attachment',
+    link: '/staff/complaints',
+  };
+
+  if (chat.isGroup) {
+    const recipients = chat.participants.filter(p => p.toString() !== req.user._id.toString());
+    if (recipients.length > 0) {
+      notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
+    }
+  } else {
+    const recipient = chat.participants.find(p => p.toString() !== req.user._id.toString());
+    if (recipient) {
+      notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
+    }
+  }
 
   res.status(201).json({ success: true, data: reply });
 });

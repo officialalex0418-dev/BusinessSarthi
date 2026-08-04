@@ -14,6 +14,19 @@ export const monthStr = (d = new Date()) => {
   return todayStr(d).slice(0, 7); // Returns YYYY-MM
 };
 
+/** Returns total minutes from midnight in Nepal Time (Asia/Kathmandu) */
+export function getNepalMinutes(d = new Date()) {
+  const options = {
+    timeZone: 'Asia/Kathmandu',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+  };
+  const formatter = new Intl.DateTimeFormat('en-US', options);
+  const [{ value: hour }, , { value: minute }] = formatter.formatToParts(d);
+  return parseInt(hour, 10) * 60 + parseInt(minute, 10);
+}
+
 export function rangeFromPeriod(period) {
   const now = new Date();
   const start = new Date(now);
