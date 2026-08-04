@@ -11,7 +11,7 @@ export default function LiveTracking() {
   const { user } = useAuth();
   const dateFormat = user?.company?.settings?.dateFormat || 'BS';
   const [tab, setTab] = useState('live'); // live | route | heatmap
-  const [markers, setMarkers] = useState(null);
+  const [markers, setMarkers] = useState([]);
   const [focusedStaffId, setFocusedStaffId] = useState(null);
   const [staffList, setStaffList] = useState([]);
   const [selectedStaff, setSelectedStaff] = useState('');
@@ -19,6 +19,14 @@ export default function LiveTracking() {
   const [analysis, setAnalysis] = useState(null);
   const [heat, setHeat] = useState([]);
   const [period, setPeriod] = useState('daily');
+
+  const getRelativeTime = (date) => {
+    if (!date) return 'Waiting for signal';
+    const diff = Math.floor((new Date() - new Date(date)) / 1000);
+    if (diff < 60) return 'Active now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return formatDateTime(date, dateFormat);
+  };
 
   const loadLive = useCallback(async () => {
     const { data } = await api.get('/locations/live');
@@ -121,13 +129,23 @@ export default function LiveTracking() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{m.name}</p>
-                      <p className="text-xs text-slate-500">{m.position || 'Staff'}</p>
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-tighter">{m.position || 'Staff'}</p>
                     </div>
                     {m.batteryLevel != null && <Badge color={m.batteryLevel > 20 ? 'green' : 'red'}>🔋 {m.batteryLevel}%</Badge>}
                   </div>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {m.lat != null ? `${m.lat.toFixed(5)}, ${m.lng.toFixed(5)}` : 'No GPS data'} · {formatDateTime(m.recordedAt, dateFormat)}
-                  </p>
+                  <div className="mt-2 flex items-center justify-between">
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      {m.lat != null ? `${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}` : 'No GPS data'}
+                    </p>
+                    <p className={cn(
+                      "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                      getRelativeTime(m.recordedAt) === 'Active now'
+                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20"
+                        : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                    )}>
+                      {getRelativeTime(m.recordedAt)}
+                    </p>
+                  </div>
                 </div>
               ))}
             </CardBody>

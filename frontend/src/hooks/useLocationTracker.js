@@ -248,6 +248,12 @@ export function useLocationTracker(enabled = true) {
                   source: 'BACKGROUND_WATCHER',
                };
                try {
+                  // Flush offline queue first to maintain order
+                  const queue = readQueue();
+                  if (queue.length > 0) {
+                     await api.post('/locations', { pings: queue });
+                     writeQueue([]);
+                  }
                   await api.post('/locations', point);
                   setLastPing(new Date());
                } catch {

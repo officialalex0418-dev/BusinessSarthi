@@ -68,6 +68,8 @@ export const pushLocation = asyncHandler(async (req, res) => {
   realtime.staffLocation(companyId.toString(), {
     staffId: req.user._id,
     staffName: req.user.name,
+    position: req.user.position,
+    profilePhoto: req.user.profilePhoto,
     lat: latest.location.coordinates[1],
     lng: latest.location.coordinates[0],
     address: latest.address,
