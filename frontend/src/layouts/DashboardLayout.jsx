@@ -22,7 +22,15 @@ export default function DashboardLayout({ title, nav }) {
 
   // Background location tracking for staff - only when checked-in
   const isTrackingEnabled = user?.role === 'STAFF' && user?.isCheckedIn;
-  const { isAlerting } = useLocationTracker(isTrackingEnabled);
+  const { isAlerting, ping } = useLocationTracker(isTrackingEnabled);
+
+  // Listen for force refresh command from manager
+  useSocketEvent('location:force_update', useCallback(() => {
+    if (isTrackingEnabled && ping) {
+       console.log('⚡ Force location update requested by manager');
+       ping();
+    }
+  }, [isTrackingEnabled, ping]));
 
   useEffect(() => {
     // Dispatch a resize event when sidebar toggles to help components like Leaflet recalculate

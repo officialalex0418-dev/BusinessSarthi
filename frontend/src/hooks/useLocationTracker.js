@@ -295,5 +295,5 @@ export function useLocationTracker(enabled = true) {
     };
   }, [enabled, ping, flush, playAlert, stopAlert, updateTrackingNotification]);
 
-  return { status, intervalMinutes, lastPing, isAlerting };
+  return { status, intervalMinutes, lastPing, isAlerting, ping };
 }

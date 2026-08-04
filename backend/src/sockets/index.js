@@ -77,4 +77,9 @@ export const realtime = {
     if (companyId) io.to(`company:${companyId}`).emit('activity:new', activity);
     io.to('platform').emit('activity:new', { companyId, ...activity });
   },
+  /** Force specific user device to send a fresh location ping */
+  requestRefresh(userId) {
+    if (!io) return;
+    io.to(`user:${userId}`).emit('location:force_update');
+  },
 };

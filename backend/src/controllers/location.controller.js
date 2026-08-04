@@ -255,6 +255,38 @@ export const heatmap = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { points } });
 });
 
+/** POST /locations/request-refresh (manager/owner) — ask active staff to ping NOW */
+export const requestRefresh = asyncHandler(async (req, res) => {
+  const companyId = req.user.company?._id;
+  if (!companyId) throw ApiError.forbidden('No company associated');
+
+  const { staffId } = req.body;
+
+  if (staffId) {
+    // Refresh specific user
+    const staff = await User.findById(staffId);
+    if (!staff || staff.company?.toString() !== companyId.toString()) {
+       throw ApiError.notFound('Staff not found in your company');
+    }
+    realtime.requestRefresh(staffId);
+  } else {
+    // Refresh all active staff in company
+    const today = todayStr();
+    const activeAttendance = await Attendance.find({
+      company: companyId,
+      date: today,
+      'checkIn.time': { $exists: true },
+      'checkOut.time': { $exists: false },
+    }).select('staff');
+
+    activeAttendance.forEach(a => {
+      realtime.requestRefresh(a.staff.toString());
+    });
+  }
+
+  res.json({ success: true, message: 'Refresh request sent to active staff' });
+});
+
 /** GET /locations/analysis/:staffId?period= — movement stats (distance, pings, active hours) */
 export const movementAnalysis = asyncHandler(async (req, res) => {
   const staff = await User.findById(req.params.staffId);

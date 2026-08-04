@@ -33,6 +33,17 @@ export default function LiveTracking() {
     setMarkers(data.data.items || []);
   }, []);
 
+  const handleManualRefresh = async () => {
+    try {
+       // 1. Fetch current data from DB
+       loadLive();
+       // 2. Ask all active devices to ping NOW for exact realtime data
+       await api.post('/locations/request-refresh');
+    } catch (err) {
+       console.error('Refresh request failed', err);
+    }
+  };
+
   useEffect(() => {
     loadLive();
     const interval = setInterval(loadLive, 60000); // 1 min refresh
@@ -110,7 +121,7 @@ export default function LiveTracking() {
           </div>
           <Card>
             <CardHeader title={`Active Staff (${activeMarkers.length})`}
-              action={<Button variant="ghost" onClick={loadLive}><RefreshCw className="h-4 w-4" /></Button>} />
+              action={<Button variant="ghost" onClick={handleManualRefresh}><RefreshCw className="h-4 w-4" /></Button>} />
             <CardBody className="max-h-[420px] space-y-3 overflow-y-auto">
               {activeMarkers.length === 0 && <p className="text-sm text-slate-400">No location pings in the last 24h.</p>}
               {activeMarkers.map((m) => (
