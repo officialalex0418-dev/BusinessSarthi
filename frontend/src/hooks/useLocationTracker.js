@@ -282,7 +282,9 @@ export function useLocationTracker(enabled = true) {
     return () => {
       cancelled = true;
       if (timerRef.current) clearInterval(timerRef.current);
-      BackgroundGeolocation.removeWatcher({ id: 'bs_watcher' }).catch(() => {});
+      // Remove explicit watcher termination on unmount.
+      // This allows the native service to stay alive if app UI is swiped away.
+      // termination only happens on explicit logout or checkout.
       stopAlert();
     };
   }, [enabled, ping, flush, playAlert, stopAlert, updateTrackingNotification]);

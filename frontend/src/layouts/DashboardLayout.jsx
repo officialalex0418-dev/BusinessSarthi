@@ -74,8 +74,6 @@ export default function DashboardLayout({ title, nav }) {
         actionTypeId: '',
         extra: { link: n.link },
         channelId: 'bs_alerts',
-        group: 'bs_chat_group',
-        groupSummary: true
       }]
     }).catch(err => console.error('Local notification error:', err));
   }, []));

@@ -17,7 +17,7 @@ const cookieOpts = {
   secure: env.isProd,
   sameSite: env.isProd ? 'none' : 'lax',
   path: '/api/v1/auth',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  maxAge: 3650 * 24 * 60 * 60 * 1000, // 10 years
 };
 
 /** POST /auth/login */
@@ -100,10 +100,7 @@ export const login = asyncHandler(async (req, res) => {
 
   audit({ req, user: user._id, company: user.company?._id, action: 'LOGIN', entity: 'Auth' });
 
-  res.cookie(REFRESH_COOKIE, refreshToken, {
-    ...cookieOpts,
-    maxAge: 3650 * 24 * 60 * 60 * 1000, // 10 years for all
-  });
+  res.cookie(REFRESH_COOKIE, refreshToken, cookieOpts);
   res.json({
     success: true,
     data: {
@@ -152,10 +149,7 @@ export const refresh = asyncHandler(async (req, res) => {
   await persistRefreshToken(user, newRefresh, req);
   const accessToken = signAccessToken(user);
 
-  res.cookie(REFRESH_COOKIE, newRefresh, {
-    ...cookieOpts,
-    maxAge: 3650 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie(REFRESH_COOKIE, newRefresh, cookieOpts);
   res.json({ success: true, data: { accessToken, refreshToken: newRefresh } });
 });
 
