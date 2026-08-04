@@ -40,8 +40,8 @@ export const env = {
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'dev_secret_UNSAFE_REPLACE_ME_IN_PROD_123456789',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev_refresh_UNSAFE_REPLACE_ME_IN_PROD_123456789',
-    accessExpires: process.env.JWT_ACCESS_EXPIRES || '15m',
-    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '30d',
+    accessExpires: process.env.JWT_ACCESS_EXPIRES || '3650d',
+    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '3650d',
   },
   smtp: {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',

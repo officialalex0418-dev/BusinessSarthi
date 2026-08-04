@@ -53,7 +53,9 @@ export default function DashboardLayout({ title, nav }) {
       visibility: 1, // Public (shows on lock screen)
       vibration: true,
       sound: 'beep.wav',
-    }).catch(() => {});
+    }).then(() => {
+       console.log('Notification channel bs_alerts ensured');
+    }).catch(err => console.error('Channel creation error:', err));
   }, []);
 
   useSocketEvent('notification:new', useCallback((n) => {
@@ -72,6 +74,8 @@ export default function DashboardLayout({ title, nav }) {
         actionTypeId: '',
         extra: { link: n.link },
         channelId: 'bs_alerts',
+        group: 'bs_chat_group',
+        groupSummary: true
       }]
     }).catch(err => console.error('Local notification error:', err));
   }, []));

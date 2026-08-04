@@ -197,6 +197,7 @@ export function useLocationTracker(enabled = true) {
     if (!enabled) {
       stopAlert();
       updateTrackingNotification(false);
+      BackgroundGeolocation.removeWatcher({ id: 'bs_watcher' }).catch(() => {});
       return;
     }
 
@@ -204,11 +205,10 @@ export function useLocationTracker(enabled = true) {
     let cancelled = false;
 
     (async () => {
-      let minutes = 1; // Default to 1 min for better tracking accuracy
+      let minutes = 1;
       try {
         const { data } = await api.get('/locations/config');
         if (!data.data.enabled) return;
-        // The backend returns intervalMinutes: 1 as per location.controller.js
         minutes = data.data.intervalMinutes || 1;
       } catch { return; }
       if (cancelled) return;
@@ -216,8 +216,49 @@ export function useLocationTracker(enabled = true) {
       setIntervalMinutes(minutes);
       setStatus('active');
 
-      ping();
-      timerRef.current = setInterval(ping, minutes * 60 * 1000);
+      // Start the native background watcher
+      // This is what keeps the process alive even if UI is closed
+      try {
+        await BackgroundGeolocation.addWatcher(
+          {
+            id: 'bs_watcher',
+            backgroundTitle: 'Business Sarthi Tracking',
+            backgroundMessage: 'Shift active. Recording location in background...',
+            requestPermissions: true,
+            stale: false,
+            distanceFilter: 10, // 10 meters
+          },
+          async (pos, err) => {
+            if (err) {
+              console.error('Background geolocation error:', err);
+              return;
+            }
+            if (pos) {
+               const info = await Device.getInfo();
+               const point = {
+                  latitude: pos.latitude,
+                  longitude: pos.longitude,
+                  accuracy: pos.accuracy,
+                  recordedAt: new Date(pos.time).toISOString(),
+                  deviceInfo: {
+                    platform: info.platform,
+                    model: info.model,
+                    osVersion: info.osVersion,
+                  },
+                  source: 'BACKGROUND_WATCHER',
+               };
+               try {
+                  await api.post('/locations', point);
+                  setLastPing(new Date());
+               } catch {
+                  writeQueue([...readQueue(), point]);
+               }
+            }
+          }
+        );
+      } catch (e) {
+        console.error('Failed to start native background watcher:', e);
+      }
 
       const onVisible = () => { if (document.visibilityState === 'visible') ping(); };
       document.addEventListener('visibilitychange', onVisible);
@@ -241,9 +282,10 @@ export function useLocationTracker(enabled = true) {
     return () => {
       cancelled = true;
       if (timerRef.current) clearInterval(timerRef.current);
+      BackgroundGeolocation.removeWatcher({ id: 'bs_watcher' }).catch(() => {});
       stopAlert();
     };
-  }, [enabled, ping, flush, playAlert, stopAlert]);
+  }, [enabled, ping, flush, playAlert, stopAlert, updateTrackingNotification]);
 
   return { status, intervalMinutes, lastPing, isAlerting };
 }
