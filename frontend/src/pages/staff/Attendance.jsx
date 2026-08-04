@@ -173,16 +173,8 @@ export default function StaffAttendance() {
       await refreshUser();
       load();
     } catch (err) {
-      const msg = err.response?.data?.message?.toLowerCase() || '';
-      if (msg.includes('already checked in')) {
-        setMessage('You are already checked in for today.');
-      } else if (msg.includes('not checked in')) {
-        setMessage('You need to check in first before checking out.');
-      } else if (msg.includes('outside')) {
-        setMessage('You are too far from the company location. Please check in from the office radius.');
-      } else {
-        setMessage('Unable to record attendance. Please check your internet and try again.');
-      }
+      const msg = err.response?.data?.message || 'Unable to record attendance. Please check your internet and try again.';
+      setMessage(msg);
     } finally { setBusy(false); }
   };
 

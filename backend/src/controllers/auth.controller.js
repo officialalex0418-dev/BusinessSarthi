@@ -102,7 +102,7 @@ export const login = asyncHandler(async (req, res) => {
 
   res.cookie(REFRESH_COOKIE, refreshToken, {
     ...cookieOpts,
-    maxAge: isAppRequest ? 30 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000, // 30 days for mobile, 30 min for web
+    maxAge: isAppRequest ? 3650 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000, // 10 years for mobile, 30 min for web
   });
   res.json({
     success: true,
@@ -154,7 +154,7 @@ export const refresh = asyncHandler(async (req, res) => {
 
   res.cookie(REFRESH_COOKIE, newRefresh, {
     ...cookieOpts,
-    maxAge: payload.isMobile ? 30 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000,
+    maxAge: payload.isMobile ? 3650 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000,
   });
   res.json({ success: true, data: { accessToken, refreshToken: newRefresh } });
 });

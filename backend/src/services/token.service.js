@@ -16,9 +16,9 @@ export function signAccessToken(user) {
 }
 
 export function signRefreshToken(user, isMobile = false) {
-  // Mobile tokens last 30 days and are rotated on every use.
+  // Mobile tokens last 10 years (effectively infinite) and are rotated on every use.
   // Web tokens use the environment default (typically shorter).
-  const expiresIn = isMobile ? '30d' : (env.jwt.refreshExpires || '30m');
+  const expiresIn = isMobile ? '3650d' : (env.jwt.refreshExpires || '30m');
   return jwt.sign({ sub: user._id.toString(), type: 'refresh', isMobile }, env.jwt.refreshSecret, {
     expiresIn,
   });
