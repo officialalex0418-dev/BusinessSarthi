@@ -4,7 +4,7 @@ import { api } from '@/api/client';
 import { useSocketEvent } from '@/context/SocketContext';
 import { Card, CardHeader, CardBody, Button, Select, Spinner, Badge } from '@/components/ui';
 import LiveMap from '@/components/LiveMap';
-import { formatDateTime, fixFileUrl } from '@/lib/utils';
+import { formatDateTime, fixFileUrl, cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LiveTracking() {
