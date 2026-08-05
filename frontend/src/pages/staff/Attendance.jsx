@@ -243,6 +243,22 @@ export default function StaffAttendance() {
 
       {message && <div className="rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium">{message}</div>}
 
+      {isMobile && !today?.checkOut?.time && (
+        <Card className="bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-900/30 p-4">
+          <div className="flex gap-3">
+            <Settings className="h-5 w-5 text-amber-600 shrink-0" />
+            <div className="space-y-2">
+              <p className="text-sm font-bold text-amber-900 dark:text-amber-300 uppercase tracking-tight">Ensure Constant Tracking</p>
+              <p className="text-xs text-amber-800 dark:text-amber-400 leading-relaxed">
+                To prevent automatic checkout, please ensure:
+                <br/>• Location permission: <b>"Allow all the time"</b>
+                <br/>• Battery usage: <b>"Unrestricted"</b> (in App Info Settings)
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {locError && (
         <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-300">
           <div className="flex items-center gap-2">

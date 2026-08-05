@@ -20,7 +20,7 @@ export function startCronJobs() {
 }
 
 async function autoCheckoutInactiveUsers() {
-  const fortyFiveMinsAgo = new Date(Date.now() - 45 * 60 * 1000);
+  const sixtyMinsAgo = new Date(Date.now() - 60 * 60 * 1000);
   const today = todayStr();
 
   // 1. Find all active attendance records for today
@@ -36,12 +36,12 @@ async function autoCheckoutInactiveUsers() {
       .sort({ recordedAt: -1 })
       .select('recordedAt');
 
-    // 3. If no ping ever OR last ping was > 45 mins ago
+    // 3. If no ping ever OR last ping was > 60 mins ago
     // We also check against checkIn.time in case they just checked in and haven't pinged yet
     const lastActivity = lastLog ? lastLog.recordedAt : session.checkIn.time;
 
-    if (lastActivity < fortyFiveMinsAgo) {
-      console.log(`👤 Auto-checking out ${session.staff.name} due to 45m inactivity.`);
+    if (lastActivity < sixtyMinsAgo) {
+      console.log(`👤 Auto-checking out ${session.staff.name} due to 60m inactivity.`);
 
       session.checkOut = {
         time: new Date(),

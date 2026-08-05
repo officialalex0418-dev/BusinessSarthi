@@ -25,6 +25,7 @@ export function useLocationTracker(enabled = true) {
   const [lastPing, setLastPing] = useState(null);
   const [isAlerting, setIsAlerting] = useState(false);
   const timerRef = useRef(null);
+  const heartbeatRef = useRef(null);
   const audioRef = useRef(null);
   const alertTimerRef = useRef(null);
   const gpsOffStartTimeRef = useRef(null);
@@ -226,7 +227,7 @@ export function useLocationTracker(enabled = true) {
             backgroundMessage: 'Shift active. Recording location in background...',
             requestPermissions: true,
             stale: false,
-            distanceFilter: 10, // 10 meters
+            distanceFilter: 0, // Report every small movement to keep connection alive
           },
           async (pos, err) => {
             if (err) {
@@ -266,6 +267,11 @@ export function useLocationTracker(enabled = true) {
         console.error('Failed to start native background watcher:', e);
       }
 
+      // Foreground Intervals
+      ping();
+      timerRef.current = setInterval(ping, minutes * 60 * 1000);
+      heartbeatRef.current = setInterval(ping, 10 * 60 * 1000); // 10 min heartbeat
+
       const onVisible = () => { if (document.visibilityState === 'visible') ping(); };
       document.addEventListener('visibilitychange', onVisible);
 
@@ -288,6 +294,7 @@ export function useLocationTracker(enabled = true) {
     return () => {
       cancelled = true;
       if (timerRef.current) clearInterval(timerRef.current);
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       // Remove explicit watcher termination on unmount.
       // This allows the native service to stay alive if app UI is swiped away.
       // termination only happens on explicit logout or checkout.
