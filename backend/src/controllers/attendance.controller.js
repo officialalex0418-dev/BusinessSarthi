@@ -13,6 +13,7 @@ import { getDistanceMeters } from '../utils/geo.js';
 
 import { reverseGeocode } from '../utils/geocoder.js';
 import { checkAttendanceRestriction } from '../utils/attendance-checks.js';
+import { uploadFile } from '../services/storage.service.js';
 
 /** POST /attendance/check-in */
 export const checkIn = asyncHandler(async (req, res) => {
@@ -30,7 +31,10 @@ export const checkIn = asyncHandler(async (req, res) => {
   const existing = await Attendance.findOne({ staff: req.user._id, date });
   if (existing?.checkIn?.time) throw ApiError.conflict('Already checked in today');
 
-  const { latitude, longitude, deviceInfo } = req.body;
+  const { latitude, longitude, deviceInfo, photo } = req.body;
+
+  // Selfie is mandatory for all check-ins
+  if (!photo) throw ApiError.badRequest('Selfie is mandatory for check-in');
 
   // Outdoor staff cannot check-in from web
   const isAppRequest = !!deviceInfo?.platform && (deviceInfo.platform.toLowerCase() === 'android' || deviceInfo.platform.toLowerCase() === 'ios');
@@ -76,6 +80,13 @@ export const checkIn = asyncHandler(async (req, res) => {
 
   const now = new Date();
   const address = await reverseGeocode(latitude, longitude);
+  let photoUrl = null;
+
+  try {
+    photoUrl = await uploadFile(photo, 'attendance/check-in', 'image/jpeg');
+  } catch (err) {
+    throw ApiError.badRequest('Failed to process check-in photo');
+  }
 
   // 2. Shift Window Restriction (1 hour prior until shift end)
   if (req.user.shift) {
@@ -122,6 +133,7 @@ export const checkIn = asyncHandler(async (req, res) => {
         'checkIn.time': now,
         'checkIn.location': latitude != null ? { type: 'Point', coordinates: [longitude, latitude] } : undefined,
         'checkIn.address': address,
+        'checkIn.photo': photoUrl,
         'checkIn.deviceInfo': deviceInfo,
         'checkIn.isLate': isLate,
         status: 'PRESENT',
@@ -166,7 +178,10 @@ export const checkOut = asyncHandler(async (req, res) => {
   if (!attendance?.checkIn?.time) throw ApiError.badRequest('You have not checked in today');
   if (attendance.checkOut?.time) throw ApiError.conflict('Already checked out today');
 
-  const { latitude, longitude, deviceInfo, auto, reason } = req.body;
+  const { latitude, longitude, deviceInfo, auto, reason, photo } = req.body;
+
+  // Selfie is mandatory for all check-outs (unless it's an auto-checkout)
+  if (!auto && !photo) throw ApiError.badRequest('Selfie is mandatory for check-out');
 
   // Outdoor staff cannot check-out from web unless it's an auto-checkout
   const isAppRequest = !!deviceInfo?.platform && (deviceInfo.platform.toLowerCase() === 'android' || deviceInfo.platform.toLowerCase() === 'ios');
@@ -176,11 +191,21 @@ export const checkOut = asyncHandler(async (req, res) => {
 
   const now = new Date();
   const address = latitude != null ? await reverseGeocode(latitude, longitude) : (auto ? 'System Auto Checkout' : 'Location Unknown');
+  let photoUrl = null;
+
+  if (!auto && photo) {
+    try {
+      photoUrl = await uploadFile(photo, 'attendance/check-out', 'image/jpeg');
+    } catch (err) {
+      throw ApiError.badRequest('Failed to process check-out photo');
+    }
+  }
 
   attendance.checkOut = {
     time: now,
     location: latitude != null ? { type: 'Point', coordinates: [longitude, latitude] } : undefined,
     address,
+    photo: photoUrl,
     deviceInfo,
   };
 

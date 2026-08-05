@@ -3,6 +3,7 @@ import { LogIn, LogOut, MapPin, AlertCircle, Settings, Fingerprint, Calendar, Cl
 import { api } from '@/api/client';
 import { NativeBiometric } from '@capgo/capacitor-native-biometric';
 import { Device } from '@capacitor/device';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useAuth } from '@/context/AuthContext';
 import { useAppPermissions } from '@/hooks/useAppPermissions';
 import { Card, CardHeader, CardBody, Button, Table, Badge, Spinner, Modal, Input, Textarea, MonthPicker, DatePicker } from '@/components/ui';
@@ -157,12 +158,36 @@ export default function StaffAttendance() {
         return;
       }
 
+      // Selfie capture is mandatory
+      let photoBase64 = null;
+      try {
+        const photo = await Camera.getPhoto({
+          quality: 60, // Reduced quality for faster upload
+          allowEditing: false,
+          resultType: CameraResultType.Base64,
+          source: CameraSource.Camera,
+          promptLabelHeader: 'Attendance Selfie',
+          promptLabelPhoto: 'Take a Selfie',
+          saveToGallery: false,
+          correctOrientation: true,
+          width: 800,
+          height: 800,
+        });
+        photoBase64 = `data:image/jpeg;base64,${photo.base64String}`;
+      } catch (e) {
+        setBusy(false);
+        if (e.message?.includes('User cancelled')) return; // Just stop
+        alert('Could not open camera. Camera permission is required for attendance.');
+        return;
+      }
+
       const deviceIdInfo = await Device.getId();
       const deviceInfoRaw = await Device.getInfo();
 
       await api.post(`/attendance/${endpoint}`, {
         ...coords,
         deviceId: deviceIdInfo.identifier,
+        photo: photoBase64,
         deviceInfo: {
           platform: deviceInfoRaw.platform,
           model: `${deviceInfoRaw.manufacturer} ${deviceInfoRaw.model}`,
