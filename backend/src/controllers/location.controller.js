@@ -100,19 +100,21 @@ export const liveLocations = asyncHandler(async (req, res) => {
   const companyMatch = req.companyId ? { company: toObjectId(req.companyId) } : {};
   const today = todayStr();
 
-  // 1. Find staff who are checked in today and haven't checked out
+  // 1. Find staff who are checked in and haven't checked out (look back 48h for active shifts)
   const activeAttendance = await Attendance.find({
     ...companyMatch,
-    date: today,
     'checkIn.time': { $exists: true },
     'checkOut.time': { $exists: false },
+    createdAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) }
   }).populate('staff', 'name position profilePhoto');
 
   if (!activeAttendance.length) {
     return res.json({ success: true, data: { items: [] } });
   }
 
-  const activeStaffIds = activeAttendance.map((a) => a.staff._id);
+  // Filter out any entries where staff might be null (deleted users)
+  const validAttendance = activeAttendance.filter(a => a.staff);
+  const activeStaffIds = validAttendance.map((a) => a.staff._id);
 
   // 2. Get latest location logs for these staff members from the last 24h
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -130,7 +132,7 @@ export const liveLocations = asyncHandler(async (req, res) => {
   const logMap = Object.fromEntries(logs.map(l => [l.staff.toString(), l]));
 
   // 3. Merge: If no recent log, use the Check-In location from Attendance
-  const items = activeAttendance.map(a => {
+  const items = validAttendance.map(a => {
     const s = a.staff;
     const latestLog = logMap[s._id.toString()];
 
