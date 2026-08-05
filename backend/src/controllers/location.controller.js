@@ -66,9 +66,9 @@ export const pushLocation = asyncHandler(async (req, res) => {
   // Realtime: broadcast latest point to company + platform dashboards
   const latest = saved[saved.length - 1];
   realtime.staffLocation(companyId.toString(), {
-    staffId: req.user._id,
+    staffId: req.user._id.toString(),
     staffName: req.user.name,
-    position: req.user.position,
+    position: req.user.position || 'Staff',
     profilePhoto: req.user.profilePhoto,
     lat: latest.location.coordinates[1],
     lng: latest.location.coordinates[0],
@@ -106,16 +106,17 @@ export const liveLocations = asyncHandler(async (req, res) => {
     date: today,
     'checkIn.time': { $exists: true },
     'checkOut.time': { $exists: false },
-  }).select('staff checkIn.time');
+  }).populate('staff', 'name position profilePhoto');
 
-  const activeStaffIds = activeAttendance.map((a) => a.staff);
-  if (!activeStaffIds.length) {
+  if (!activeAttendance.length) {
     return res.json({ success: true, data: { items: [] } });
   }
 
-  // 2. Get latest location for these staff members
+  const activeStaffIds = activeAttendance.map((a) => a.staff._id);
+
+  // 2. Get latest location logs for these staff members from the last 24h
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const latest = await LocationLog.aggregate([
+  const logs = await LocationLog.aggregate([
     { $match: {
         ...companyMatch,
         staff: { $in: activeStaffIds },
@@ -124,36 +125,35 @@ export const liveLocations = asyncHandler(async (req, res) => {
     { $sort: { recordedAt: -1 } },
     { $group: { _id: '$staff', doc: { $first: '$$ROOT' } } },
     { $replaceRoot: { newRoot: '$doc' } },
-    {
-      $lookup: {
-        from: 'users', localField: 'staff', foreignField: '_id', as: 'staffInfo',
-        pipeline: [{ $project: { name: 1, position: 1, profilePhoto: 1 } }],
-      },
-    },
-    { $unwind: '$staffInfo' },
-    { $limit: 500 },
   ]);
 
-  // Map for fast lookup
-  const attMap = Object.fromEntries(activeAttendance.map((a) => [a.staff.toString(), a.checkIn.time]));
+  const logMap = Object.fromEntries(logs.map(l => [l.staff.toString(), l]));
 
-  res.json({
-    success: true,
-    data: {
-      items: latest.map((l) => ({
-        staffId: l.staff,
-        name: l.staffInfo.name,
-        position: l.staffInfo.position,
-        profilePhoto: l.staffInfo.profilePhoto,
-        lat: l.location.coordinates[1],
-        lng: l.location.coordinates[0],
-        accuracy: l.accuracy,
-        batteryLevel: l.batteryLevel,
-        recordedAt: l.recordedAt,
-        checkInTime: attMap[l.staff.toString()],
-      })),
-    },
-  });
+  // 3. Merge: If no recent log, use the Check-In location from Attendance
+  const items = activeAttendance.map(a => {
+    const s = a.staff;
+    const latestLog = logMap[s._id.toString()];
+
+    // Use Log if available, otherwise use Check-In coordinates
+    const lat = latestLog ? latestLog.location.coordinates[1] : a.checkIn?.location?.coordinates?.[1];
+    const lng = latestLog ? latestLog.location.coordinates[0] : a.checkIn?.location?.coordinates?.[0];
+    const recordedAt = latestLog ? latestLog.recordedAt : a.checkIn?.time;
+
+    return {
+      staffId: s._id.toString(),
+      name: s.name,
+      position: s.position || 'Staff',
+      profilePhoto: s.profilePhoto,
+      lat,
+      lng,
+      accuracy: latestLog?.accuracy || 0,
+      batteryLevel: latestLog?.batteryLevel,
+      recordedAt,
+      checkInTime: a.checkIn?.time,
+    };
+  }).filter(i => i.lat != null); // Only show those with at least check-in GPS
+
+  res.json({ success: true, data: { items } });
 });
 
 /** GET /locations/history/:staffId?from=&to=&period= — route history / playback */

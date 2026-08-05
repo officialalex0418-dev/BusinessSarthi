@@ -137,6 +137,19 @@ export const checkIn = asyncHandler(async (req, res) => {
       address,
       deviceInfo, source: 'CHECKIN', recordedAt: now,
     }).catch(() => {});
+
+    // Realtime: broadcast check-in location immediately
+    realtime.staffLocation(companyId.toString(), {
+      staffId: req.user._id.toString(),
+      staffName: req.user.name,
+      position: req.user.position || 'Staff',
+      profilePhoto: req.user.profilePhoto,
+      lat: latitude,
+      lng: longitude,
+      address,
+      accuracy: 0,
+      recordedAt: now,
+    });
   }
 
   audit({ req, action: 'CHECK_IN', entity: 'Attendance', entityId: attendance._id, meta: { isLate } });
@@ -211,6 +224,19 @@ export const checkOut = asyncHandler(async (req, res) => {
       address,
       deviceInfo, source: 'CHECKOUT', recordedAt: now,
     }).catch(() => {});
+
+    // Realtime: broadcast final checkout location
+    realtime.staffLocation(req.user.company._id.toString(), {
+      staffId: req.user._id.toString(),
+      staffName: req.user.name,
+      position: req.user.position || 'Staff',
+      profilePhoto: req.user.profilePhoto,
+      lat: latitude,
+      lng: longitude,
+      address,
+      accuracy: 0,
+      recordedAt: now,
+    });
   }
 
   audit({ req, action: 'CHECK_OUT', entity: 'Attendance', entityId: attendance._id });
