@@ -181,7 +181,15 @@ export const schemas = {
   checkInOut: Joi.object({
     latitude: Joi.number().min(-90).max(90),
     longitude: Joi.number().min(-180).max(180),
-    deviceInfo: Joi.object({ platform: Joi.string(), model: Joi.string() }),
+    deviceId: Joi.string().allow('', null),
+    photo: Joi.string().allow('', null),
+    auto: Joi.boolean(),
+    reason: Joi.string().allow('', null),
+    deviceInfo: Joi.object({
+      platform: Joi.string().allow(''),
+      model: Joi.string().allow(''),
+      osVersion: Joi.string().allow(''),
+    }),
   }),
 
   // ---- Leave ----

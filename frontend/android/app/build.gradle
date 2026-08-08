@@ -16,6 +16,10 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    compileOptions {
+        sourceCompatibility rootProject.ext.jvmVersion
+        targetCompatibility rootProject.ext.jvmVersion
+    }
     buildTypes {
         release {
             minifyEnabled false
