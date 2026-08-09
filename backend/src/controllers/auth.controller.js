@@ -83,16 +83,17 @@ export const login = asyncHandler(async (req, res) => {
 
   const accessToken = signAccessToken(user);
   const refreshToken = signRefreshToken(user, isAppRequest);
-  await persistRefreshToken(user, refreshToken, req);
 
-  // Add checked-in status for tracking control
-  const today = todayStr();
-  const activeAtt = await Attendance.findOne({
-    staff: user._id,
-    date: today,
-    'checkIn.time': { $exists: true },
-    'checkOut.time': { $exists: false }
-  });
+  // Optimized: Parallelize token persistence and check-in status check
+  const [activeAtt] = await Promise.all([
+    Attendance.findOne({
+      staff: user._id,
+      date: todayStr(),
+      'checkIn.time': { $exists: true },
+      'checkOut.time': { $exists: false }
+    }).select('_id'),
+    persistRefreshToken(user, refreshToken, req)
+  ]);
 
   user.lastLoginAt = new Date();
   await user.save({ validateBeforeSave: false });

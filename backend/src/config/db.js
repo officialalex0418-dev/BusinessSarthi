@@ -6,8 +6,10 @@ export async function connectDB() {
   try {
     const conn = await mongoose.connect(env.mongoUri, {
       autoIndex: !env.isProd, // build indexes in dev; in prod sync manually/migration
-      maxPoolSize: 50,
+      maxPoolSize: 100,
       serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
     });
     console.log(`✅ MongoDB connected: ${conn.connection.host}`);
   } catch (err) {

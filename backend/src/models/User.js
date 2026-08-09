@@ -71,6 +71,8 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ company: 1, role: 1 });
 userSchema.index({ company: 1, isActive: 1 });
 userSchema.index({ name: 'text', email: 'text' });
+userSchema.index({ primaryDeviceId: 1 }, { sparse: true });
+userSchema.index({ 'refreshTokens.tokenHash': 1 });
 
 // ---------- Hooks ----------
 userSchema.pre('save', async function (next) {

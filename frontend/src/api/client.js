@@ -5,7 +5,30 @@ import { Capacitor } from '@capacitor/core';
 
 const baseURL = `${import.meta.env.VITE_API_URL || ''}/api/v1`;
 
-export const api = axios.create({ baseURL, withCredentials: true });
+export const api = axios.create({
+  baseURL,
+  withCredentials: true,
+  timeout: 20000 // 20 second timeout to prevent infinite hangs
+});
+
+// ---------- automatic retry logic ----------
+const MAX_RETRIES = 2;
+api.interceptors.response.use(null, async (error) => {
+  const { config, response } = error;
+
+  // Only retry on network errors or 5xx server errors
+  const shouldRetry = !response || (response.status >= 500 && response.status <= 599);
+
+  if (shouldRetry && (!config._retryCount || config._retryCount < MAX_RETRIES)) {
+    config._retryCount = (config._retryCount || 0) + 1;
+    // Exponential backoff: 1s, 2s
+    const delay = config._retryCount * 1000;
+    await new Promise(resolve => setTimeout(resolve, delay));
+    console.warn(`[RETRY] Attempt ${config._retryCount} for ${config.url}`);
+    return api(config);
+  }
+  return Promise.reject(error);
+});
 
 // ---------- token storage ----------
 let accessToken = localStorage.getItem('bs_access') || null;

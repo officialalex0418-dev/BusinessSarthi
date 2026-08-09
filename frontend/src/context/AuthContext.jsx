@@ -11,20 +11,21 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     (async () => {
-      // Always fetch public settings for branding
-      try {
-        const { data: s } = await api.get('/auth/settings');
-        setSettings(s.data);
-      } catch (e) {
-        console.warn('Failed to fetch public settings', e);
-      }
+      const token = getAccessToken();
 
-      if (!getAccessToken()) return setLoading(false);
       try {
-        const { data } = await api.get('/auth/me');
-        setUser(data.data.user);
-      } catch {
-        setAccessToken(null);
+        // Parallel load: Branding + User Profile
+        const [settingsRes, userRes] = await Promise.all([
+          api.get('/auth/settings'),
+          token ? api.get('/auth/me') : Promise.resolve({ data: { data: { user: null } } })
+        ]);
+
+        if (settingsRes.data.success) setSettings(settingsRes.data.data);
+        if (userRes.data.success) setUser(userRes.data.data.user);
+
+      } catch (e) {
+        console.warn('Initialization partially failed', e);
+        if (token) setAccessToken(null);
       } finally {
         setLoading(false);
       }
