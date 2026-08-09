@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Target, User, Sale, SalesInvoice } from '../models/index.js';
 import { asyncHandler, ApiError } from '../utils/ApiError.js';
 import { bsToAd, bsMapping } from '../utils/nepaliDate.js';
@@ -5,17 +6,17 @@ import { bsToAd, bsMapping } from '../utils/nepaliDate.js';
 /** Assign/Update targets in bulk for a specific month */
 export const setTargets = asyncHandler(async (req, res) => {
   const { month, calendarType, targets } = req.body; // month: YYYY-MM, targets: [{ staffId, amount }]
-  const companyId = req.user.company?._id || req.user.company;
+  const companyId = req.companyId;
 
   if (!month || !calendarType || !Array.isArray(targets)) {
     throw ApiError.badRequest('Missing required fields');
   }
 
-  const companyOid = new mongoose.Types.ObjectId(companyId.toString());
+  const companyOid = new mongoose.Types.ObjectId(companyId);
 
   const ops = targets.map(t => ({
     updateOne: {
-      filter: { staff: new mongoose.Types.ObjectId(t.staffId.toString()), month, calendarType, company: companyOid },
+      filter: { staff: new mongoose.Types.ObjectId(t.staffId), month, calendarType, company: companyOid },
       update: { $set: { amount: Number(t.amount) || 0 } },
       upsert: true
     }
@@ -31,13 +32,13 @@ export const setTargets = asyncHandler(async (req, res) => {
 /** Get assigned targets for a specific month */
 export const getTargets = asyncHandler(async (req, res) => {
   const { month, calendarType } = req.query;
-  const companyId = req.user.company?._id || req.user.company;
+  const companyId = req.companyId;
 
   if (!month || !calendarType) {
     throw ApiError.badRequest('Month and calendarType are required');
   }
 
-  const companyOid = new mongoose.Types.ObjectId(companyId.toString());
+  const companyOid = new mongoose.Types.ObjectId(companyId);
 
   const targets = await Target.find({ company: companyOid, month, calendarType });
   res.json({ success: true, data: targets });
@@ -46,11 +47,11 @@ export const getTargets = asyncHandler(async (req, res) => {
 /** Calculate achievement report (Target vs Sales) */
 export const getAchievementReport = asyncHandler(async (req, res) => {
   const { month, calendarType, staffId, startDate, endDate } = req.query;
-  const companyId = req.user.company?._id || req.user.company;
+  const companyId = req.companyId;
 
   if (!companyId) throw ApiError.forbidden('No company associated');
 
-  const companyOid = new mongoose.Types.ObjectId(companyId.toString());
+  const companyOid = new mongoose.Types.ObjectId(companyId);
 
   let from, to;
 

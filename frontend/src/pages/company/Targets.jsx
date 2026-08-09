@@ -22,6 +22,7 @@ export default function TargetsPage() {
   const [stats, setStats] = useState(null);
   const [trend, setTrend] = useState([]);
   const [search, setSearch] = useState('');
+  const [error, setError] = useState(null);
 
   const [month, setMonth] = useState(() => {
     if (dateFormat === 'BS') {
@@ -32,7 +33,7 @@ export default function TargetsPage() {
   });
 
   const load = useCallback(async () => {
-    setLoading(true);
+    setLoading(true); setError(null);
     try {
       const [staffRes, targetRes, reportRes] = await Promise.all([
         api.get('/staff?limit=200'),
@@ -54,6 +55,7 @@ export default function TargetsPage() {
       setTrend(reportRes.data.trend || []);
     } catch (err) {
       console.error(err);
+      setError('Failed to load target data. Please ensure the backend is running and the company is associated correctly.');
     } finally {
       setLoading(false);
     }
@@ -115,6 +117,8 @@ export default function TargetsPage() {
           <button onClick={() => setView('assignment')} className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-all", view === 'assignment' ? "bg-white dark:bg-slate-700 shadow-sm text-primary-600" : "text-slate-500")}>Assignment</button>
         </div>
       </div>
+
+      {error && <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100 animate-in fade-in duration-300">{error}</div>}
 
       {view === 'dashboard' && stats && (
         <div className="space-y-6 animate-in fade-in duration-500">
