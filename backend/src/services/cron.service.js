@@ -1,5 +1,4 @@
-import Attendance from '../models/Attendance.js';
-import LocationLog from '../models/LocationLog.js';
+import { Attendance, LocationLog } from '../models/index.js';
 import { todayStr } from '../utils/dates.js';
 
 /**

@@ -1,9 +1,4 @@
-import Attendance from '../models/Attendance.js';
-import AttendanceRequest from '../models/AttendanceRequest.js';
-import LocationLog from '../models/LocationLog.js';
-import Company from '../models/Company.js';
-import Branch from '../models/Branch.js';
-import Shift from '../models/Shift.js';
+import { Attendance, AttendanceRequest, LocationLog, Company, Branch, Shift, User } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';

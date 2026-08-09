@@ -1,7 +1,5 @@
 import mongoose from 'mongoose';
-import LocationLog from '../models/LocationLog.js';
-import User from '../models/User.js';
-import Attendance from '../models/Attendance.js';
+import { LocationLog, User, Attendance } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { realtime } from '../sockets/index.js';
 import { rangeFromPeriod, todayStr } from '../utils/dates.js';
