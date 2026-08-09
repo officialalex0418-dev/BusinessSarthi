@@ -1,7 +1,4 @@
-import Notification from '../models/Notification.js';
-import AuditLog from '../models/AuditLog.js';
-import Setting from '../models/Setting.js';
-import User from '../models/User.js';
+import { Notification, AuditLog, Setting, User } from '../models/index.js';
 import { asyncHandler, ApiError } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';

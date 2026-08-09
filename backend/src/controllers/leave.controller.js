@@ -1,5 +1,4 @@
-import Leave from '../models/Leave.js';
-import User from '../models/User.js';
+import { Leave, User } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';

@@ -1,12 +1,6 @@
 import mongoose from 'mongoose';
 import ExcelJS from 'exceljs';
-import Attendance from '../models/Attendance.js';
-import Sale from '../models/Sale.js';
-import Payroll from '../models/Payroll.js';
-import LocationLog from '../models/LocationLog.js';
-import User from '../models/User.js';
-import Company from '../models/Company.js';
-import Setting from '../models/Setting.js';
+import { Attendance, Sale, Payroll, LocationLog, User, Company, Setting } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { sendExcel, sendPdf } from '../services/report.service.js';
 import { rangeFromPeriod } from '../utils/dates.js';

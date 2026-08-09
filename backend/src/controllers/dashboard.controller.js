@@ -1,15 +1,11 @@
 import mongoose from 'mongoose';
-import Company from '../models/Company.js';
-import User from '../models/User.js';
-import Package from '../models/Package.js';
-import Attendance from '../models/Attendance.js';
-import Sale from '../models/Sale.js';
-import LocationLog from '../models/LocationLog.js';
-import AuditLog from '../models/AuditLog.js';
-import Leave from '../models/Leave.js';
-import Holiday from '../models/Holiday.js';
+import {
+  Company, User, Package, Attendance, Sale, SalesInvoice,
+  LocationLog, AuditLog, Leave, Holiday, Target
+} from '../models/index.js';
 import { asyncHandler } from '../utils/ApiError.js';
 import { todayStr } from '../utils/dates.js';
+import { adToBs } from '../utils/nepaliDate.js';
 
 const oid = (id) => new mongoose.Types.ObjectId(id);
 
@@ -112,26 +108,43 @@ export const companyDashboard = asyncHandler(async (req, res) => {
 /** GET /dashboard/staff — Staff app dashboard */
 export const staffDashboard = asyncHandler(async (req, res) => {
   const userId = oid(req.user._id);
+  const companyId = req.user.company?._id;
   const today = todayStr();
   const month = today.slice(0, 7);
   const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
 
-  const [todayAttendance, monthAttendance, salesAgg, upcomingHolidays, recentLeaves] = await Promise.all([
+  const dateFormat = req.user.company?.settings?.dateFormat || 'AD';
+  let targetMonth = month;
+  if (dateFormat === 'BS') {
+    const bs = adToBs(new Date());
+    targetMonth = `${bs.year}-${String(bs.month).padStart(2, '0')}`;
+  }
+
+  const [
+    todayAttendance, monthAttendance, salesAgg, invoicesAgg,
+    monthlyTarget, upcomingHolidays, recentLeaves
+  ] = await Promise.all([
     Attendance.findOne({ staff: userId, date: today }),
     Attendance.find({ staff: userId, date: { $regex: `^${month}` } }).lean(),
     Sale.aggregate([
       { $match: { staff: userId, saleDate: { $gte: startOfMonth } } },
-      { $group: { _id: null, achieved: { $sum: '$amount' }, count: { $sum: 1 } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
-    Holiday.find({ company: req.user.company?._id, startDate: { $gte: new Date() } })
+    SalesInvoice.aggregate([
+      { $match: { staff: userId, saleDate: { $gte: startOfMonth } } },
+      { $group: { _id: null, total: { $sum: '$netTotal' } } },
+    ]),
+    Target.findOne({ staff: userId, month: targetMonth, calendarType: dateFormat }),
+    Holiday.find({ company: companyId, startDate: { $gte: new Date() } })
       .sort('startDate').limit(5).lean(),
     Leave.find({ staff: userId }).sort('-createdAt').limit(5).lean(),
   ]);
 
   const lateDays = monthAttendance.filter((a) => a.checkIn?.isLate).length;
   const presentDays = monthAttendance.filter((a) => ['PRESENT', 'HALF_DAY'].includes(a.status)).length;
-  const achieved = salesAgg[0]?.achieved || 0;
-  const target = req.user.monthlyTarget || 0;
+
+  const achieved = (salesAgg[0]?.total || 0) + (invoicesAgg[0]?.total || 0);
+  const target = monthlyTarget?.amount || 0;
 
   res.json({
     success: true,

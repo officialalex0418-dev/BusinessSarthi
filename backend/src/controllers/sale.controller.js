@@ -1,8 +1,5 @@
 import mongoose from 'mongoose';
-import Sale from '../models/Sale.js';
-import User from '../models/User.js';
-import Inventory from '../models/Inventory.js';
-import Customer from '../models/Customer.js';
+import { Sale, User, Inventory, Customer } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';

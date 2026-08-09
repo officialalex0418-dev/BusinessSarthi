@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
-import Setting from '../models/Setting.js';
+import { Setting } from '../models/index.js';
 
 let APP_NAME = 'Business Sarthi';
 

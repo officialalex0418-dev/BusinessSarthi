@@ -1,5 +1,4 @@
-import Package from '../models/Package.js';
-import Company from '../models/Company.js';
+import { Package, Company } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { audit } from '../utils/audit.js';
 

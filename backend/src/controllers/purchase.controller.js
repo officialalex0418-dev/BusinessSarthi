@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
-import Purchase from '../models/Purchase.js';
-import Inventory from '../models/Inventory.js';
+import { Purchase, Inventory } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { audit } from '../utils/audit.js';
 

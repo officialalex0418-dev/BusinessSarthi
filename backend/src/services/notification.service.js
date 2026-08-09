@@ -1,4 +1,4 @@
-import Notification from '../models/Notification.js';
+import { Notification } from '../models/index.js';
 import { realtime } from '../sockets/index.js';
 
 /** Create DB notification + push over socket. Fire-and-forget safe. */

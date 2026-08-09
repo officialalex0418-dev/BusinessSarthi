@@ -111,5 +111,13 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
     };
   });
 
-  res.json({ success: true, data: report, range: { from, to } });
+  // Dashboard Aggregates
+  const stats = {
+    totalTarget: report.reduce((sum, r) => sum + r.target, 0),
+    totalAchieved: report.reduce((sum, r) => sum + r.achieved, 0),
+    staffCount: report.length,
+    completedStaff: report.filter(r => r.percent >= 100).length,
+  };
+
+  res.json({ success: true, data: report, stats, range: { from, to } });
 });

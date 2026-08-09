@@ -1,4 +1,4 @@
-import AuditLog from '../models/AuditLog.js';
+import { AuditLog } from '../models/index.js';
 
 /** Fire-and-forget audit logger — never blocks the request path. */
 export function audit({ req, user, company, action, entity, entityId, meta, success = true }) {

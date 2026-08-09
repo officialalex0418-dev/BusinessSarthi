@@ -1,9 +1,4 @@
-import Payroll from '../models/Payroll.js';
-import User from '../models/User.js';
-import Attendance from '../models/Attendance.js';
-import Company from '../models/Company.js';
-import Leave from '../models/Leave.js';
-import LeaveType from '../models/LeaveType.js';
+import { Payroll, User, Attendance, Company, Leave, LeaveType } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';

@@ -1,6 +1,4 @@
-import Holiday from '../models/Holiday.js';
-import Leave from '../models/Leave.js';
-import Shift from '../models/Shift.js';
+import { Holiday, Leave, Shift } from '../models/index.js';
 
 /**
  * Checks if a given date is a restricted day for attendance check-in.

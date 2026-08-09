@@ -1,5 +1,5 @@
 import { ApiError } from '../utils/ApiError.js';
-import Package from '../models/Package.js';
+import { Package } from '../models/index.js';
 
 /** Role gate: authorize('SUPER_ADMIN', 'COMPANY_OWNER') */
 export const authorize = (...roles) => (req, _res, next) => {
