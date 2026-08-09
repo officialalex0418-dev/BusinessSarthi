@@ -146,7 +146,7 @@ export default function AttendancePage() {
                   </td>
                   <td className="table-td">{a.workedMinutes ? `${(a.workedMinutes / 60).toFixed(1)} h` : '—'}</td>
                   <td className="table-td">
-                    <Badge color={a.status === 'PRESENT' ? 'green' : a.status === 'HALF_DAY' ? 'yellow' : 'gray'}>{a.status}</Badge>
+                    <Badge color={a.status === 'PRESENT' ? 'green' : a.status === 'LATE' ? 'red' : a.status === 'HALF_DAY' ? 'yellow' : 'gray'}>{a.status}</Badge>
                   </td>
                 </tr>
               )}
@@ -163,7 +163,7 @@ export default function AttendancePage() {
                          <p className="text-xs text-slate-500">{a.staff?.position || 'Staff'}</p>
                        </div>
                     </div>
-                    <Badge color={a.status === 'PRESENT' ? 'green' : a.status === 'HALF_DAY' ? 'yellow' : 'gray'}>{a.status}</Badge>
+                    <Badge color={a.status === 'PRESENT' ? 'green' : a.status === 'LATE' ? 'red' : a.status === 'HALF_DAY' ? 'yellow' : 'gray'}>{a.status}</Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm text-slate-600 bg-slate-50 p-2 rounded-lg dark:bg-slate-800/50">
                     <p><b>In:</b> {formatTime(a.checkIn?.time)} {a.checkIn?.isLate && "(Late)"}</p>

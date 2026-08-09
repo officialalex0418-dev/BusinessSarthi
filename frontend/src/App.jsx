@@ -48,6 +48,7 @@ import CompanyConfiguration from '@/pages/company/Configuration';
 import CompanyDesignations from '@/pages/company/Designations';
 import CompanyBranches from '@/pages/company/Branches';
 import CompanyShifts from '@/pages/company/Shifts';
+import CompanyTargets from '@/pages/company/Targets';
 import CompanyDepartments from '@/pages/company/Departments';
 import CompanyLeavesConfig from '@/pages/company/LeavesConfig';
 import HolidayCalendar from '@/pages/company/HolidayCalendar';
@@ -283,6 +284,7 @@ export default function App() {
           <Route path="designations" element={<CompanyDesignations />} />
           <Route path="branches" element={<CompanyBranches />} />
           <Route path="shifts" element={<CompanyShifts />} />
+          <Route path="targets" element={<CompanyTargets />} />
           <Route path="departments" element={<CompanyDepartments />} />
           <Route path="leaves" element={<CompanyLeavesConfig />} />
           <Route path="holidays" element={<HolidayCalendar />} />
@@ -327,6 +329,7 @@ export default function App() {
           <Route path="designations" element={<CompanyDesignations />} />
           <Route path="branches" element={<CompanyBranches />} />
           <Route path="shifts" element={<CompanyShifts />} />
+          <Route path="targets" element={<CompanyTargets />} />
           <Route path="departments" element={<CompanyDepartments />} />
           <Route path="leaves" element={<CompanyLeavesConfig />} />
           <Route path="holidays" element={<HolidayCalendar />} />

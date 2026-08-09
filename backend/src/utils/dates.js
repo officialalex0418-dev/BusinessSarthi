@@ -27,6 +27,17 @@ export function getNepalMinutes(d = new Date()) {
   return parseInt(hour, 10) * 60 + parseInt(minute, 10);
 }
 
+/** Pure function to check if a check-in is late */
+export function isLateArrival(checkInTime, shiftStartTime, bufferMinutes = 0) {
+  if (!checkInTime || !shiftStartTime) return false;
+
+  const [sh, sm] = shiftStartTime.split(':').map(Number);
+  const checkInMins = getNepalMinutes(new Date(checkInTime));
+  const thresholdMins = sh * 60 + sm + bufferMinutes;
+
+  return checkInMins > thresholdMins;
+}
+
 export function rangeFromPeriod(period) {
   const now = new Date();
   const start = new Date(now);

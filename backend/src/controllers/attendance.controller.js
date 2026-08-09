@@ -118,12 +118,30 @@ export const checkIn = asyncHandler(async (req, res) => {
     }
   }
 
-  // Late detection from company settings
-  const settings = req.user.company.settings || {};
-  const [h, m] = (settings.workStartTime || '09:00').split(':').map(Number);
-  const startToday = new Date(now);
-  startToday.setHours(h, m + (settings.lateGraceMinutes || 15), 0, 0);
-  const isLate = now > startToday;
+  // Late detection from shift settings (Requirement: Check-In > StartTime + Buffer)
+  let isLate = false;
+  if (req.user.shift) {
+    const shift = await Shift.findById(req.user.shift);
+    if (shift) {
+      const [sh, sm] = shift.startTime.split(':').map(Number);
+      const buffer = shift.bufferTime || 0;
+
+      // Current time in Nepal
+      const nowMins = getNepalMinutes(now);
+      const shiftStartPlusBuffer = sh * 60 + sm + buffer;
+
+      if (nowMins > shiftStartPlusBuffer) {
+        isLate = true;
+      }
+    }
+  } else {
+    // Fallback to company settings if no specific shift
+    const settings = req.user.company.settings || {};
+    const [h, m] = (settings.workStartTime || '09:00').split(':').map(Number);
+    const startToday = new Date(now);
+    startToday.setHours(h, m + (settings.lateGraceMinutes || 15), 0, 0);
+    isLate = now > startToday;
+  }
 
   const attendance = await Attendance.findOneAndUpdate(
     { staff: req.user._id, date },
@@ -136,7 +154,7 @@ export const checkIn = asyncHandler(async (req, res) => {
         'checkIn.photo': photoUrl,
         'checkIn.deviceInfo': deviceInfo,
         'checkIn.isLate': isLate,
-        status: 'PRESENT',
+        status: isLate ? 'LATE' : 'PRESENT',
       },
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }

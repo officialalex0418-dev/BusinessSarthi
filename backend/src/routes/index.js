@@ -27,6 +27,7 @@ import * as complaint from '../controllers/complaint.controller.js';
 import * as chat from '../controllers/chat.controller.js';
 import * as designation from '../controllers/designation.controller.js';
 import * as companyConfig from '../controllers/companyConfig.controller.js';
+import * as target from '../controllers/target.controller.js';
 import * as report from '../controllers/report.controller.js';
 import * as misc from '../controllers/misc.controller.js';
 
@@ -249,6 +250,11 @@ r.get('/company-config/holidays', protect, authorize(...MANAGERS), scopeCompany,
 r.post('/company-config/holidays', protect, authorize(...MANAGERS), scopeCompany, companyConfig.createHoliday);
 r.patch('/company-config/holidays/:id', protect, authorize(...MANAGERS), scopeCompany, companyConfig.updateHoliday);
 r.delete('/company-config/holidays/:id', protect, authorize(...MANAGERS), scopeCompany, companyConfig.deleteHoliday);
+
+// Targets
+r.get('/targets', protect, authorize(...MANAGERS), scopeCompany, target.getTargets);
+r.post('/targets/bulk', protect, authorize(...MANAGERS), scopeCompany, target.setTargets);
+r.get('/targets/achievement', protect, authorize(...MANAGERS), scopeCompany, target.getAchievementReport);
 
 // ============ REPORTS ============
 r.get('/reports/tracking/excel', protect, authorize(...MANAGERS), scopeCompany, report.trackingExcel);

@@ -9,7 +9,7 @@ import { formatMoney, cn } from '@/lib/utils';
 
 const emptyForm = {
   name: '', email: '', phone: '', address: '', pan: '', position: '',
-  basicSalary: 0, allowances: 0, monthlyTarget: 0, role: 'STAFF', designation: '',
+  basicSalary: 0, allowances: 0, role: 'STAFF', designation: '',
   workMode: 'OUTDOOR', branch: 'MAIN', shift: '',
   allowedMobileCount: 1, allowedWebCount: 1,
 };
@@ -73,7 +73,6 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
         ...form,
         basicSalary: mode === 'system' ? 0 : Number(form.basicSalary),
         allowances: mode === 'system' ? 0 : Number(form.allowances),
-        monthlyTarget: Number(form.monthlyTarget),
         role: mode === 'system' ? 'ADMIN_EMPLOYEE' : form.role,
         designation: form.designation || undefined,
         shift: form.shift || undefined,
@@ -332,13 +331,10 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
             </div>
 
             <div className="sm:col-span-2 space-y-4">
-               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Finance & Targets</p>
-               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Finance</p>
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input label="Basic Salary" type="number" min="0" value={form.basicSalary} onChange={(e) => setForm({ ...form, basicSalary: e.target.value })} />
                   <Input label="Monthly Allowances" type="number" min="0" value={form.allowances} onChange={(e) => setForm({ ...form, allowances: e.target.value })} />
-                  {mode === 'company' && (
-                    <Input label="Monthly Sales Target" type="number" min="0" value={form.monthlyTarget} onChange={(e) => setForm({ ...form, monthlyTarget: e.target.value })} />
-                  )}
                </div>
             </div>
           </div>

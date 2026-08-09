@@ -29,3 +29,4 @@ export { default as ChatMessage } from './ChatMessage.js';
 export { default as Holiday } from './Holiday.js';
 export { default as AuditLog } from './AuditLog.js';
 export { default as Setting } from './Setting.js';
+export { default as Target } from './Target.js';

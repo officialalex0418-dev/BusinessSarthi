@@ -391,7 +391,7 @@ export default function StaffAttendance() {
             <div key={a._id} className="p-4 space-y-2 border-b dark:border-slate-800 last:border-0 hover:bg-slate-50 transition-colors">
               <div className="flex items-center justify-between">
                 <p className="font-bold text-slate-700 dark:text-slate-200">{formatDate(a.date, dateFormat)}</p>
-                <Badge color={a.status === 'PRESENT' ? 'green' : 'yellow'}>{a.status}</Badge>
+                <Badge color={a.status === 'PRESENT' ? 'green' : a.status === 'LATE' ? 'red' : 'yellow'}>{a.status}</Badge>
               </div>
               <div className="grid grid-cols-2 text-sm">
                 <div>

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { UserCog, MapPin, Clock, Building2, CalendarCheck, ChevronRight } from 'lucide-react';
+import { UserCog, MapPin, Clock, Building2, CalendarCheck, ChevronRight, Target } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui';
 
 export default function Configuration() {
@@ -7,6 +7,7 @@ export default function Configuration() {
     { title: 'Designation', desc: 'Manage roles and granular permissions', icon: UserCog, to: 'designations', color: 'text-blue-600 bg-blue-50' },
     { title: 'Branches', desc: 'Manage multiple office locations and geofencing', icon: MapPin, to: 'branches', color: 'text-emerald-600 bg-emerald-50' },
     { title: 'Shifts', desc: 'Define working hours, days, and late buffers', icon: Clock, to: 'shifts', color: 'text-purple-600 bg-purple-50' },
+    { title: 'Targets', desc: 'Manage monthly sales targets for staff', icon: Target, to: 'targets', color: 'text-emerald-600 bg-emerald-50' },
     { title: 'Department', desc: 'Organize your staff into departments', icon: Building2, to: 'departments', color: 'text-orange-600 bg-orange-50' },
     { title: 'Leave Management', desc: 'Configure leave types and approval settings', icon: CalendarCheck, to: 'leaves', color: 'text-rose-600 bg-rose-50' },
     { title: 'Holiday Calendar', desc: 'Manage annual holidays and festivals', icon: CalendarCheck, to: 'holidays', color: 'text-amber-600 bg-amber-50' },
