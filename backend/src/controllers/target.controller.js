@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 import { Target, User, Sale, SalesInvoice } from '../models/index.js';
 import { asyncHandler, ApiError } from '../utils/ApiError.js';
-import { bsToAd, bsMapping } from '../utils/nepaliDate.js';
+import { bsToAd, bsMapping, adToBs } from '../utils/nepaliDate.js';
+import { rangeFromPeriod } from '../utils/dates.js';
 
 /** Assign/Update targets in bulk for a specific month */
 export const setTargets = asyncHandler(async (req, res) => {
@@ -46,7 +47,7 @@ export const getTargets = asyncHandler(async (req, res) => {
 
 /** Calculate achievement report (Target vs Sales) */
 export const getAchievementReport = asyncHandler(async (req, res) => {
-  const { month, calendarType, staffId, startDate, endDate } = req.query;
+  const { month, calendarType, staffId, startDate, endDate, period } = req.query;
   const companyId = req.companyId;
 
   if (!companyId) throw ApiError.forbidden('No company associated');
@@ -60,6 +61,10 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
     from.setHours(0, 0, 0, 0);
     to = new Date(endDate);
     to.setHours(23, 59, 59, 999);
+  } else if (period) {
+    const range = rangeFromPeriod(period);
+    from = range.start;
+    to = range.end;
   } else if (month && calendarType) {
     if (calendarType === 'BS') {
       const [y, m] = month.split('-').map(Number);
@@ -76,11 +81,14 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
       to = new Date(y, m, 0, 23, 59, 59, 999);
     }
   } else {
-    throw ApiError.badRequest('Either month/calendarType or startDate/endDate must be provided');
+    // Default to this month
+    const range = rangeFromPeriod('monthly');
+    from = range.start;
+    to = range.end;
   }
 
   const match = { company: companyOid, saleDate: { $gte: from, $lte: to } };
-  if (staffId) match.staff = new mongoose.Types.ObjectId(staffId.toString());
+  if (staffId && staffId !== 'all') match.staff = new mongoose.Types.ObjectId(staffId.toString());
 
   // Aggregate Sales (Generic ONLY - as requested)
   const salesAgg = await Sale.aggregate([
@@ -88,14 +96,14 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
     { $group: { _id: '$staff', total: { $sum: '$amount' } } }
   ]);
 
-  // Fetch Targets for the month
+  // Fetch Targets for the month (only if monthly view is used, otherwise targets are hard to aggregate)
   const targets = (month && calendarType)
     ? await Target.find({ company: companyOid, month, calendarType })
     : [];
 
   // Fetch Relevant Staff
   const staffQuery = { company: companyOid, role: { $in: ['STAFF', 'COMPANY_MANAGER'] }, isActive: true };
-  if (staffId) staffQuery._id = match.staff;
+  if (staffId && staffId !== 'all') staffQuery._id = new mongoose.Types.ObjectId(staffId.toString());
   const allStaff = await User.find(staffQuery).select('name position');
 
   const report = allStaff.map(s => {
@@ -120,8 +128,8 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
     completedStaff: report.filter(r => r.percent >= 100).length,
   };
 
-  // Trend Data
-  const trend = await Sale.aggregate([
+  // Trend Data with Calendar support
+  const trendRaw = await Sale.aggregate([
     { $match: match },
     {
       $group: {
@@ -129,9 +137,26 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
         amount: { $sum: '$amount' }
       }
     },
-    { $sort: { _id: 1 } },
-    { $project: { date: '$_id', amount: 1, _id: 0 } }
+    { $sort: { _id: 1 } }
   ]);
 
-  res.json({ success: true, data: report, stats, trend, range: { from, to } });
+  const trend = trendRaw.map(t => {
+    let label = t._id; // YYYY-MM-DD
+    if (calendarType === 'BS') {
+       const bs = adToBs(new Date(t._id));
+       if (bs) label = `${bs.year}-${String(bs.month).padStart(2, '0')}-${String(bs.day).padStart(2, '0')}`;
+    }
+    return { date: label, amount: t.amount };
+  });
+
+  // Top 10 Selling Products
+  const topProducts = await Sale.aggregate([
+    { $match: match },
+    { $group: { _id: '$productName', total: { $sum: '$amount' }, quantity: { $sum: '$quantity' } } },
+    { $sort: { total: -1 } },
+    { $limit: 10 },
+    { $project: { name: '$_id', amount: '$total', quantity: 1, _id: 0 } }
+  ]);
+
+  res.json({ success: true, data: report, stats, trend, topProducts, range: { from, to } });
 });

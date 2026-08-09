@@ -21,8 +21,11 @@ export default function TargetsPage() {
   const [reportData, setReportData] = useState([]);
   const [stats, setStats] = useState(null);
   const [trend, setTrend] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
   const [search, setSearch] = useState('');
   const [error, setError] = useState(null);
+  const [period, setPeriod] = useState('monthly');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
 
   const [month, setMonth] = useState(() => {
     if (dateFormat === 'BS') {
@@ -35,10 +38,16 @@ export default function TargetsPage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
+      const params = { month, calendarType: dateFormat, period };
+      if (period === 'custom') {
+        params.startDate = customRange.start;
+        params.endDate = customRange.end;
+      }
+
       const [staffRes, targetRes, reportRes] = await Promise.all([
         api.get('/staff?limit=200'),
         api.get('/targets', { params: { month, calendarType: dateFormat } }),
-        api.get('/targets/achievement', { params: { month, calendarType: dateFormat } })
+        api.get('/targets/achievement', { params })
       ]);
 
       const activeStaff = (staffRes.data.data.items || []).filter(s => ['STAFF', 'COMPANY_MANAGER'].includes(s.role));
@@ -53,17 +62,30 @@ export default function TargetsPage() {
       setReportData(reportRes.data.data);
       setStats(reportRes.data.stats);
       setTrend(reportRes.data.trend || []);
+      setTopProducts(reportRes.data.topProducts || []);
     } catch (err) {
       console.error(err);
       setError('Failed to load target data. Please ensure the backend is running and the company is associated correctly.');
     } finally {
       setLoading(false);
     }
-  }, [month, dateFormat]);
+  }, [month, dateFormat, period, customRange]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const periodOptions = [
+    { value: 'today', label: 'Today' },
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'weekly', label: 'Last 7 Days' },
+    { value: '30days', label: 'Last 30 Days' },
+    { value: 'monthly', label: 'This Month' },
+    { value: '3months', label: 'Last 3 Months' },
+    { value: '6months', label: 'Last 6 Months' },
+    { value: '1year', label: 'Last 1 Year' },
+    { value: 'custom', label: 'Custom Range' },
+  ];
 
   const updateTarget = (staffId, val) => {
     setTargets(prev => prev.map(t => t.staffId === staffId ? { ...t, amount: Number(val) || 0 } : t));
@@ -181,26 +203,47 @@ export default function TargetsPage() {
               </Card>
            </div>
 
+           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <Card>
+                 <CardHeader title="Staff Progress Rankings" icon={BarChart2} />
+                 <CardBody className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                       <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 30, top: 10, bottom: 10 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.5} />
+                          <XAxis type="number" hide />
+                          <YAxis dataKey="name" type="category" fontSize={11} width={100} axisLine={false} tickLine={false} />
+                          <Tooltip cursor={{fill: 'transparent'}} formatter={(v) => formatMoney(v)} />
+                          <Bar dataKey="achieved" name="Achieved" fill="#10b981" radius={[0, 4, 4, 0]} barSize={12} />
+                          <Bar dataKey="target" name="Target" fill="#bfdbfe" radius={[0, 4, 4, 0]} barSize={12} />
+                          <Legend verticalAlign="top" align="right" height={36}/>
+                       </BarChart>
+                    </ResponsiveContainer>
+                 </CardBody>
+              </Card>
+
+              <Card>
+                 <CardHeader title="Top Selling Products" icon={TrendingUp} />
+                 <CardBody className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                       <BarChart data={topProducts} layout="vertical" margin={{ left: 10, right: 30, top: 10, bottom: 10 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.5} />
+                          <XAxis type="number" hide />
+                          <YAxis dataKey="name" type="category" fontSize={11} width={100} axisLine={false} tickLine={false} />
+                          <Tooltip formatter={(v) => formatMoney(v)} />
+                          <Bar dataKey="amount" name="Total Sales" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={12} />
+                       </BarChart>
+                    </ResponsiveContainer>
+                 </CardBody>
+              </Card>
+           </div>
+
            <Card>
-              <CardHeader title="Staff Progress Rankings" icon={BarChart2} />
+              <CardHeader title="Leaderboard" icon={ArrowUpRight} />
               <CardBody>
-                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <div className="h-80">
-                       <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 30, top: 10, bottom: 10 }}>
-                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.5} />
-                             <XAxis type="number" hide />
-                             <YAxis dataKey="name" type="category" fontSize={11} width={100} axisLine={false} tickLine={false} />
-                             <Tooltip cursor={{fill: 'transparent'}} formatter={(v) => formatMoney(v)} />
-                             <Bar dataKey="achieved" name="Achieved" fill="#10b981" radius={[0, 4, 4, 0]} barSize={12} />
-                             <Bar dataKey="target" name="Target" fill="#bfdbfe" radius={[0, 4, 4, 0]} barSize={12} />
-                             <Legend verticalAlign="top" align="right" height={36}/>
-                          </BarChart>
-                       </ResponsiveContainer>
-                    </div>
-                    <div className="space-y-4">
-                       <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Top 5 Achievement %</p>
-                       {reportData.sort((a,b) => b.percent - a.percent).slice(0, 5).map((r, i) => (
+                 <div className="space-y-4">
+                    <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Top 5 Achievement %</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       {reportData.sort((a,b) => b.percent - a.percent).slice(0, 10).map((r, i) => (
                           <div key={r.staffId} className="flex items-center gap-4 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50">
                              <span className="text-lg font-black text-slate-300">#{i+1}</span>
                              <div className="flex-1">
@@ -221,12 +264,28 @@ export default function TargetsPage() {
 
       <Card>
         <div className="flex flex-col border-b border-slate-200 p-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-4">
              <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-slate-400" />
-                <span className="text-sm font-medium">Month:</span>
+                <Select
+                   value={period}
+                   onChange={e => setPeriod(e.target.value)}
+                   options={periodOptions}
+                   className="w-40"
+                />
              </div>
-             <MonthPicker value={month} onChange={setMonth} className="w-44" />
+
+             {period === 'monthly' && (
+                <MonthPicker value={month} onChange={setMonth} className="w-44" />
+             )}
+
+             {period === 'custom' && (
+                <div className="flex items-center gap-2 animate-in slide-in-from-left-2">
+                   <Input type="date" value={customRange.start} onChange={e => setCustomRange({...customRange, start: e.target.value})} className="w-36 h-9" />
+                   <span className="text-slate-400">to</span>
+                   <Input type="date" value={customRange.end} onChange={e => setCustomRange({...customRange, end: e.target.value})} className="w-36 h-9" />
+                </div>
+             )}
           </div>
           <div className="relative max-w-xs w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />

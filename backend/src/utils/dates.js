@@ -54,7 +54,6 @@ export function rangeFromPeriod(period) {
   const now = new Date();
   const start = new Date(now);
   switch (period) {
-    case 'daily':
     case 'today':
       start.setHours(0, 0, 0, 0);
       break;
@@ -67,12 +66,24 @@ export function rangeFromPeriod(period) {
     case 'weekly':
       start.setDate(now.getDate() - 7);
       break;
-    case 'monthly':
-      start.setDate(now.getDate() - 30); // Use 30 days as requested
+    case '30days':
+      start.setDate(now.getDate() - 30);
       break;
-    case '3months': start.setMonth(now.getMonth() - 3); break;
-    case '6months': start.setMonth(now.getMonth() - 6); break;
-    default: start.setHours(0, 0, 0, 0);
+    case 'monthly':
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      break;
+    case '3months':
+      start.setMonth(now.getMonth() - 3);
+      break;
+    case '6months':
+      start.setMonth(now.getMonth() - 6);
+      break;
+    case '1year':
+      start.setFullYear(now.getFullYear() - 1);
+      break;
+    default:
+      start.setHours(0, 0, 0, 0);
   }
   return { start, end: now };
 }
