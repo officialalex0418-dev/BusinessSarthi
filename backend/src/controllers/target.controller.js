@@ -119,5 +119,18 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
     completedStaff: report.filter(r => r.percent >= 100).length,
   };
 
-  res.json({ success: true, data: report, stats, range: { from, to } });
+  // Trend Data (Last 30 days or Month range)
+  const trend = await Sale.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$saleDate' } },
+        amount: { $sum: '$amount' }
+      }
+    },
+    { $sort: { _id: 1 } },
+    { $project: { date: '$_id', amount: 1, _id: 0 } }
+  ]);
+
+  res.json({ success: true, data: report, stats, trend, range: { from, to } });
 });
