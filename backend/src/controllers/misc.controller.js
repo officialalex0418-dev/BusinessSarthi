@@ -89,8 +89,9 @@ export const updateSettings = asyncHandler(async (req, res) => {
 
 // ---------- File Proxy ----------
 export const getFile = asyncHandler(async (req, res) => {
-  const { folder, key } = req.params;
-  const fileKey = `${folder}/${key}`;
+  const fileKey = req.params[0]; // Extract key from wildcard '*'
+
+  if (!fileKey) throw ApiError.badRequest('File key is required');
 
   try {
     const { stream, contentType, contentLength } = await import('../services/storage.service.js').then(m => m.getFileStream(fileKey));

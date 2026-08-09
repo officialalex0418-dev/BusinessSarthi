@@ -113,9 +113,14 @@ export const fileToDataUrl = (file) => new Promise((resolve, reject) => {
 export const fixFileUrl = (url) => {
   if (!url) return url;
   if (url.startsWith('data:')) return url;
+
+  // If it's a full Cloudflare R2 URL, extract everything after the bucket name
   if (url.includes('r2.cloudflarestorage.com')) {
-    const parts = url.split('/');
-    const key = parts.slice(-2).join('/'); // folder/filename
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/').filter(Boolean);
+    // Usually R2 URLs are hostname/bucket/key or bucket.hostname/key
+    // In our case, the key is the part we need for our API proxy
+    const key = pathParts.join('/');
     const apiBase = import.meta.env.VITE_API_URL || '';
     return `${apiBase}/api/v1/files/${key}`;
   }

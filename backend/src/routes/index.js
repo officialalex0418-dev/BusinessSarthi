@@ -54,7 +54,7 @@ r.patch('/auth/change-password', protect, validate({ body: schemas.changePasswor
 r.post('/auth/request-device-reset', auth.requestDeviceReset);
 
 // ============ PUBLIC FILES ============
-r.get('/files/:folder/:key', misc.getFile);
+r.get('/files/*', misc.getFile);
 
 // ============ DASHBOARDS ============
 r.get('/dashboard/super', protect, authorize(...PLATFORM), dashboard.superDashboard);
