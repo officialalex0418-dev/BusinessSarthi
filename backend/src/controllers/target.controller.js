@@ -73,16 +73,10 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
   const match = { company: companyId, saleDate: { $gte: from, $lte: to } };
   if (staffId) match.staff = staffId;
 
-  // Aggregate Sales (Daily/Generic)
+  // Aggregate Sales (Generic ONLY - as requested)
   const salesAgg = await Sale.aggregate([
     { $match: match },
     { $group: { _id: '$staff', total: { $sum: '$amount' } } }
-  ]);
-
-  // Aggregate Sales Invoices (Distributor)
-  const invoicesAgg = await SalesInvoice.aggregate([
-    { $match: match },
-    { $group: { _id: '$staff', total: { $sum: '$netTotal' } } }
   ]);
 
   // Fetch Targets for the month
@@ -96,10 +90,8 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
   const allStaff = await User.find(staffQuery).select('name position');
 
   const report = allStaff.map(s => {
-    const saleTotal = salesAgg.find(x => x._id.toString() === s._id.toString())?.total || 0;
-    const invTotal = invoicesAgg.find(x => x._id.toString() === s._id.toString())?.total || 0;
+    const achieved = salesAgg.find(x => x._id.toString() === s._id.toString())?.total || 0;
     const target = targets.find(x => x.staff.toString() === s._id.toString())?.amount || 0;
-    const achieved = saleTotal + invTotal;
 
     return {
       staffId: s._id,

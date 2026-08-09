@@ -121,7 +121,7 @@ export const staffDashboard = asyncHandler(async (req, res) => {
   }
 
   const [
-    todayAttendance, monthAttendance, salesAgg, invoicesAgg,
+    todayAttendance, monthAttendance, salesAgg,
     monthlyTarget, upcomingHolidays, recentLeaves
   ] = await Promise.all([
     Attendance.findOne({ staff: userId, date: today }),
@@ -129,10 +129,6 @@ export const staffDashboard = asyncHandler(async (req, res) => {
     Sale.aggregate([
       { $match: { staff: userId, saleDate: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]),
-    SalesInvoice.aggregate([
-      { $match: { staff: userId, saleDate: { $gte: startOfMonth } } },
-      { $group: { _id: null, total: { $sum: '$netTotal' } } },
     ]),
     Target.findOne({ staff: userId, month: targetMonth, calendarType: dateFormat }),
     Holiday.find({ company: companyId, startDate: { $gte: new Date() } })
@@ -143,7 +139,7 @@ export const staffDashboard = asyncHandler(async (req, res) => {
   const lateDays = monthAttendance.filter((a) => a.checkIn?.isLate).length;
   const presentDays = monthAttendance.filter((a) => ['PRESENT', 'HALF_DAY'].includes(a.status)).length;
 
-  const achieved = (salesAgg[0]?.total || 0) + (invoicesAgg[0]?.total || 0);
+  const achieved = salesAgg[0]?.total || 0;
   const target = monthlyTarget?.amount || 0;
 
   res.json({
