@@ -42,7 +42,7 @@ export const getTargets = asyncHandler(async (req, res) => {
 /** Calculate achievement report (Target vs Sales) */
 export const getAchievementReport = asyncHandler(async (req, res) => {
   const { month, calendarType, staffId, startDate, endDate } = req.query;
-  const companyId = req.user.company;
+  const companyId = mongoose.Types.ObjectId.createFromHexString(req.user.company.toString());
 
   let from, to;
 
@@ -71,7 +71,7 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
   }
 
   const match = { company: companyId, saleDate: { $gte: from, $lte: to } };
-  if (staffId) match.staff = staffId;
+  if (staffId) match.staff = mongoose.Types.ObjectId.createFromHexString(staffId.toString());
 
   // Aggregate Sales (Generic ONLY - as requested)
   const salesAgg = await Sale.aggregate([
@@ -86,7 +86,7 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
 
   // Fetch Relevant Staff
   const staffQuery = { company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] }, isActive: true };
-  if (staffId) staffQuery._id = staffId;
+  if (staffId) staffQuery._id = match.staff;
   const allStaff = await User.find(staffQuery).select('name position');
 
   const report = allStaff.map(s => {
@@ -111,7 +111,7 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
     completedStaff: report.filter(r => r.percent >= 100).length,
   };
 
-  // Trend Data (Last 30 days or Month range)
+  // Trend Data
   const trend = await Sale.aggregate([
     { $match: match },
     {
