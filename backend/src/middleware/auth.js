@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
-import User from '../models/User.js';
+import { User } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 
 /** Verifies access token (Authorization: Bearer <token>) and attaches req.user */

@@ -1,6 +1,5 @@
 import crypto from 'crypto';
-import User from '../models/User.js';
-import Attendance from '../models/Attendance.js';
+import { User, Attendance } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { audit } from '../utils/audit.js';
 import { env } from '../config/env.js';
