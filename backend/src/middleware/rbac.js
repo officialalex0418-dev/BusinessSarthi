@@ -32,8 +32,9 @@ export const authorize = (...roles) => (req, _res, next) => {
 
       if (path.startsWith('/staff')) {
         permissionChecked = true;
-        // Listing staff (GET) is allowed for both staff managers and config managers (for target assignment)
-        permissionGranted = permissions.staff || (req.method === 'GET' && permissions.configuration);
+        // Listing staff (GET) is allowed for staff managers OR anyone with a management module permission (to populate filters)
+        const hasAnyManagementPerm = permissions.staff || permissions.configuration || permissions.salesTracker || permissions.liveTracking || permissions.attendance || permissions.leaves || permissions.payroll;
+        permissionGranted = permissions.staff || (req.method === 'GET' && hasAnyManagementPerm);
       } else if (path.startsWith('/locations/live') || path.startsWith('/locations/history')) {
         permissionChecked = true;
         permissionGranted = permissions.liveTracking;
@@ -52,17 +53,18 @@ export const authorize = (...roles) => (req, _res, next) => {
       } else if (path.startsWith('/sales')) {
         const isEntry = req.method === 'POST' && path === '/sales';
         const isMetadata = path === '/sales/metadata';
-        const isOwnList = req.method === 'GET' && (path === '/sales' || path === '/sales/me/summary');
+        // Summary is always self. /sales is self ONLY if no staffId or staffId is current user.
+        const isSelfList = path === '/sales/me/summary' || (path === '/sales' && req.method === 'GET' && (!req.query.staffId || req.query.staffId === req.user._id.toString()));
+
         const dept = (designation?.department?.name || '').toLowerCase();
         const isSalesDept = dept.includes('sales') || dept.includes('marketing');
-
         const canEntry = isSalesDept || permissions.salesEntry;
 
-        if (isEntry || isOwnList || isMetadata) {
+        if (isEntry || isSelfList || isMetadata) {
           permissionChecked = true;
           permissionGranted = canEntry;
         } else {
-          // Access to all sales (Management)
+          // Access to all sales (Management view in Sales Tracker)
           permissionChecked = true;
           permissionGranted = permissions.salesTracker;
         }

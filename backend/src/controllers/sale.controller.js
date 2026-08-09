@@ -123,7 +123,8 @@ export const listSales = asyncHandler(async (req, res) => {
   // 2. If staffId is a specific ID, only Managers/Owners can see it (or the staff themselves).
   // 3. If staffId is missing, default to ONLY the current user's sales.
 
-  const isManagerial = ['COMPANY_OWNER', 'COMPANY_MANAGER', 'SUPER_ADMIN', 'ADMIN_EMPLOYEE'].includes(req.user.role);
+  const perms = req.user.designation?.permissions || {};
+  const isManagerial = ['COMPANY_OWNER', 'COMPANY_MANAGER', 'SUPER_ADMIN', 'ADMIN_EMPLOYEE'].includes(req.user.role) || perms.salesTracker;
 
   if (staffId === 'all') {
     if (!isManagerial) throw ApiError.forbidden('Only managers can view all sales');
