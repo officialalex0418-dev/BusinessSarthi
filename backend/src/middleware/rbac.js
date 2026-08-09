@@ -32,7 +32,8 @@ export const authorize = (...roles) => (req, _res, next) => {
 
       if (path.startsWith('/staff')) {
         permissionChecked = true;
-        permissionGranted = permissions.staff;
+        // Listing staff (GET) is allowed for both staff managers and config managers (for target assignment)
+        permissionGranted = permissions.staff || (req.method === 'GET' && permissions.configuration);
       } else if (path.startsWith('/locations/live') || path.startsWith('/locations/history')) {
         permissionChecked = true;
         permissionGranted = permissions.liveTracking;
@@ -108,7 +109,7 @@ export const authorize = (...roles) => (req, _res, next) => {
           if (path.includes('/sales') && permissions.salesTracker) permissionGranted = true;
           if (path.includes('/payroll') && permissions.payroll) permissionGranted = true;
         }
-      } else if (path.startsWith('/company-config')) {
+      } else if (path.startsWith('/company-config') || path.startsWith('/targets')) {
         permissionChecked = true;
         permissionGranted = permissions.configuration;
       }
