@@ -5,15 +5,17 @@ import { bsToAd, bsMapping } from '../utils/nepaliDate.js';
 /** Assign/Update targets in bulk for a specific month */
 export const setTargets = asyncHandler(async (req, res) => {
   const { month, calendarType, targets } = req.body; // month: YYYY-MM, targets: [{ staffId, amount }]
-  const companyId = req.user.company;
+  const companyId = req.user.company?._id || req.user.company;
 
   if (!month || !calendarType || !Array.isArray(targets)) {
     throw ApiError.badRequest('Missing required fields');
   }
 
+  const companyOid = new mongoose.Types.ObjectId(companyId.toString());
+
   const ops = targets.map(t => ({
     updateOne: {
-      filter: { staff: t.staffId, month, calendarType, company: companyId },
+      filter: { staff: new mongoose.Types.ObjectId(t.staffId.toString()), month, calendarType, company: companyOid },
       update: { $set: { amount: Number(t.amount) || 0 } },
       upsert: true
     }
@@ -29,20 +31,26 @@ export const setTargets = asyncHandler(async (req, res) => {
 /** Get assigned targets for a specific month */
 export const getTargets = asyncHandler(async (req, res) => {
   const { month, calendarType } = req.query;
-  const companyId = req.user.company;
+  const companyId = req.user.company?._id || req.user.company;
 
   if (!month || !calendarType) {
     throw ApiError.badRequest('Month and calendarType are required');
   }
 
-  const targets = await Target.find({ company: companyId, month, calendarType });
+  const companyOid = new mongoose.Types.ObjectId(companyId.toString());
+
+  const targets = await Target.find({ company: companyOid, month, calendarType });
   res.json({ success: true, data: targets });
 });
 
 /** Calculate achievement report (Target vs Sales) */
 export const getAchievementReport = asyncHandler(async (req, res) => {
   const { month, calendarType, staffId, startDate, endDate } = req.query;
-  const companyId = mongoose.Types.ObjectId.createFromHexString(req.user.company.toString());
+  const companyId = req.user.company?._id || req.user.company;
+
+  if (!companyId) throw ApiError.forbidden('No company associated');
+
+  const companyOid = new mongoose.Types.ObjectId(companyId.toString());
 
   let from, to;
 
@@ -70,8 +78,8 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('Either month/calendarType or startDate/endDate must be provided');
   }
 
-  const match = { company: companyId, saleDate: { $gte: from, $lte: to } };
-  if (staffId) match.staff = mongoose.Types.ObjectId.createFromHexString(staffId.toString());
+  const match = { company: companyOid, saleDate: { $gte: from, $lte: to } };
+  if (staffId) match.staff = new mongoose.Types.ObjectId(staffId.toString());
 
   // Aggregate Sales (Generic ONLY - as requested)
   const salesAgg = await Sale.aggregate([
@@ -81,11 +89,11 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
 
   // Fetch Targets for the month
   const targets = (month && calendarType)
-    ? await Target.find({ company: companyId, month, calendarType })
+    ? await Target.find({ company: companyOid, month, calendarType })
     : [];
 
   // Fetch Relevant Staff
-  const staffQuery = { company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] }, isActive: true };
+  const staffQuery = { company: companyOid, role: { $in: ['STAFF', 'COMPANY_MANAGER'] }, isActive: true };
   if (staffId) staffQuery._id = match.staff;
   const allStaff = await User.find(staffQuery).select('name position');
 
