@@ -3,6 +3,7 @@ import { LocationLog, CurrentStaffLocation, User, Attendance } from '../models/i
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { realtime } from '../sockets/index.js';
 import { rangeFromPeriod, todayStr } from '../utils/dates.js';
+import { LOCATION_SOURCES, PERSISTENT_LOCATION_SOURCES } from '../constants/location.js';
 
 import { reverseGeocode } from '../utils/geocoder.js';
 
@@ -22,7 +23,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
   // Sort by recordedAt to ensure interval enforcement is chronological
   incoming.sort((a, b) => new Date(a.recordedAt || 0) - new Date(b.recordedAt || 0));
 
-  // 1. Update Real-time State (CurrentStaffLocation) for all pings
+  // 1. Update Real-time State (CurrentStaffLocation) for ALL pings
   const latestPing = incoming[incoming.length - 1];
   const recordedAt = latestPing.recordedAt ? new Date(latestPing.recordedAt) : new Date();
 
@@ -35,7 +36,8 @@ export const pushLocation = asyncHandler(async (req, res) => {
     company: companyId,
   };
 
-  // 2. Fetch current state to check lastStoredAt and handle interval
+  // 2. Fetch current state to check lastStoredAt and handle interval in one step
+  // We use new: false to get the state AS IT WAS before this update
   let currentState = await CurrentStaffLocation.findOneAndUpdate(
     { staff: req.user._id },
     { $set: stateUpdate },
@@ -59,8 +61,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
   });
 
   // 4. Persistent Storage logic (LocationLog)
-  // LIVE_REFRESH is only broadcasted and stored in real-time state, never in historical log.
-  const storagePings = incoming.filter((p) => !['LIVE_REFRESH', 'MANUAL'].includes(p.source));
+  const storagePings = incoming.filter((p) => PERSISTENT_LOCATION_SOURCES.includes(p.source));
   if (storagePings.length === 0) {
     return res.status(200).json({ success: true, message: 'Real-time update only' });
   }
@@ -70,7 +71,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
 
   const docsToSave = [];
   for (const p of storagePings) {
-    const isSpecial = ['CHECKIN', 'CHECKOUT'].includes(p.source);
+    const isSpecial = [LOCATION_SOURCES.CHECKIN, LOCATION_SOURCES.CHECKOUT, LOCATION_SOURCES.MANUAL].includes(p.source);
     const pTime = p.recordedAt ? new Date(p.recordedAt) : new Date();
 
     if (!isSpecial) {
@@ -99,7 +100,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
       batteryLevel: p.batteryLevel,
       deviceInfo: p.deviceInfo,
       recordedAt: pTime,
-      source: ['CHECKIN', 'CHECKOUT'].includes(p.source) ? p.source : 'BACKGROUND',
+      source: p.source || LOCATION_SOURCES.BACKGROUND,
     };
 
     docsToSave.push(doc);
@@ -135,8 +136,7 @@ export const getTrackingConfig = asyncHandler(async (req, res) => {
 
 /** GET /locations/live — latest location per active staff (owner/manager/admin) */
 export const liveLocations = asyncHandler(async (req, res) => {
-  const companyId = toObjectId(req.companyId);
-  const companyMatch = req.companyId ? { company: companyId } : {};
+  const companyMatch = req.companyId ? { company: new mongoose.Types.ObjectId(req.companyId) } : {};
 
   // 1. Find staff who are currently checked in (look back 48h)
   const activeAttendance = await Attendance.find({

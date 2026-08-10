@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { LOCATION_SOURCES } from '../constants/location.js';
 
 /**
  * High-volume collection. Uses GeoJSON + compound indexes for fast
@@ -33,8 +34,8 @@ const locationLogSchema = new mongoose.Schema(
     recordedAt: { type: Date, required: true, default: Date.now },
     source: {
       type: String,
-      enum: ['BACKGROUND', 'CHECKIN', 'CHECKOUT', 'MANUAL', 'LIVE_REFRESH'],
-      default: 'BACKGROUND'
+      enum: Object.values(LOCATION_SOURCES),
+      default: LOCATION_SOURCES.BACKGROUND
     },
   },
   { timestamps: { createdAt: true, updatedAt: false } }

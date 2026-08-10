@@ -1,10 +1,11 @@
-import { Attendance, AttendanceRequest, LocationLog, Company, Branch, Shift, User } from '../models/index.js';
+import { Attendance, AttendanceRequest, LocationLog, Company, Branch, Shift, User, CurrentStaffLocation } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
 import { realtime } from '../sockets/index.js';
 import { todayStr, getNepalMinutes } from '../utils/dates.js';
 import { getDistanceMeters } from '../utils/geo.js';
+import { LOCATION_SOURCES } from '../constants/location.js';
 
 import { reverseGeocode } from '../utils/geocoder.js';
 import { checkAttendanceRestriction } from '../utils/attendance-checks.js';
@@ -156,12 +157,24 @@ export const checkIn = asyncHandler(async (req, res) => {
   );
 
   if (latitude != null) {
-    LocationLog.create({
+    const point = {
       staff: req.user._id, company: companyId,
       location: { type: 'Point', coordinates: [longitude, latitude] },
       address,
-      deviceInfo, source: 'CHECKIN', recordedAt: now,
-    }).catch(() => {});
+      deviceInfo, source: LOCATION_SOURCES.CHECKIN, recordedAt: now,
+    };
+
+    LocationLog.create(point).catch(() => {});
+
+    // Also update CurrentState for the live dashboard
+    CurrentStaffLocation.findOneAndUpdate(
+      { staff: req.user._id },
+      { $set: {
+          location: point.location, address, recordedAt: now, source: point.source,
+          lastStoredAt: now, company: companyId
+      } },
+      { upsert: true }
+    ).catch(() => {});
 
     // Realtime: broadcast check-in location immediately
     realtime.staffLocation(companyId.toString(), {
@@ -256,12 +269,24 @@ export const checkOut = asyncHandler(async (req, res) => {
   await attendance.save();
 
   if (latitude != null) {
-    LocationLog.create({
+    const point = {
       staff: req.user._id, company: req.user.company._id,
       location: { type: 'Point', coordinates: [longitude, latitude] },
       address,
-      deviceInfo, source: 'CHECKOUT', recordedAt: now,
-    }).catch(() => {});
+      deviceInfo, source: LOCATION_SOURCES.CHECKOUT, recordedAt: now,
+    };
+
+    LocationLog.create(point).catch(() => {});
+
+    // Also update CurrentState
+    CurrentStaffLocation.findOneAndUpdate(
+      { staff: req.user._id },
+      { $set: {
+          location: point.location, address, recordedAt: now, source: point.source,
+          lastStoredAt: now, company: req.user.company._id
+      } },
+      { upsert: true }
+    ).catch(() => {});
 
     // Realtime: broadcast final checkout location
     realtime.staffLocation(req.user.company._id.toString(), {
