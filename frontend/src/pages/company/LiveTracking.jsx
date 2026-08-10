@@ -19,6 +19,7 @@ export default function LiveTracking() {
   const [analysis, setAnalysis] = useState(null);
   const [heat, setHeat] = useState([]);
   const [period, setPeriod] = useState('daily');
+  const [refreshing, setRefreshing] = useState(false);
 
   const getRelativeTime = (date) => {
     if (!date) return 'Waiting for signal';
@@ -45,13 +46,17 @@ export default function LiveTracking() {
   }, []);
 
   const handleManualRefresh = async () => {
+    setRefreshing(true);
     try {
-       // 1. Fetch current data from DB
-       loadLive();
-       // 2. Ask all active devices to ping NOW for exact realtime data
+       // 1. Fetch latest from server
+       await loadLive();
+       // 2. Broadcast refresh request to phones
        await api.post('/locations/request-refresh');
+       // Turn off loading after 5s (enough time for most sockets to respond)
+       setTimeout(() => setRefreshing(false), 5000);
     } catch (err) {
        console.error('Refresh request failed', err);
+       setRefreshing(false);
     }
   };
 
@@ -133,8 +138,12 @@ export default function LiveTracking() {
               />
           </div>
           <Card>
-            <CardHeader title={`Active Staff (${activeMarkers.length})`}
-              action={<Button variant="ghost" onClick={handleManualRefresh}><RefreshCw className="h-4 w-4" /></Button>} />
+            <CardHeader
+              title={refreshing ? "Refreshing Staff..." : `Active Staff (${activeMarkers.length})`}
+              action={<Button variant="ghost" onClick={handleManualRefresh} disabled={refreshing}>
+                <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+              </Button>}
+            />
             <CardBody className="max-h-[420px] space-y-3 overflow-y-auto">
               {activeMarkers.length === 0 && <p className="text-sm text-slate-400">No location pings in the last 24h.</p>}
               {activeMarkers.map((m) => (

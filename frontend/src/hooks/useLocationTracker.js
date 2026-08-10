@@ -24,9 +24,9 @@ export function useLocationTracker(enabled = true) {
   const [status, setStatus] = useState('idle');
   const [intervalMinutes, setIntervalMinutes] = useState(null);
   const [lastPing, setLastPing] = useState(null);
+  const [lastPersistentGpsAt, setLastPersistentGpsAt] = useState(null);
   const [isAlerting, setIsAlerting] = useState(false);
   const timerRef = useRef(null);
-  const heartbeatRef = useRef(null);
   const audioRef = useRef(null);
   const alertTimerRef = useRef(null);
   const gpsOffStartTimeRef = useRef(null);
@@ -180,9 +180,9 @@ export function useLocationTracker(enabled = true) {
   }, []);
 
   const ping = useCallback(async (source = 'BACKGROUND') => {
-    // Throttling: If it's a normal background ping, respect the intervalMinutes
-    if (source === 'BACKGROUND' && lastPing) {
-       const diff = (new Date() - new Date(lastPing)) / 60000;
+    // Throttling: If it's a normal background/persistent ping, respect the local interval gate
+    if (source === 'BACKGROUND' && lastPersistentGpsAt) {
+       const diff = (new Date() - new Date(lastPersistentGpsAt)) / 60000;
        if (diff < (intervalMinutes || 1)) return;
     }
 
@@ -191,15 +191,19 @@ export function useLocationTracker(enabled = true) {
       if (!point) return;
       point.source = source;
       try {
-        // Only flush/update lastPing if it's a persistent ping
-        if (source !== 'LIVE_REFRESH') {
+        // Handle persistent pings (BACKGROUND, CHECKIN, CHECKOUT)
+        const isPersistent = source !== 'LIVE_REFRESH';
+
+        if (isPersistent) {
            await flush();
-           setLastPing(new Date());
+           setLastPersistentGpsAt(new Date());
         }
 
         await api.post('/locations', point);
+        setLastPing(new Date());
+
       } catch {
-        // Only queue persistent points
+        // Only queue persistent points if upload fails
         if (source !== 'LIVE_REFRESH') {
           writeQueue([...readQueue(), point]);
         }
@@ -207,9 +211,10 @@ export function useLocationTracker(enabled = true) {
     } catch (e) {
        console.error('Ping failed:', e.message);
     }
-  }, [capture, flush, lastPing, intervalMinutes]);
+  }, [capture, flush, lastPersistentGpsAt, intervalMinutes]);
 
-  // Handle server-side requests for immediate refresh
+  // Handle server-side requests for immediate refresh (LIVE_REFRESH)
+  // This bypasses the persistent interval gate.
   useSocketEvent('location:force_update', useCallback(() => {
     if (enabled) {
       console.log('Force refresh requested via socket');
@@ -229,38 +234,40 @@ export function useLocationTracker(enabled = true) {
     let cancelled = false;
 
     (async () => {
-      let minutes = 1;
+      let minutes = 60; // Default to 60 if config fails
       try {
         const { data } = await api.get('/locations/config');
         if (!data.data.enabled) return;
-        minutes = data.data.intervalMinutes || 1;
+        // Use the actual package interval for mobile-side throttling
+        minutes = data.data.packageInterval || data.data.intervalMinutes || 60;
       } catch { return; }
       if (cancelled) return;
 
       setIntervalMinutes(minutes);
       setStatus('active');
 
-      // Start the native background watcher
+      // Start the native background watcher with intelligent filtering
       try {
         await BackgroundGeolocation.addWatcher(
           {
             id: 'bs_watcher',
             backgroundTitle: 'Business Sarthi Tracking',
-            backgroundMessage: 'Shift active. Recording location in background...',
+            backgroundMessage: 'Shift active. Tracking for route and heatmap...',
             requestPermissions: true,
             stale: false,
-            distanceFilter: 50, // Only trigger callback after 50m movement to save battery
+            distanceFilter: 100, // Only trigger after 100m movement to save battery
           },
           async (pos, err) => {
             if (err) return;
-            if (pos) ping('BACKGROUND'); // Use central throttled ping
+            // Native callback uses the central throttled ping function
+            if (pos) ping('BACKGROUND');
           }
         );
       } catch (e) {
         console.error('Failed to start native background watcher:', e);
       }
 
-      // Foreground Intervals
+      // Foreground Intervals - also throttled by the 'ping' function's internal check
       ping();
       timerRef.current = setInterval(ping, minutes * 60 * 1000);
 
@@ -275,7 +282,7 @@ export function useLocationTracker(enabled = true) {
           playAlert('NO_INTERNET');
         }
       };
-      const netHandler = Network.addListener('networkStatusChange', onNetChange);
+      const netHandler = Network.addListener('networkStatusChange', status => onNetChange(status));
 
       return () => {
         document.removeEventListener('visibilitychange', onVisible);
@@ -286,10 +293,6 @@ export function useLocationTracker(enabled = true) {
     return () => {
       cancelled = true;
       if (timerRef.current) clearInterval(timerRef.current);
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      // Remove explicit watcher termination on unmount.
-      // This allows the native service to stay alive if app UI is swiped away.
-      // termination only happens on explicit logout or checkout.
       stopAlert();
     };
   }, [enabled, ping, flush, playAlert, stopAlert, updateTrackingNotification]);

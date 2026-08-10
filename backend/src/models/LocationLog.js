@@ -31,7 +31,11 @@ const locationLogSchema = new mongoose.Schema(
       appVersion: String,
     },
     recordedAt: { type: Date, required: true, default: Date.now },
-    source: { type: String, enum: ['BACKGROUND', 'CHECKIN', 'CHECKOUT', 'MANUAL'], default: 'BACKGROUND' },
+    source: {
+      type: String,
+      enum: ['BACKGROUND', 'CHECKIN', 'CHECKOUT', 'MANUAL', 'LIVE_REFRESH'],
+      default: 'BACKGROUND'
+    },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

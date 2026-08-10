@@ -23,7 +23,6 @@ export const pushLocation = asyncHandler(async (req, res) => {
   incoming.sort((a, b) => new Date(a.recordedAt || 0) - new Date(b.recordedAt || 0));
 
   // 1. Update Real-time State (CurrentStaffLocation) for all pings
-  // This is used for the Live Dashboard without querying millions of logs.
   const latestPing = incoming[incoming.length - 1];
   const recordedAt = latestPing.recordedAt ? new Date(latestPing.recordedAt) : new Date();
 
@@ -36,13 +35,16 @@ export const pushLocation = asyncHandler(async (req, res) => {
     company: companyId,
   };
 
-  await CurrentStaffLocation.findOneAndUpdate(
+  // 2. Fetch current state to check lastStoredAt and handle interval
+  let currentState = await CurrentStaffLocation.findOneAndUpdate(
     { staff: req.user._id },
     { $set: stateUpdate },
-    { upsert: true }
+    { upsert: true, new: false }
   );
 
-  // 2. Socket.IO Broadcast for real-time dashboard UI
+  let lastStoredAt = currentState?.lastStoredAt || null;
+
+  // 3. Socket.IO Broadcast for real-time dashboard UI
   realtime.staffLocation(companyId.toString(), {
     staffId: req.user._id.toString(),
     staffName: req.user.name,
@@ -56,19 +58,14 @@ export const pushLocation = asyncHandler(async (req, res) => {
     source: latestPing.source
   });
 
-  // 3. Persistent Storage logic (LocationLog)
+  // 4. Persistent Storage logic (LocationLog)
   const storagePings = incoming.filter((p) => p.source !== 'LIVE_REFRESH');
   if (storagePings.length === 0) {
     return res.status(200).json({ success: true, message: 'Broadcasted only' });
   }
 
-  // Get company package for interval enforcement
-  const company = await mongoose.model('Company').findById(companyId).populate('package');
-  const packageInterval = company?.package?.trackingIntervalMinutes || 60;
-
-  // Get current state to check lastStoredAt
-  let currentState = await CurrentStaffLocation.findOne({ staff: req.user._id });
-  let lastStoredAt = currentState?.lastStoredAt || null;
+  // Use populated package info from req.user (added by protect middleware)
+  const packageInterval = req.user.company?.package?.trackingIntervalMinutes || 60;
 
   const docsToSave = [];
   for (const p of storagePings) {
@@ -76,7 +73,10 @@ export const pushLocation = asyncHandler(async (req, res) => {
     const pTime = p.recordedAt ? new Date(p.recordedAt) : new Date();
 
     if (!isSpecial && lastStoredAt) {
-      const diffMinutes = (pTime - lastStoredAt) / (1000 * 60);
+      // Reject points that are older than or equal to the last stored point
+      if (pTime <= new Date(lastStoredAt)) continue;
+
+      const diffMinutes = (pTime - new Date(lastStoredAt)) / (1000 * 60);
       if (diffMinutes < packageInterval) continue;
     }
 
