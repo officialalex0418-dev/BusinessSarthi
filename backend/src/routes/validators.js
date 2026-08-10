@@ -73,7 +73,7 @@ export const schemas = {
     description: Joi.string().max(500).allow(''),
     price: Joi.number().min(0).default(0),
     maxStaff: Joi.number().integer().min(1).required(),
-    trackingIntervalMinutes: Joi.number().valid(30, 60, 120).default(60),
+    trackingIntervalMinutes: Joi.number().valid(15, 30, 60, 90, 120).default(60),
     features: Joi.object({
       employeeTracking: Joi.boolean(),
       inventoryManagement: Joi.boolean(),
@@ -91,7 +91,7 @@ export const schemas = {
     description: Joi.string().max(500).allow(''),
     price: Joi.number().min(0),
     maxStaff: Joi.number().integer().min(1),
-    trackingIntervalMinutes: Joi.number().valid(30, 60, 120),
+    trackingIntervalMinutes: Joi.number().valid(15, 30, 60, 90, 120),
     features: Joi.object({
       employeeTracking: Joi.boolean(),
       inventoryManagement: Joi.boolean(),

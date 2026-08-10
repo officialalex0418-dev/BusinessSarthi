@@ -11,7 +11,8 @@ const currentStaffLocationSchema = new mongoose.Schema(
     accuracy: Number,
     batteryLevel: Number,
     address: String,
-    recordedAt: Date,
+    recordedAt: Date, // Time from device
+    receivedAt: Date, // Time at server
     source: String, // BACKGROUND, CHECKIN, LIVE_REFRESH, etc.
     lastStoredAt: Date, // Timestamp of the last point that was saved to historical LocationLog
     lastRefreshRequestedAt: Date, // Server-side cooldown tracking

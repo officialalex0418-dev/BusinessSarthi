@@ -50,32 +50,38 @@ export function initSocket(server) {
     // Direct Live Refresh Response (Staff -> Server -> Manager)
     socket.on('staff:location:live', async (payload) => {
        const { lat, lng, accuracy, batteryLevel, recordedAt } = payload;
+       const serverNow = new Date();
 
-       // Security: Verify user still active and belongs to company
+       // 1. Validation: Coordinates and user status
+       if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+
        const { User, Attendance } = await import('../models/index.js');
        const u = await User.findById(id).select('isActive company role');
        if (!u || !u.isActive || u.company?.toString() !== company?.toString()) {
           return socket.disconnect(true);
        }
 
-       // Broadcast to company managers
+       // 2. Broadcast to company managers
        if (company) {
           io.to(`company:${company}`).to('platform').emit('location:update', {
              staffId: id,
              staffName: socket.user.name || 'Staff',
              lat, lng, accuracy, batteryLevel,
-             recordedAt: recordedAt || new Date(),
+             recordedAt: recordedAt || serverNow,
+             receivedAt: serverNow,
              source: 'LIVE_REFRESH'
           });
 
-          // Also update the CurrentStaffLocation for consistency in the "Live" table
+          // 3. Update the CurrentStaffLocation for consistency in the "Live" table
           const { CurrentStaffLocation } = await import('../models/index.js');
           await CurrentStaffLocation.findOneAndUpdate(
             { staff: id },
             {
               $set: {
                 location: { type: 'Point', coordinates: [lng, lat] },
-                accuracy, batteryLevel, recordedAt,
+                accuracy, batteryLevel,
+                recordedAt: recordedAt || serverNow,
+                receivedAt: serverNow,
                 source: 'LIVE_REFRESH',
                 company: company
               }
@@ -92,7 +98,8 @@ export function initSocket(server) {
   return io;
 }
 
-export function getIO() {
+export function getIO
+) {
   return io;
 }
 

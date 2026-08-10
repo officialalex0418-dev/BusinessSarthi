@@ -24,10 +24,17 @@ export function useLocationTracker(enabled = true) {
   const [status, setStatus] = useState('idle');
   const [intervalMinutes, setIntervalMinutes] = useState(null);
   const [lastPing, setLastPing] = useState(null);
-  const [lastPersistentGpsAt, setLastPersistentGpsAt] = useState(null);
   const [isAlerting, setIsAlerting] = useState(false);
+
   const socket = useSocket();
+  const lastPersistentGpsAtRef = useRef(null);
+  const uploadInFlightRef = useRef(false);
+
   const timerRef = useRef(null);
+  const audioRef = useRef(null);
+  const alertTimerRef = useRef(null);
+  const gpsOffStartTimeRef = useRef(null);
+  const checkOutTimerRef = useRef(null);
   const audioRef = useRef(null);
   const alertTimerRef = useRef(null);
   const gpsOffStartTimeRef = useRef(null);
@@ -183,11 +190,16 @@ export function useLocationTracker(enabled = true) {
   }, []);
 
   const ping = useCallback(async (source = 'BACKGROUND', preCaptured = null) => {
-    // Throttling: If it's a normal background/persistent ping, respect the local interval gate
-    if (source === 'BACKGROUND' && lastPersistentGpsAt) {
-       const diff = (new Date() - new Date(lastPersistentGpsAt)) / 60000;
-       if (diff < (intervalMinutes || 1)) return;
+    const now = Date.now();
+    const intervalMs = (intervalMinutes || 60) * 60 * 1000;
+
+    // 1. Throttling Gate: Use Ref to prevent React-state race conditions
+    if (source === 'BACKGROUND' && lastPersistentGpsAtRef.current) {
+       if (now - lastPersistentGpsAtRef.current < intervalMs) return;
     }
+
+    // 2. Concurrency Lock: Prevent multiple simultaneous uploads
+    if (uploadInFlightRef.current && source !== 'LIVE_REFRESH') return;
 
     try {
       // Use preCaptured point (e.g. from background watcher) or capture fresh
@@ -209,6 +221,8 @@ export function useLocationTracker(enabled = true) {
         return;
       }
 
+      // Start Upload
+      uploadInFlightRef.current = true;
       try {
         // Handle persistent pings (BACKGROUND, CHECKIN, CHECKOUT)
         await flush();
@@ -216,7 +230,7 @@ export function useLocationTracker(enabled = true) {
         await api.post('/locations', point);
 
         // ONLY update the throttle timer AFTER successful server response
-        setLastPersistentGpsAt(new Date());
+        lastPersistentGpsAtRef.current = Date.now();
         setLastPing(new Date());
 
       } catch {
@@ -224,11 +238,13 @@ export function useLocationTracker(enabled = true) {
         if (source !== 'LIVE_REFRESH') {
           writeQueue([...readQueue(), point]);
         }
+      } finally {
+        uploadInFlightRef.current = false;
       }
     } catch (e) {
        console.error('Ping failed:', e.message);
     }
-  }, [capture, flush, lastPersistentGpsAt, intervalMinutes, socket]);
+  }, [capture, flush, intervalMinutes, socket]);
 
   // Handle server-side requests for immediate refresh (LIVE_REFRESH)
   useSocketEvent('location:force_update', useCallback(() => {

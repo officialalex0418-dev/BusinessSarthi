@@ -19,101 +19,126 @@ export const pushLocation = asyncHandler(async (req, res) => {
   if (!companyId) throw ApiError.forbidden('No company associated');
 
   const incoming = req.body.pings || [req.body];
+  const serverNow = new Date();
 
   // Sort by recordedAt to ensure interval enforcement is chronological
   incoming.sort((a, b) => new Date(a.recordedAt || 0) - new Date(b.recordedAt || 0));
 
-  // 1. Update Real-time State (CurrentStaffLocation) for ALL pings
-  const latestPing = incoming[incoming.length - 1];
-  const recordedAt = latestPing.recordedAt ? new Date(latestPing.recordedAt) : new Date();
-
-  const stateUpdate = {
-    location: { type: 'Point', coordinates: [latestPing.longitude, latestPing.latitude] },
-    accuracy: latestPing.accuracy,
-    batteryLevel: latestPing.batteryLevel,
-    recordedAt,
-    source: latestPing.source,
-    company: companyId,
-  };
-
-  // 2. Fetch current state to check lastStoredAt and handle interval in one step
-  // We use new: false to get the state AS IT WAS before this update
-  let currentState = await CurrentStaffLocation.findOneAndUpdate(
-    { staff: req.user._id },
-    { $set: stateUpdate },
-    { upsert: true, new: false }
-  );
-
-  let lastStoredAt = currentState?.lastStoredAt || null;
-
-  // 3. Socket.IO Broadcast for real-time dashboard UI
-  realtime.staffLocation(companyId.toString(), {
-    staffId: req.user._id.toString(),
-    staffName: req.user.name,
-    position: req.user.position || 'Staff',
-    profilePhoto: req.user.profilePhoto,
-    lat: latestPing.latitude,
-    lng: latestPing.longitude,
-    accuracy: latestPing.accuracy,
-    batteryLevel: latestPing.batteryLevel,
-    recordedAt,
-    source: latestPing.source
-  });
-
-  // 4. Persistent Storage logic (LocationLog)
-  const storagePings = incoming.filter((p) => PERSISTENT_LOCATION_SOURCES.includes(p.source));
-  if (storagePings.length === 0) {
-    return res.status(200).json({ success: true, message: 'Real-time update only' });
-  }
-
-  // Use populated package info from req.user (added by protect middleware)
+  // Use populated package info from req.user
   const packageInterval = req.user.company?.package?.trackingIntervalMinutes || 60;
 
+  // 1. Get existing state to check lastStoredAt (one atomic-like fetch)
+  let currentState = await CurrentStaffLocation.findOne({ staff: req.user._id });
+  let lastStoredAt = currentState?.lastStoredAt || null;
+
   const docsToSave = [];
-  for (const p of storagePings) {
-    const isSpecial = [LOCATION_SOURCES.CHECKIN, LOCATION_SOURCES.CHECKOUT, LOCATION_SOURCES.MANUAL].includes(p.source);
-    const pTime = p.recordedAt ? new Date(p.recordedAt) : new Date();
+  let latestPersistentPoint = null;
 
-    if (!isSpecial) {
-      // 1. Never store pings older than the current recorded state (prevents backfilling/out-of-order issues)
-      if (lastStoredAt && pTime <= new Date(lastStoredAt)) continue;
+  for (const p of incoming) {
+    const { latitude, longitude, accuracy, batteryLevel, source, recordedAt } = p;
 
-      // 2. Server-side interval enforcement (Package-driven)
-      if (lastStoredAt) {
-        const diffMinutes = (pTime - new Date(lastStoredAt)) / (1000 * 60);
-        if (diffMinutes < packageInterval) continue;
-      }
+    // Basic Validation
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) continue;
+
+    const isLiveOnly = source === 'LIVE_REFRESH';
+    const isSpecial = ['CHECKIN', 'CHECKOUT', 'MANUAL'].includes(source);
+    const pTime = recordedAt ? new Date(recordedAt) : serverNow;
+
+    if (isLiveOnly) {
+      // 2. Broadcast Live Refresh via Socket.IO immediately
+      realtime.staffLocation(companyId.toString(), {
+        staffId: req.user._id.toString(),
+        staffName: req.user.name,
+        position: req.user.position || 'Staff',
+        profilePhoto: req.user.profilePhoto,
+        lat: latitude,
+        lng: longitude,
+        accuracy,
+        batteryLevel,
+        recordedAt: pTime,
+        receivedAt: serverNow,
+        source
+      });
+
+      // Update CurrentState for LIVE_REFRESH
+      await CurrentStaffLocation.findOneAndUpdate(
+        { staff: req.user._id },
+        { $set: {
+            location: { type: 'Point', coordinates: [longitude, latitude] },
+            accuracy, batteryLevel, recordedAt: pTime, receivedAt: serverNow, source, company: companyId
+        } },
+        { upsert: true }
+      );
+      continue;
+    }
+
+    // 3. Persistent Storage logic (BACKGROUND, CHECKIN, CHECKOUT)
+    if (!isSpecial && lastStoredAt) {
+      // Reject points that are older than or equal to the last stored point
+      if (pTime <= new Date(lastStoredAt)) continue;
+
+      const diffMinutes = (pTime - new Date(lastStoredAt)) / (1000 * 60);
+      if (diffMinutes < packageInterval) continue;
     }
 
     // Geocode ONLY check-in/out to save API costs
     let address = p.address;
-    if (!address && isSpecial) {
-      address = await reverseGeocode(p.latitude, p.longitude);
+    if (!address && ['CHECKIN', 'CHECKOUT'].includes(source)) {
+      address = await reverseGeocode(latitude, longitude);
     }
 
     const doc = {
       staff: req.user._id,
       company: companyId,
-      location: { type: 'Point', coordinates: [p.longitude, p.latitude] },
+      location: { type: 'Point', coordinates: [longitude, latitude] },
       address,
-      accuracy: p.accuracy,
-      batteryLevel: p.batteryLevel,
+      accuracy,
+      batteryLevel,
       deviceInfo: p.deviceInfo,
       recordedAt: pTime,
-      source: p.source || LOCATION_SOURCES.BACKGROUND,
+      receivedAt: serverNow,
+      source: isSpecial ? source : 'BACKGROUND',
     };
 
     docsToSave.push(doc);
+    latestPersistentPoint = doc;
     lastStoredAt = pTime; // Update for next ping in same batch
   }
 
   if (docsToSave.length > 0) {
+    // 4. Atomic-like batch insert
     await LocationLog.insertMany(docsToSave, { ordered: false });
-    // Record the time of the latest persistent point
-    await CurrentStaffLocation.updateOne(
+
+    // 5. Update Real-time State (CurrentStaffLocation) and Broadcast only for accepted points
+    const lp = latestPersistentPoint;
+    await CurrentStaffLocation.findOneAndUpdate(
       { staff: req.user._id },
-      { $set: { lastStoredAt: docsToSave[docsToSave.length - 1].recordedAt } }
+      { $set: {
+          location: lp.location,
+          accuracy: lp.accuracy,
+          batteryLevel: lp.batteryLevel,
+          recordedAt: lp.recordedAt,
+          receivedAt: serverNow,
+          source: lp.source,
+          lastStoredAt: lp.recordedAt,
+          company: companyId
+      } },
+      { upsert: true }
     );
+
+    realtime.staffLocation(companyId.toString(), {
+      staffId: req.user._id.toString(),
+      staffName: req.user.name,
+      position: req.user.position || 'Staff',
+      profilePhoto: req.user.profilePhoto,
+      lat: lp.location.coordinates[1],
+      lng: lp.location.coordinates[0],
+      accuracy: lp.accuracy,
+      batteryLevel: lp.batteryLevel,
+      recordedAt: lp.recordedAt,
+      receivedAt: serverNow,
+      source: lp.source
+    });
   }
 
   res.status(201).json({ success: true, saved: docsToSave.length });

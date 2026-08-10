@@ -32,6 +32,7 @@ const locationLogSchema = new mongoose.Schema(
       appVersion: String,
     },
     recordedAt: { type: Date, required: true, default: Date.now },
+    receivedAt: { type: Date, required: true, default: Date.now },
     source: {
       type: String,
       enum: Object.values(LOCATION_SOURCES),
