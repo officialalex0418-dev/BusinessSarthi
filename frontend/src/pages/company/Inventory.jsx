@@ -601,6 +601,7 @@ export default function InventoryPage() {
                 <Plus className="h-4 w-4 mr-1" /> Add Product Row
               </Button>
             )}
+          </div>
 
           <div className="flex justify-end gap-2 border-t pt-4">
             <Button type="button" variant="outline" onClick={() => setModal(null)}>Cancel</Button>

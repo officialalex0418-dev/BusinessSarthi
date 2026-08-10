@@ -20,7 +20,7 @@ export const PACKAGE_FEATURES = Object.freeze({
   SALES: 'salesTracking',
 });
 
-export const TRACKING_INTERVALS = Object.freeze([30, 60, 120]); // minutes
+export const TRACKING_INTERVALS = Object.freeze([15, 30, 60, 90, 120]); // minutes
 
 export const LEAVE_TYPES = Object.freeze(['PAID', 'UNPAID', 'SICK']);
 export const LEAVE_STATUS = Object.freeze(['PENDING', 'APPROVED', 'REJECTED']);

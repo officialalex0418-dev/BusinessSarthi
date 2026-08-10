@@ -28,6 +28,17 @@ export default function LiveTracking() {
     return formatDateTime(date, dateFormat);
   };
 
+  const getStatusInfo = (item) => {
+    const recordedAt = item.recordedAt;
+    if (!recordedAt) return { label: 'STALE', color: 'bg-slate-100 text-slate-500 dark:bg-slate-800' };
+
+    const diffMin = (new Date() - new Date(recordedAt)) / 60000;
+    if (diffMin < 2) return { label: 'LIVE', color: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' };
+    if (diffMin < 10) return { label: 'RECENT', color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' };
+    if (diffMin < 30) return { label: 'DELAYED', color: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20' };
+    return { label: 'STALE', color: 'bg-slate-100 text-slate-500 dark:bg-slate-800' };
+  };
+
   const loadLive = useCallback(async () => {
     const { data } = await api.get('/locations/live');
     setMarkers(data.data.items || []);
@@ -145,16 +156,17 @@ export default function LiveTracking() {
                     {m.batteryLevel != null && <Badge color={m.batteryLevel > 20 ? 'green' : 'red'}>🔋 {m.batteryLevel}%</Badge>}
                   </div>
                   <div className="mt-2 flex items-center justify-between">
-                    <p className="text-[10px] text-slate-400 font-medium">
-                      {m.lat != null ? `${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}` : 'No GPS data'}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-slate-400 font-medium truncate">
+                        {m.lat != null ? `${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}` : 'No GPS data'}
+                      </p>
+                      {m.accuracy != null && <p className="text-[9px] text-slate-500">Acc: ±{Math.round(m.accuracy)}m</p>}
+                    </div>
                     <p className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded-full",
-                      getRelativeTime(m.recordedAt) === 'Active now'
-                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20"
-                        : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                      "text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap",
+                      getStatusInfo(m).color
                     )}>
-                      {getRelativeTime(m.recordedAt)}
+                      {getStatusInfo(m).label} • {getRelativeTime(m.recordedAt)}
                     </p>
                   </div>
                 </div>

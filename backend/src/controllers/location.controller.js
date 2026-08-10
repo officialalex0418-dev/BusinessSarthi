@@ -14,39 +14,63 @@ const toObjectId = (id) => new mongoose.Types.ObjectId(id);
  * Supports batch: { pings: [...] } for offline-queued points.
  */
 export const pushLocation = asyncHandler(async (req, res) => {
-  const companyId = req.user.company?._id;
+  const companyId = req.user.company?._id || req.user.company;
   if (!companyId) throw ApiError.forbidden('No company associated');
 
-  // Only track STAFF while they are checked in
-  if (req.user.role === 'STAFF') {
-    const today = todayStr();
-    const activeAtt = await Attendance.findOne({
-      staff: req.user._id,
-      date: today,
-      'checkIn.time': { $exists: true },
-      'checkOut.time': { $exists: false }
-    });
+  const incoming = req.body.pings || [req.body];
 
-    if (!activeAtt) {
-      return res.status(200).json({
-        success: true,
-        data: { saved: 0 },
-        message: 'Tracking inactive: Please check-in first'
-      });
-    }
+  // 1. Live Refresh handling: Broadcast only, don't save
+  const liveRefreshes = incoming.filter((p) => p.source === 'LIVE_REFRESH');
+  liveRefreshes.forEach((p) => {
+    realtime.staffLocation(companyId.toString(), {
+      staffId: req.user._id.toString(),
+      staffName: req.user.name,
+      position: req.user.position || 'Staff',
+      profilePhoto: req.user.profilePhoto,
+      lat: p.latitude,
+      lng: p.longitude,
+      accuracy: p.accuracy,
+      batteryLevel: p.batteryLevel,
+      recordedAt: p.recordedAt ? new Date(p.recordedAt) : new Date(),
+    });
+  });
+
+  // 2. Persistent storage handling
+  const storagePings = incoming.filter((p) => p.source !== 'LIVE_REFRESH');
+  if (storagePings.length === 0) {
+    return res.status(200).json({ success: true, message: 'Broadcasted live' });
   }
 
-  const pings = req.body.pings || [req.body];
+  // Get company package for interval enforcement
+  const company = await mongoose.model('Company').findById(companyId).populate('package');
+  const packageInterval = company?.package?.trackingIntervalMinutes || 60;
 
-  // Geocode points selectively: Always geocode CHECKIN/CHECKOUT and the first point in a batch
-  // To avoid hitting API limits with 1-minute tracking.
-  const docs = await Promise.all(pings.map(async (p, index) => {
+  // Get last stored point to check interval
+  let lastStored = await LocationLog.findOne({ staff: req.user._id })
+    .sort({ recordedAt: -1 })
+    .lean();
+
+  const docsToSave = [];
+  for (const p of storagePings) {
+    const isSpecial = ['CHECKIN', 'CHECKOUT'].includes(p.source);
+    const recordedAt = p.recordedAt ? new Date(p.recordedAt) : new Date();
+
+    if (!isSpecial) {
+      // Enforce interval for BACKGROUND pings
+      const lastTime = lastStored?.recordedAt ? new Date(lastStored.recordedAt) : null;
+      if (lastTime) {
+        const diffMinutes = (recordedAt - lastTime) / (1000 * 60);
+        if (diffMinutes < packageInterval) continue;
+      }
+    }
+
+    // Only geocode CHECKIN and CHECKOUT
     let address = p.address;
-    if (!address && (p.source === 'CHECKIN' || p.source === 'CHECKOUT' || index === 0)) {
+    if (!address && isSpecial) {
       address = await reverseGeocode(p.latitude, p.longitude);
     }
 
-    return {
+    const doc = {
       staff: req.user._id,
       company: companyId,
       location: { type: 'Point', coordinates: [p.longitude, p.latitude] },
@@ -54,40 +78,47 @@ export const pushLocation = asyncHandler(async (req, res) => {
       accuracy: p.accuracy,
       batteryLevel: p.batteryLevel,
       deviceInfo: p.deviceInfo,
-      recordedAt: p.recordedAt ? new Date(p.recordedAt) : new Date(),
+      recordedAt,
       source: p.source || 'BACKGROUND',
     };
-  }));
+    docsToSave.push(doc);
+    lastStored = doc; // Update for next ping in same batch
+  }
 
-  const saved = await LocationLog.insertMany(docs, { ordered: false });
+  let savedCount = 0;
+  if (docsToSave.length > 0) {
+    const saved = await LocationLog.insertMany(docsToSave, { ordered: false });
+    savedCount = saved.length;
 
-  // Realtime: broadcast latest point to company + platform dashboards
-  const latest = saved[saved.length - 1];
-  realtime.staffLocation(companyId.toString(), {
-    staffId: req.user._id.toString(),
-    staffName: req.user.name,
-    position: req.user.position || 'Staff',
-    profilePhoto: req.user.profilePhoto,
-    lat: latest.location.coordinates[1],
-    lng: latest.location.coordinates[0],
-    address: latest.address,
-    accuracy: latest.accuracy,
-    recordedAt: latest.recordedAt,
-  });
+    // Realtime: broadcast latest stored point if not already broadcasted as LIVE_REFRESH
+    const latest = saved[saved.length - 1];
+    realtime.staffLocation(companyId.toString(), {
+      staffId: req.user._id.toString(),
+      staffName: req.user.name,
+      position: req.user.position || 'Staff',
+      profilePhoto: req.user.profilePhoto,
+      lat: latest.location.coordinates[1],
+      lng: latest.location.coordinates[0],
+      address: latest.address,
+      accuracy: latest.accuracy,
+      batteryLevel: latest.batteryLevel,
+      recordedAt: latest.recordedAt,
+    });
+  }
 
-  res.status(201).json({ success: true, data: { saved: saved.length } });
+  res.status(201).json({ success: true, data: { saved: savedCount } });
 });
 
 /** GET /locations/interval — staff app asks how often to ping (from company package) */
 export const getTrackingConfig = asyncHandler(async (req, res) => {
-  const pkg = req.companyPackage; // set by requireFeature middleware
+  const pkg = req.companyPackage;
   res.json({
     success: true,
     data: {
       enabled: !!pkg?.features?.employeeTracking,
-      // Track every minute to create smooth routes
+      // High-resolution live tracking (not stored in DB)
       intervalMinutes: 1,
-      // Provide the package interval for marker logic
+      // Actual storage interval from package
       packageInterval: pkg?.trackingIntervalMinutes || 60,
     },
   });
@@ -139,6 +170,15 @@ export const liveLocations = asyncHandler(async (req, res) => {
     const lng = latestLog ? latestLog.location.coordinates[0] : a.checkIn?.location?.coordinates?.[0];
     const recordedAt = latestLog ? latestLog.recordedAt : a.checkIn?.time;
 
+    // LIVE (<2m), RECENT (<10m), DELAYED (<30m), STALE (>30m)
+    let locationStatus = 'STALE';
+    if (recordedAt) {
+      const diffMin = (Date.now() - new Date(recordedAt)) / 60000;
+      if (diffMin < 2) locationStatus = 'LIVE';
+      else if (diffMin < 10) locationStatus = 'RECENT';
+      else if (diffMin < 30) locationStatus = 'DELAYED';
+    }
+
     return {
       staffId: s._id.toString(),
       name: s.name,
@@ -149,6 +189,7 @@ export const liveLocations = asyncHandler(async (req, res) => {
       accuracy: latestLog?.accuracy || 0,
       batteryLevel: latestLog?.batteryLevel,
       recordedAt,
+      locationStatus,
       checkInTime: a.checkIn?.time,
     };
   }).filter(i => i.lat != null); // Only show those with at least check-in GPS
@@ -186,17 +227,21 @@ export const routeHistory = asyncHandler(async (req, res) => {
     }).sort('date').lean()
   ]);
 
+  const attMap = new Map(attendance.map((a) => [a.date, a]));
+
   // Filter logs to only include those between check-in and check-out for each day
-  const filteredPoints = logs.filter(log => {
+  const filteredPoints = logs.filter((log) => {
     const logDate = log.recordedAt.toISOString().split('T')[0];
-    const dailyAttendance = attendance.find(a => a.date === logDate);
+    const dailyAttendance = attMap.get(logDate);
 
     if (!dailyAttendance || !dailyAttendance.checkIn?.time) return false;
 
     const checkInTime = new Date(dailyAttendance.checkIn.time);
     const checkOutTime = dailyAttendance.checkOut?.time
       ? new Date(dailyAttendance.checkOut.time)
-      : (logDate === new Date().toISOString().split('T')[0] ? new Date() : new Date(new Date(logDate).setHours(23, 59, 59, 999)));
+      : logDate === new Date().toISOString().split('T')[0]
+      ? new Date()
+      : new Date(new Date(logDate).setHours(23, 59, 59, 999));
 
     return log.recordedAt >= checkInTime && log.recordedAt <= checkOutTime;
   });

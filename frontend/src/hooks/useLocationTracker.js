@@ -5,6 +5,7 @@ import { Network } from '@capacitor/network';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { api } from '@/api/client';
+import { useSocketEvent } from '@/context/SocketContext';
 
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 
@@ -178,21 +179,38 @@ export function useLocationTracker(enabled = true) {
     } catch { /* keep queued */ }
   }, []);
 
-  const ping = useCallback(async () => {
+  const ping = useCallback(async (source = 'BACKGROUND') => {
     try {
       const point = await capture();
       if (!point) return;
+      point.source = source;
       try {
-        await flush();
+        // Only flush/update lastPing if it's a persistent ping
+        if (source !== 'LIVE_REFRESH') await flush();
+
         await api.post('/locations', point);
-        setLastPing(new Date());
+
+        if (source !== 'LIVE_REFRESH') {
+          setLastPing(new Date());
+        }
       } catch {
-        writeQueue([...readQueue(), point]);
+        // Only queue persistent points
+        if (source !== 'LIVE_REFRESH') {
+          writeQueue([...readQueue(), point]);
+        }
       }
     } catch (e) {
        console.error('Ping failed:', e.message);
     }
   }, [capture, flush]);
+
+  // Handle server-side requests for immediate refresh
+  useSocketEvent('location:force_update', useCallback(() => {
+    if (enabled) {
+      console.log('Force refresh requested via socket');
+      ping('LIVE_REFRESH');
+    }
+  }, [enabled, ping]));
 
   useEffect(() => {
     if (!enabled) {
