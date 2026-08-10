@@ -98,8 +98,7 @@ export function initSocket(server) {
   return io;
 }
 
-export function getIO
-) {
+export function getIO() {
   return io;
 }
 
