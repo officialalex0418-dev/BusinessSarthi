@@ -1,2 +1,0 @@
-"C:\Program Files\Git\cmd\git.exe" commit -m "perf: production overhaul of tracking system with mobile throttling, direct socket refresh, and optimized live architecture"
-"C:\Program Files\Git\cmd\git.exe" push origin master
