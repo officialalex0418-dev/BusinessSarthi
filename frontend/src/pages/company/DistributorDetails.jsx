@@ -832,72 +832,64 @@ export default function DistributorDetails() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b bg-slate-50 dark:bg-slate-900/50">
-                <tr>
-                  <th className="px-2 py-3">S.N</th>
-                  <th className="px-2 py-3">Product Name</th>
-                  <th className="px-2 py-3">Batch</th>
-                  <th className="px-2 py-3 w-32">MRP</th>
-                  <th className="px-2 py-3">Price</th>
-                  <th className="px-2 py-3">Quantity</th>
-                  <th className="px-2 py-3">Amount</th>
-                  <th className="px-2 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {newInvForm.items.map((row, idx) => (
-                  <tr key={idx}>
-                    <td className="px-2 py-2">{idx + 1}</td>
-                    <td className="px-2 py-2 min-w-[200px]">
-                      <Select
-                        className="w-full"
-                        value={row.productId}
-                        onChange={(e) => {
-                          const prod = allProducts.find(p => p._id === e.target.value);
-                          updateNewInvRow(idx, 'productId', e.target.value);
-                          updateNewInvRow(idx, 'productName', prod?.productName || '');
-                          updateNewInvRow(idx, 'batch', prod?.batchNumber || '');
-                          if (prod) {
-                            updateNewInvRow(idx, 'price', prod.sellingPrice);
-                            updateNewInvRow(idx, 'mrp', prod.mrp || 0);
-                          }
-                        }}
-                        options={[
-                          { value: '', label: 'Select product...' },
-                          ...allProducts.map(p => ({ value: p._id, label: `${p.productName} (Stock: ${p.quantity})` }))
-                        ]}
-                        required
-                      />
-                    </td>
-                    <td className="px-2 py-2">
-                      <Input value={row.batch} onChange={e => updateNewInvRow(idx, 'batch', e.target.value)} placeholder="Batch" />
-                    </td>
-                    <td className="px-2 py-2">
-                      <div className="font-bold text-slate-600 dark:text-slate-400 text-sm">{formatMoney(row.mrp)}</div>
-                    </td>
-                    <td className="px-2 py-2">
-                      <Input type="number" min="0" step="0.01" value={row.price} onChange={e => updateNewInvRow(idx, 'price', e.target.value)} required />
-                    </td>
-                    <td className="px-2 py-2">
-                      <Input type="number" min="1" value={row.quantity} onChange={e => updateNewInvRow(idx, 'quantity', e.target.value)} required />
-                    </td>
-                    <td className="px-2 py-2">
-                      <div className="font-semibold">{formatMoney(row.amount)}</div>
-                    </td>
-                    <td className="px-2 py-2 text-right">
-                       <button type="button" onClick={() => removeNewInvRow(idx)} className="text-red-500 hover:text-red-700">
-                         <Trash2 className="h-4 w-4" />
-                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            {newInvForm.items.map((row, idx) => (
+              <div key={idx} className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 relative">
+                <div className="flex gap-4">
+                  <div className="flex-[2]">
+                    <Select
+                      label="Product Name"
+                      className="w-full"
+                      value={row.productId}
+                      onChange={(e) => {
+                        const prod = allProducts.find(p => p._id === e.target.value);
+                        updateNewInvRow(idx, 'productId', e.target.value);
+                        updateNewInvRow(idx, 'productName', prod?.productName || '');
+                        updateNewInvRow(idx, 'batch', prod?.batchNumber || '');
+                        if (prod) {
+                          updateNewInvRow(idx, 'price', prod.sellingPrice);
+                          updateNewInvRow(idx, 'mrp', prod.mrp || 0);
+                        }
+                      }}
+                      options={[
+                        { value: '', label: 'Select product...' },
+                        ...allProducts.map(p => ({ value: p._id, label: `${p.productName} (Stock: ${p.quantity})` }))
+                      ]}
+                      required
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input label="Batch NO" value={row.batch} onChange={e => updateNewInvRow(idx, 'batch', e.target.value)} placeholder="Batch" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 xs:grid-cols-4 gap-3">
+                  <div className="space-y-1.5">
+                    <span className="block text-xs font-bold text-slate-400 uppercase">MRP</span>
+                    <div className="h-10 px-3 flex items-center bg-slate-50 dark:bg-slate-800 rounded-lg border text-sm font-semibold">
+                      {formatMoney(row.mrp)}
+                    </div>
+                  </div>
+                  <Input label="Unit Price" type="number" min="0" step="0.01" value={row.price} onChange={e => updateNewInvRow(idx, 'price', e.target.value)} required className="h-10" />
+                  <Input label="QTY" type="number" min="1" value={row.quantity} onChange={e => updateNewInvRow(idx, 'quantity', e.target.value)} required className="h-10" />
+                  <div className="space-y-1.5">
+                    <span className="block text-xs font-bold text-slate-400 uppercase">Amount</span>
+                    <div className="h-10 px-3 flex items-center bg-primary-50 dark:bg-primary-900/10 rounded-lg border border-primary-100 dark:border-primary-900/30 text-sm font-black text-primary-600">
+                      {formatMoney(row.amount)}
+                    </div>
+                  </div>
+                </div>
+
+                {newInvForm.items.length > 1 && (
+                  <button type="button" onClick={() => removeNewInvRow(idx)} className="absolute -top-2 -right-2 bg-white dark:bg-slate-800 p-1.5 rounded-full border shadow-sm text-red-500 hover:text-red-700">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
 
-          <Button type="button" variant="outline" size="sm" onClick={addNewInvRow}>
+          <Button type="button" variant="outline" size="sm" onClick={addNewInvRow} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-1" /> Add Product
           </Button>
 
@@ -964,59 +956,51 @@ export default function DistributorDetails() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b bg-slate-50 dark:bg-slate-900/50">
-                <tr>
-                  <th className="px-2 py-3">S.N</th>
-                  <th className="px-2 py-3">Product Name</th>
-                  <th className="px-2 py-3">Batch</th>
-                  <th className="px-2 py-3 w-32">MRP</th>
-                  <th className="px-2 py-3">Price</th>
-                  <th className="px-2 py-3">Quantity</th>
-                  <th className="px-2 py-3">Amount</th>
-                  <th className="px-2 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {editingInvoice?.items.map((row, idx) => (
-                  <tr key={idx}>
-                    <td className="px-2 py-2">{idx + 1}</td>
-                    <td className="px-2 py-2 min-w-[200px]">
-                      <Input
-                        className="w-full"
-                        value={row.productName}
-                        onChange={e => updateEditRow(idx, 'productName', e.target.value)}
-                        required
-                      />
-                    </td>
-                    <td className="px-2 py-2">
-                      <Input value={row.batch || ''} onChange={e => updateEditRow(idx, 'batch', e.target.value)} placeholder="Batch" />
-                    </td>
-                    <td className="px-2 py-2">
-                      <div className="font-bold text-slate-600 dark:text-slate-400 text-sm">{formatMoney(row.mrp || 0)}</div>
-                    </td>
-                    <td className="px-2 py-2">
-                      <Input type="number" min="0" step="0.01" value={row.price} onChange={e => updateEditRow(idx, 'price', e.target.value)} required />
-                    </td>
-                    <td className="px-2 py-2">
-                      <Input type="number" min="1" value={row.quantity} onChange={e => updateEditRow(idx, 'quantity', e.target.value)} required />
-                    </td>
-                    <td className="px-2 py-2">
-                      <div className="font-semibold">{formatMoney(row.amount)}</div>
-                    </td>
-                    <td className="px-2 py-2 text-right">
-                       <button type="button" onClick={() => removeEditRow(idx)} className="text-red-500 hover:text-red-700">
-                         <Trash2 className="h-4 w-4" />
-                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            {editingInvoice?.items.map((row, idx) => (
+              <div key={idx} className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 relative">
+                <div className="flex gap-4">
+                  <div className="flex-[2]">
+                    <Input
+                      label="Product Name"
+                      className="w-full"
+                      value={row.productName}
+                      onChange={e => updateEditRow(idx, 'productName', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input label="Batch NO" value={row.batch || ''} onChange={e => updateEditRow(idx, 'batch', e.target.value)} placeholder="Batch" className="h-10" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 xs:grid-cols-4 gap-3">
+                  <div className="space-y-1.5">
+                    <span className="block text-xs font-bold text-slate-400 uppercase">MRP</span>
+                    <div className="h-10 px-3 flex items-center bg-slate-50 dark:bg-slate-800 rounded-lg border text-sm font-semibold">
+                      {formatMoney(row.mrp || 0)}
+                    </div>
+                  </div>
+                  <Input label="Unit Price" type="number" min="0" step="0.01" value={row.price} onChange={e => updateEditRow(idx, 'price', e.target.value)} required className="h-10" />
+                  <Input label="QTY" type="number" min="1" value={row.quantity} onChange={e => updateEditRow(idx, 'quantity', e.target.value)} required className="h-10" />
+                  <div className="space-y-1.5">
+                    <span className="block text-xs font-bold text-slate-400 uppercase">Amount</span>
+                    <div className="h-10 px-3 flex items-center bg-primary-50 dark:bg-primary-900/10 rounded-lg border border-primary-100 dark:border-primary-900/30 text-sm font-black text-primary-600">
+                      {formatMoney(row.amount)}
+                    </div>
+                  </div>
+                </div>
+
+                {editingInvoice.items.length > 1 && (
+                  <button type="button" onClick={() => removeEditRow(idx)} className="absolute -top-2 -right-2 bg-white dark:bg-slate-800 p-1.5 rounded-full border shadow-sm text-red-500 hover:text-red-700">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
 
-          <Button type="button" variant="outline" size="sm" onClick={addEditRow}>
+          <Button type="button" variant="outline" size="sm" onClick={addEditRow} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-1" /> Add Product
           </Button>
 

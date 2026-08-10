@@ -7,8 +7,13 @@ export const listCustomers = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
   const filter = { company: req.companyId };
 
+  // Data Scoping: Staff only see customers they created
+  if (req.user.role === 'STAFF') {
+    filter.createdBy = req.user._id;
+  }
+
   if (req.query.town) filter.town = { $regex: req.query.town, $options: 'i' };
-  if (req.query.createdBy) filter.createdBy = req.query.createdBy;
+  if (req.query.createdBy && req.user.role !== 'STAFF') filter.createdBy = req.query.createdBy;
 
   if (req.query.search) {
     filter.$or = [

@@ -258,56 +258,63 @@ export default function StaffSales() {
         {submitError && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600 border border-red-100">{submitError}</div>}
         <form onSubmit={submit} className="space-y-6 pb-48">
 
-          <div className="overflow-x-auto border rounded-xl dark:border-slate-800 shadow-sm">
-            <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-800">
-                    <tr>
-                        <th className="px-4 py-4 font-bold text-slate-700 dark:text-slate-200">Product</th>
-                        <th className="px-4 py-4 font-bold text-slate-700 dark:text-slate-200 w-28">Qty</th>
-                        <th className="px-4 py-4 font-bold text-slate-700 dark:text-slate-200 w-36">Price</th>
-                        <th className="px-4 py-4 font-bold text-slate-700 dark:text-slate-200 w-40 text-right">Amount</th>
-                        <th className="px-4 py-4 w-10"></th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y dark:divide-slate-800">
-                    {items.map((row, idx) => (
-                        <tr key={idx} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                            <td className="px-3 py-3">
-                                <Select
-                                    value={row.productId}
-                                    onChange={(e) => updateRow(idx, 'productId', e.target.value)}
-                                    options={[
-                                        { value: '', label: 'Select product...' },
-                                        ...metadata.products.map(p => ({ value: p._id, label: `${p.productName} (Stock: ${p.quantity})` }))
-                                    ]}
-                                    required
-                                    className="h-10"
-                                />
-                            </td>
-                            <td className="px-3 py-3">
-                                <Input type="number" min="1" required value={row.quantity} onChange={(e) => updateRow(idx, 'quantity', e.target.value)} className="h-10" />
-                            </td>
-                            <td className="px-3 py-3">
-                                <Input type="number" min="0" step="0.01" required value={row.sellingPrice} onChange={(e) => updateRow(idx, 'sellingPrice', e.target.value)} className="h-10" />
-                            </td>
-                            <td className="px-4 py-3 text-right font-bold text-slate-900 dark:text-white">
-                                {formatMoney(row.amount)}
-                            </td>
-                            <td className="px-3 py-3">
-                                {!editingId && (
-                                    <button type="button" onClick={() => removeRow(idx)} className="text-slate-300 hover:text-red-500 transition-colors">
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+          <div className="space-y-4">
+             {items.map((row, idx) => (
+                <div key={idx} className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                   <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1">
+                         <Select
+                            label="Product Name"
+                            value={row.productId}
+                            onChange={(e) => updateRow(idx, 'productId', e.target.value)}
+                            options={[
+                                { value: '', label: 'Select product...' },
+                                ...metadata.products.map(p => ({ value: p._id, label: `${p.productName} (Stock: ${p.quantity})` }))
+                            ]}
+                            required
+                            className="h-10"
+                         />
+                      </div>
+                      {!editingId && items.length > 1 && (
+                         <button type="button" onClick={() => removeRow(idx)} className="mt-6 text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 className="h-5 w-5" />
+                         </button>
+                      )}
+                   </div>
+
+                   <div className="grid grid-cols-3 gap-3">
+                      <Input
+                        label="QTY"
+                        type="number"
+                        min="1"
+                        required
+                        value={row.quantity}
+                        onChange={(e) => updateRow(idx, 'quantity', e.target.value)}
+                        className="h-10"
+                      />
+                      <Input
+                        label="Unit Price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        value={row.sellingPrice}
+                        onChange={(e) => updateRow(idx, 'sellingPrice', e.target.value)}
+                        className="h-10"
+                      />
+                      <div className="space-y-1.5">
+                         <span className="block text-sm font-medium">Amount</span>
+                         <div className="h-10 px-3 flex items-center bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200">
+                            {formatMoney(row.amount)}
+                         </div>
+                      </div>
+                   </div>
+                </div>
+             ))}
           </div>
 
           {!editingId && (
-            <Button type="button" variant="outline" size="sm" onClick={addRow}>
+            <Button type="button" variant="outline" size="sm" onClick={addRow} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-1" /> Add Product Row
             </Button>
           )}

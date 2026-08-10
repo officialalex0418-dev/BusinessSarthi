@@ -238,9 +238,15 @@ export const mySalesSummary = asyncHandler(async (req, res) => {
 export const getSalesMetadata = asyncHandler(async (req, res) => {
   const companyId = req.companyId;
 
+  const customerFilter = { company: companyId };
+  // Data Scoping: Filter customers created by this staff member
+  if (req.user.role === 'STAFF') {
+    customerFilter.createdBy = req.user._id;
+  }
+
   const [products, customers] = await Promise.all([
     Inventory.find({ company: companyId, isActive: true }).select('productName sellingPrice mrp quantity sku batchNumber'),
-    Customer.find({ company: companyId }).select('name address contactNumber panVat ownerName').sort('name'),
+    Customer.find(customerFilter).select('name address contactNumber panVat ownerName').sort('name'),
   ]);
 
   res.json({
