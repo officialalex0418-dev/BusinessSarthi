@@ -27,7 +27,12 @@ export function initSocket(server) {
         socket.handshake.headers?.authorization?.split(' ')[1];
       if (!token) return next(new Error('Authentication required'));
       const payload = jwt.verify(token, env.jwt.accessSecret);
-      socket.user = { id: payload.sub, role: payload.role, company: payload.company };
+      socket.user = {
+        id: payload.sub,
+        role: payload.role,
+        company: payload.company,
+        name: payload.name // Ensure name is available from JWT
+      };
       next();
     } catch {
       next(new Error('Invalid token'));
@@ -41,6 +46,37 @@ export function initSocket(server) {
     if (company && ['COMPANY_OWNER', 'COMPANY_MANAGER'].includes(role)) {
       socket.join(`company:${company}`);
     }
+
+    // Direct Live Refresh Response (Staff -> Server -> Manager)
+    socket.on('staff:location:live', async (payload) => {
+       const { lat, lng, accuracy, batteryLevel, recordedAt } = payload;
+
+       // Broadcast to company managers
+       if (company) {
+          io.to(`company:${company}`).to('platform').emit('location:update', {
+             staffId: id,
+             staffName: socket.user.name || 'Staff', // Need to ensure name is in user object
+             lat, lng, accuracy, batteryLevel,
+             recordedAt: recordedAt || new Date(),
+             source: 'LIVE_REFRESH'
+          });
+
+          // Also update the CurrentStaffLocation for consistency in the "Live" table
+          const { CurrentStaffLocation } = await import('../models/index.js');
+          await CurrentStaffLocation.findOneAndUpdate(
+            { staff: id },
+            {
+              $set: {
+                location: { type: 'Point', coordinates: [lng, lat] },
+                accuracy, batteryLevel, recordedAt,
+                source: 'LIVE_REFRESH',
+                company: company
+              }
+            },
+            { upsert: true }
+          ).catch(err => console.error('Socket state update failed', err));
+       }
+    });
 
     socket.on('disconnect', () => {});
   });

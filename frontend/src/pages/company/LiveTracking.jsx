@@ -46,14 +46,15 @@ export default function LiveTracking() {
   }, []);
 
   const handleManualRefresh = async () => {
+    if (refreshing) return;
     setRefreshing(true);
     try {
        // 1. Fetch latest from server
        await loadLive();
        // 2. Broadcast refresh request to phones
        await api.post('/locations/request-refresh');
-       // Turn off loading after 5s (enough time for most sockets to respond)
-       setTimeout(() => setRefreshing(false), 5000);
+       // Turn off loading after 8s (enough time for most sockets to respond)
+       setTimeout(() => setRefreshing(false), 8000);
     } catch (err) {
        console.error('Refresh request failed', err);
        setRefreshing(false);

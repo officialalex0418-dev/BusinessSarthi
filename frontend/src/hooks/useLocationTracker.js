@@ -5,7 +5,7 @@ import { Network } from '@capacitor/network';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { api } from '@/api/client';
-import { useSocketEvent } from '@/context/SocketContext';
+import { useSocket, useSocketEvent } from '@/context/SocketContext';
 
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 
@@ -26,6 +26,7 @@ export function useLocationTracker(enabled = true) {
   const [lastPing, setLastPing] = useState(null);
   const [lastPersistentGpsAt, setLastPersistentGpsAt] = useState(null);
   const [isAlerting, setIsAlerting] = useState(false);
+  const socket = useSocket();
   const timerRef = useRef(null);
   const audioRef = useRef(null);
   const alertTimerRef = useRef(null);
@@ -190,28 +191,36 @@ export function useLocationTracker(enabled = true) {
       const point = await capture();
       if (!point) return;
       point.source = source;
+
+      // Handle Live Refresh via direct Socket.IO (No DB storage, no REST call)
+      if (source === 'LIVE_REFRESH') {
+        if (socket?.connected) {
+          socket.emit('staff:location:live', {
+             lat: point.latitude,
+             lng: point.longitude,
+             accuracy: point.accuracy,
+             batteryLevel: point.batteryLevel,
+             recordedAt: point.recordedAt
+          });
+        }
+        return;
+      }
+
       try {
         // Handle persistent pings (BACKGROUND, CHECKIN, CHECKOUT)
-        const isPersistent = source !== 'LIVE_REFRESH';
-
-        if (isPersistent) {
-           await flush();
-           setLastPersistentGpsAt(new Date());
-        }
+        await flush();
+        setLastPersistentGpsAt(new Date());
 
         await api.post('/locations', point);
         setLastPing(new Date());
 
       } catch {
-        // Only queue persistent points if upload fails
-        if (source !== 'LIVE_REFRESH') {
-          writeQueue([...readQueue(), point]);
-        }
+        writeQueue([...readQueue(), point]);
       }
     } catch (e) {
        console.error('Ping failed:', e.message);
     }
-  }, [capture, flush, lastPersistentGpsAt, intervalMinutes]);
+  }, [capture, flush, lastPersistentGpsAt, intervalMinutes, socket]);
 
   // Handle server-side requests for immediate refresh (LIVE_REFRESH)
   // This bypasses the persistent interval gate.

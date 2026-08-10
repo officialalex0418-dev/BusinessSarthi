@@ -279,17 +279,31 @@ export const heatmap = asyncHandler(async (req, res) => {
   if (req.companyId) match.company = toObjectId(req.companyId);
   if (req.query.staffId) match.staff = toObjectId(req.query.staffId);
 
+  // Geographic Aggregation: Bucket points into a 4-decimal grid (~11m cells)
+  // This is significantly more scalable than returning raw points.
   const points = await LocationLog.aggregate([
     { $match: match },
-    { $sample: { size: 10000 } }, // increased sample size for better heatmap accuracy
+    {
+      $group: {
+        _id: {
+          lat: { $round: [{ $arrayElemAt: ['$location.coordinates', 1] }, 4] },
+          lng: { $round: [{ $arrayElemAt: ['$location.coordinates', 0] }, 4] }
+        },
+        count: { $sum: 1 }
+      }
+    },
     {
       $project: {
         _id: 0,
-        lat: { $arrayElemAt: ['$location.coordinates', 1] },
-        lng: { $arrayElemAt: ['$location.coordinates', 0] },
-      },
+        lat: '$_id.lat',
+        lng: '$_id.lng',
+        count: 1
+      }
     },
+    { $sort: { count: -1 } },
+    { $limit: 10000 }
   ]);
+
   res.json({ success: true, data: { points } });
 });
 
