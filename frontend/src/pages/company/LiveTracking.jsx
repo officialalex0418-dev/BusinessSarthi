@@ -29,14 +29,14 @@ export default function LiveTracking() {
   };
 
   const getStatusInfo = (item) => {
-    const recordedAt = item.recordedAt;
-    if (!recordedAt) return { label: 'STALE', color: 'bg-slate-100 text-slate-500 dark:bg-slate-800' };
-
-    const diffMin = (new Date() - new Date(recordedAt)) / 60000;
-    if (diffMin < 2) return { label: 'LIVE', color: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' };
-    if (diffMin < 10) return { label: 'RECENT', color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' };
-    if (diffMin < 30) return { label: 'DELAYED', color: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20' };
-    return { label: 'STALE', color: 'bg-slate-100 text-slate-500 dark:bg-slate-800' };
+    const status = item.locationStatus || 'STALE';
+    const colors = {
+      'LIVE': 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
+      'ON_SCHEDULE': 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
+      'DELAYED': 'bg-amber-50 text-amber-600 dark:bg-amber-900/20',
+      'STALE': 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+    };
+    return { label: status.replace('_', ' '), color: colors[status] || colors.STALE };
   };
 
   const loadLive = useCallback(async () => {
@@ -57,7 +57,9 @@ export default function LiveTracking() {
 
   useEffect(() => {
     loadLive();
-    const interval = setInterval(loadLive, 60000); // 1 min refresh
+    // Smart Polling: Fallback to REST only if socket is disconnected.
+    // For now, we poll every 5 mins as a safety net, but rely on Socket.io for realtime.
+    const interval = setInterval(loadLive, 300000);
     return () => clearInterval(interval);
   }, [loadLive]);
   useEffect(() => {

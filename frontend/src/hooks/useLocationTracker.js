@@ -180,19 +180,24 @@ export function useLocationTracker(enabled = true) {
   }, []);
 
   const ping = useCallback(async (source = 'BACKGROUND') => {
+    // Throttling: If it's a normal background ping, respect the intervalMinutes
+    if (source === 'BACKGROUND' && lastPing) {
+       const diff = (new Date() - new Date(lastPing)) / 60000;
+       if (diff < (intervalMinutes || 1)) return;
+    }
+
     try {
       const point = await capture();
       if (!point) return;
       point.source = source;
       try {
         // Only flush/update lastPing if it's a persistent ping
-        if (source !== 'LIVE_REFRESH') await flush();
+        if (source !== 'LIVE_REFRESH') {
+           await flush();
+           setLastPing(new Date());
+        }
 
         await api.post('/locations', point);
-
-        if (source !== 'LIVE_REFRESH') {
-          setLastPing(new Date());
-        }
       } catch {
         // Only queue persistent points
         if (source !== 'LIVE_REFRESH') {
@@ -202,7 +207,7 @@ export function useLocationTracker(enabled = true) {
     } catch (e) {
        console.error('Ping failed:', e.message);
     }
-  }, [capture, flush]);
+  }, [capture, flush, lastPing, intervalMinutes]);
 
   // Handle server-side requests for immediate refresh
   useSocketEvent('location:force_update', useCallback(() => {
@@ -236,7 +241,6 @@ export function useLocationTracker(enabled = true) {
       setStatus('active');
 
       // Start the native background watcher
-      // This is what keeps the process alive even if UI is closed
       try {
         await BackgroundGeolocation.addWatcher(
           {
@@ -245,40 +249,11 @@ export function useLocationTracker(enabled = true) {
             backgroundMessage: 'Shift active. Recording location in background...',
             requestPermissions: true,
             stale: false,
-            distanceFilter: 0, // Report every small movement to keep connection alive
+            distanceFilter: 50, // Only trigger callback after 50m movement to save battery
           },
           async (pos, err) => {
-            if (err) {
-              console.error('Background geolocation error:', err);
-              return;
-            }
-            if (pos) {
-               const info = await Device.getInfo();
-               const point = {
-                  latitude: pos.latitude,
-                  longitude: pos.longitude,
-                  accuracy: pos.accuracy,
-                  recordedAt: new Date(pos.time).toISOString(),
-                  deviceInfo: {
-                    platform: info.platform,
-                    model: info.model,
-                    osVersion: info.osVersion,
-                  },
-                  source: 'BACKGROUND_WATCHER',
-               };
-               try {
-                  // Flush offline queue first to maintain order
-                  const queue = readQueue();
-                  if (queue.length > 0) {
-                     await api.post('/locations', { pings: queue });
-                     writeQueue([]);
-                  }
-                  await api.post('/locations', point);
-                  setLastPing(new Date());
-               } catch {
-                  writeQueue([...readQueue(), point]);
-               }
-            }
+            if (err) return;
+            if (pos) ping('BACKGROUND'); // Use central throttled ping
           }
         );
       } catch (e) {
@@ -288,7 +263,6 @@ export function useLocationTracker(enabled = true) {
       // Foreground Intervals
       ping();
       timerRef.current = setInterval(ping, minutes * 60 * 1000);
-      heartbeatRef.current = setInterval(ping, 10 * 60 * 1000); // 10 min heartbeat
 
       const onVisible = () => { if (document.visibilityState === 'visible') ping(); };
       document.addEventListener('visibilitychange', onVisible);

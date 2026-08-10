@@ -6,6 +6,7 @@ export { default as Department } from './Department.js';
 export { default as Designation } from './Designation.js';
 export { default as Package } from './Package.js';
 export { default as LocationLog } from './LocationLog.js';
+export { default as CurrentStaffLocation } from './CurrentStaffLocation.js';
 export { default as Attendance } from './Attendance.js';
 export { default as AttendanceRequest } from './AttendanceRequest.js';
 export { default as Leave } from './Leave.js';

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { LocationLog, User, Attendance } from '../models/index.js';
+import { LocationLog, CurrentStaffLocation, User, Attendance } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { realtime } from '../sockets/index.js';
 import { rangeFromPeriod, todayStr } from '../utils/dates.js';
@@ -19,52 +19,68 @@ export const pushLocation = asyncHandler(async (req, res) => {
 
   const incoming = req.body.pings || [req.body];
 
-  // 1. Live Refresh handling: Broadcast only, don't save
-  const liveRefreshes = incoming.filter((p) => p.source === 'LIVE_REFRESH');
-  liveRefreshes.forEach((p) => {
-    realtime.staffLocation(companyId.toString(), {
-      staffId: req.user._id.toString(),
-      staffName: req.user.name,
-      position: req.user.position || 'Staff',
-      profilePhoto: req.user.profilePhoto,
-      lat: p.latitude,
-      lng: p.longitude,
-      accuracy: p.accuracy,
-      batteryLevel: p.batteryLevel,
-      recordedAt: p.recordedAt ? new Date(p.recordedAt) : new Date(),
-    });
+  // Sort by recordedAt to ensure interval enforcement is chronological
+  incoming.sort((a, b) => new Date(a.recordedAt || 0) - new Date(b.recordedAt || 0));
+
+  // 1. Update Real-time State (CurrentStaffLocation) for all pings
+  // This is used for the Live Dashboard without querying millions of logs.
+  const latestPing = incoming[incoming.length - 1];
+  const recordedAt = latestPing.recordedAt ? new Date(latestPing.recordedAt) : new Date();
+
+  const stateUpdate = {
+    location: { type: 'Point', coordinates: [latestPing.longitude, latestPing.latitude] },
+    accuracy: latestPing.accuracy,
+    batteryLevel: latestPing.batteryLevel,
+    recordedAt,
+    source: latestPing.source,
+    company: companyId,
+  };
+
+  await CurrentStaffLocation.findOneAndUpdate(
+    { staff: req.user._id },
+    { $set: stateUpdate },
+    { upsert: true }
+  );
+
+  // 2. Socket.IO Broadcast for real-time dashboard UI
+  realtime.staffLocation(companyId.toString(), {
+    staffId: req.user._id.toString(),
+    staffName: req.user.name,
+    position: req.user.position || 'Staff',
+    profilePhoto: req.user.profilePhoto,
+    lat: latestPing.latitude,
+    lng: latestPing.longitude,
+    accuracy: latestPing.accuracy,
+    batteryLevel: latestPing.batteryLevel,
+    recordedAt,
+    source: latestPing.source
   });
 
-  // 2. Persistent storage handling
+  // 3. Persistent Storage logic (LocationLog)
   const storagePings = incoming.filter((p) => p.source !== 'LIVE_REFRESH');
   if (storagePings.length === 0) {
-    return res.status(200).json({ success: true, message: 'Broadcasted live' });
+    return res.status(200).json({ success: true, message: 'Broadcasted only' });
   }
 
   // Get company package for interval enforcement
   const company = await mongoose.model('Company').findById(companyId).populate('package');
   const packageInterval = company?.package?.trackingIntervalMinutes || 60;
 
-  // Get last stored point to check interval
-  let lastStored = await LocationLog.findOne({ staff: req.user._id })
-    .sort({ recordedAt: -1 })
-    .lean();
+  // Get current state to check lastStoredAt
+  let currentState = await CurrentStaffLocation.findOne({ staff: req.user._id });
+  let lastStoredAt = currentState?.lastStoredAt || null;
 
   const docsToSave = [];
   for (const p of storagePings) {
     const isSpecial = ['CHECKIN', 'CHECKOUT'].includes(p.source);
-    const recordedAt = p.recordedAt ? new Date(p.recordedAt) : new Date();
+    const pTime = p.recordedAt ? new Date(p.recordedAt) : new Date();
 
-    if (!isSpecial) {
-      // Enforce interval for BACKGROUND pings
-      const lastTime = lastStored?.recordedAt ? new Date(lastStored.recordedAt) : null;
-      if (lastTime) {
-        const diffMinutes = (recordedAt - lastTime) / (1000 * 60);
-        if (diffMinutes < packageInterval) continue;
-      }
+    if (!isSpecial && lastStoredAt) {
+      const diffMinutes = (pTime - lastStoredAt) / (1000 * 60);
+      if (diffMinutes < packageInterval) continue;
     }
 
-    // Only geocode CHECKIN and CHECKOUT
+    // Geocode ONLY check-in/out to save API costs
     let address = p.address;
     if (!address && isSpecial) {
       address = await reverseGeocode(p.latitude, p.longitude);
@@ -78,58 +94,47 @@ export const pushLocation = asyncHandler(async (req, res) => {
       accuracy: p.accuracy,
       batteryLevel: p.batteryLevel,
       deviceInfo: p.deviceInfo,
-      recordedAt,
+      recordedAt: pTime,
       source: p.source || 'BACKGROUND',
     };
+
     docsToSave.push(doc);
-    lastStored = doc; // Update for next ping in same batch
+    lastStoredAt = pTime; // Update for next ping in same batch
   }
 
-  let savedCount = 0;
   if (docsToSave.length > 0) {
-    const saved = await LocationLog.insertMany(docsToSave, { ordered: false });
-    savedCount = saved.length;
-
-    // Realtime: broadcast latest stored point if not already broadcasted as LIVE_REFRESH
-    const latest = saved[saved.length - 1];
-    realtime.staffLocation(companyId.toString(), {
-      staffId: req.user._id.toString(),
-      staffName: req.user.name,
-      position: req.user.position || 'Staff',
-      profilePhoto: req.user.profilePhoto,
-      lat: latest.location.coordinates[1],
-      lng: latest.location.coordinates[0],
-      address: latest.address,
-      accuracy: latest.accuracy,
-      batteryLevel: latest.batteryLevel,
-      recordedAt: latest.recordedAt,
-    });
+    await LocationLog.insertMany(docsToSave, { ordered: false });
+    // Record the time of the latest persistent point
+    await CurrentStaffLocation.updateOne(
+      { staff: req.user._id },
+      { $set: { lastStoredAt: docsToSave[docsToSave.length - 1].recordedAt } }
+    );
   }
 
-  res.status(201).json({ success: true, data: { saved: savedCount } });
+  res.status(201).json({ success: true, saved: docsToSave.length });
 });
 
 /** GET /locations/interval — staff app asks how often to ping (from company package) */
 export const getTrackingConfig = asyncHandler(async (req, res) => {
   const pkg = req.companyPackage;
+  const interval = pkg?.trackingIntervalMinutes || 60;
   res.json({
     success: true,
     data: {
       enabled: !!pkg?.features?.employeeTracking,
-      // High-resolution live tracking (not stored in DB)
-      intervalMinutes: 1,
-      // Actual storage interval from package
-      packageInterval: pkg?.trackingIntervalMinutes || 60,
+      // Throttling: Mobile app should send at the package interval, not every minute
+      intervalMinutes: interval,
+      packageInterval: interval,
     },
   });
 });
 
 /** GET /locations/live — latest location per active staff (owner/manager/admin) */
 export const liveLocations = asyncHandler(async (req, res) => {
-  const companyMatch = req.companyId ? { company: toObjectId(req.companyId) } : {};
-  const today = todayStr();
+  const companyId = toObjectId(req.companyId);
+  const companyMatch = req.companyId ? { company: companyId } : {};
 
-  // 1. Find staff who are checked in and haven't checked out (look back 48h for active shifts)
+  // 1. Find staff who are currently checked in (look back 48h)
   const activeAttendance = await Attendance.find({
     ...companyMatch,
     'checkIn.time': { $exists: true },
@@ -141,42 +146,29 @@ export const liveLocations = asyncHandler(async (req, res) => {
     return res.json({ success: true, data: { items: [] } });
   }
 
-  // Filter out any entries where staff might be null (deleted users)
-  const validAttendance = activeAttendance.filter(a => a.staff);
-  const activeStaffIds = validAttendance.map((a) => a.staff._id);
+  const staffIds = activeAttendance.filter(a => a.staff).map(a => a.staff._id);
 
-  // 2. Get latest location logs for these staff members from the last 24h
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const logs = await LocationLog.aggregate([
-    { $match: {
-        ...companyMatch,
-        staff: { $in: activeStaffIds },
-        recordedAt: { $gte: since }
-    } },
-    { $sort: { recordedAt: -1 } },
-    { $group: { _id: '$staff', doc: { $first: '$$ROOT' } } },
-    { $replaceRoot: { newRoot: '$doc' } },
-  ]);
+  // 2. Fetch current state from optimized collection (instead of aggregation on logs)
+  const states = await CurrentStaffLocation.find({ staff: { $in: staffIds } }).lean();
+  const stateMap = new Map(states.map(s => [s.staff.toString(), s]));
 
-  const logMap = Object.fromEntries(logs.map(l => [l.staff.toString(), l]));
+  // Get company package for dynamic status calculation
+  const companyDoc = await mongoose.model('Company').findById(companyId).populate('package');
+  const interval = companyDoc?.package?.trackingIntervalMinutes || 60;
 
-  // 3. Merge: If no recent log, use the Check-In location from Attendance
-  const items = validAttendance.map(a => {
+  const items = activeAttendance.filter(a => a.staff).map(a => {
     const s = a.staff;
-    const latestLog = logMap[s._id.toString()];
+    const state = stateMap.get(s._id.toString());
+    const recordedAt = state?.recordedAt || a.checkIn?.time;
 
-    // Use Log if available, otherwise use Check-In coordinates
-    const lat = latestLog ? latestLog.location.coordinates[1] : a.checkIn?.location?.coordinates?.[1];
-    const lng = latestLog ? latestLog.location.coordinates[0] : a.checkIn?.location?.coordinates?.[0];
-    const recordedAt = latestLog ? latestLog.recordedAt : a.checkIn?.time;
-
-    // LIVE (<2m), RECENT (<10m), DELAYED (<30m), STALE (>30m)
+    // Calculate status relative to package interval
+    // LIVE (<5m), ON_SCHEDULE (< interval + 10m), DELAYED, STALE
     let locationStatus = 'STALE';
     if (recordedAt) {
       const diffMin = (Date.now() - new Date(recordedAt)) / 60000;
-      if (diffMin < 2) locationStatus = 'LIVE';
-      else if (diffMin < 10) locationStatus = 'RECENT';
-      else if (diffMin < 30) locationStatus = 'DELAYED';
+      if (diffMin < 5) locationStatus = 'LIVE';
+      else if (diffMin <= interval + 10) locationStatus = 'ON_SCHEDULE';
+      else if (diffMin <= interval + 30) locationStatus = 'DELAYED';
     }
 
     return {
@@ -184,15 +176,16 @@ export const liveLocations = asyncHandler(async (req, res) => {
       name: s.name,
       position: s.position || 'Staff',
       profilePhoto: s.profilePhoto,
-      lat,
-      lng,
-      accuracy: latestLog?.accuracy || 0,
-      batteryLevel: latestLog?.batteryLevel,
+      lat: state?.location?.coordinates?.[1] || a.checkIn?.location?.coordinates?.[1],
+      lng: state?.location?.coordinates?.[0] || a.checkIn?.location?.coordinates?.[0],
+      accuracy: state?.accuracy || 0,
+      batteryLevel: state?.batteryLevel,
       recordedAt,
       locationStatus,
+      source: state?.source,
       checkInTime: a.checkIn?.time,
     };
-  }).filter(i => i.lat != null); // Only show those with at least check-in GPS
+  }).filter(i => i.lat != null);
 
   res.json({ success: true, data: { items } });
 });
