@@ -59,9 +59,10 @@ export const pushLocation = asyncHandler(async (req, res) => {
   });
 
   // 4. Persistent Storage logic (LocationLog)
-  const storagePings = incoming.filter((p) => p.source !== 'LIVE_REFRESH');
+  // LIVE_REFRESH is only broadcasted and stored in real-time state, never in historical log.
+  const storagePings = incoming.filter((p) => !['LIVE_REFRESH', 'MANUAL'].includes(p.source));
   if (storagePings.length === 0) {
-    return res.status(200).json({ success: true, message: 'Broadcasted only' });
+    return res.status(200).json({ success: true, message: 'Real-time update only' });
   }
 
   // Use populated package info from req.user (added by protect middleware)
@@ -72,12 +73,15 @@ export const pushLocation = asyncHandler(async (req, res) => {
     const isSpecial = ['CHECKIN', 'CHECKOUT'].includes(p.source);
     const pTime = p.recordedAt ? new Date(p.recordedAt) : new Date();
 
-    if (!isSpecial && lastStoredAt) {
-      // Reject points that are older than or equal to the last stored point
-      if (pTime <= new Date(lastStoredAt)) continue;
+    if (!isSpecial) {
+      // 1. Never store pings older than the current recorded state (prevents backfilling/out-of-order issues)
+      if (lastStoredAt && pTime <= new Date(lastStoredAt)) continue;
 
-      const diffMinutes = (pTime - new Date(lastStoredAt)) / (1000 * 60);
-      if (diffMinutes < packageInterval) continue;
+      // 2. Server-side interval enforcement (Package-driven)
+      if (lastStoredAt) {
+        const diffMinutes = (pTime - new Date(lastStoredAt)) / (1000 * 60);
+        if (diffMinutes < packageInterval) continue;
+      }
     }
 
     // Geocode ONLY check-in/out to save API costs

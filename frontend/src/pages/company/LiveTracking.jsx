@@ -63,8 +63,10 @@ export default function LiveTracking() {
 
   useEffect(() => {
     loadLive();
+    // Instant Live Refresh on mount (Requirement 3)
+    api.post('/locations/request-refresh').catch(() => {});
+
     // Smart Polling: Fallback to REST only if socket is disconnected.
-    // For now, we poll every 5 mins as a safety net, but rely on Socket.io for realtime.
     const interval = setInterval(loadLive, 300000);
     return () => clearInterval(interval);
   }, [loadLive]);
