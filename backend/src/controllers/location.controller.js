@@ -99,7 +99,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
       batteryLevel: p.batteryLevel,
       deviceInfo: p.deviceInfo,
       recordedAt: pTime,
-      source: p.source || 'BACKGROUND',
+      source: ['CHECKIN', 'CHECKOUT'].includes(p.source) ? p.source : 'BACKGROUND',
     };
 
     docsToSave.push(doc);
@@ -165,14 +165,14 @@ export const liveLocations = asyncHandler(async (req, res) => {
     const state = stateMap.get(s._id.toString());
     const recordedAt = state?.recordedAt || a.checkIn?.time;
 
-    // Calculate status relative to package interval
-    // LIVE (<5m), ON_SCHEDULE (< interval + 10m), DELAYED, STALE
+    // Calculate status relative to package interval (as per audit report recommendation)
+    // LIVE (< 2m), ON_SCHEDULE (<= 1.25x interval), DELAYED (<= 2x interval), STALE
     let locationStatus = 'STALE';
     if (recordedAt) {
       const diffMin = (Date.now() - new Date(recordedAt)) / 60000;
-      if (diffMin < 5) locationStatus = 'LIVE';
-      else if (diffMin <= interval + 10) locationStatus = 'ON_SCHEDULE';
-      else if (diffMin <= interval + 30) locationStatus = 'DELAYED';
+      if (diffMin < 2) locationStatus = 'LIVE';
+      else if (diffMin <= interval * 1.25) locationStatus = 'ON_SCHEDULE';
+      else if (diffMin <= interval * 2) locationStatus = 'DELAYED';
     }
 
     return {
@@ -188,6 +188,7 @@ export const liveLocations = asyncHandler(async (req, res) => {
       locationStatus,
       source: state?.source,
       checkInTime: a.checkIn?.time,
+      lastRefreshRequestedAt: state?.lastRefreshRequestedAt,
     };
   }).filter(i => i.lat != null);
 
@@ -313,17 +314,26 @@ export const heatmap = asyncHandler(async (req, res) => {
 
 /** POST /locations/request-refresh (manager/owner) — ask active staff to ping NOW */
 export const requestRefresh = asyncHandler(async (req, res) => {
-  const companyId = req.user.company?._id;
+  const companyId = req.user.company?._id || req.user.company;
   if (!companyId) throw ApiError.forbidden('No company associated');
 
   const { staffId } = req.body;
+  const COOLDOWN_MS = 20000; // 20-second server-side cooldown per staff
 
   if (staffId) {
-    // Refresh specific user
+    // 1. Cooldown Check
+    const state = await CurrentStaffLocation.findOne({ staff: staffId });
+    if (state?.lastRefreshRequestedAt && (Date.now() - state.lastRefreshRequestedAt < COOLDOWN_MS)) {
+       return res.status(429).json({ success: false, message: 'Please wait before requesting another refresh for this staff.' });
+    }
+
+    // 2. Refresh specific user
     const staff = await User.findById(staffId);
     if (!staff || staff.company?.toString() !== companyId.toString()) {
        throw ApiError.notFound('Staff not found in your company');
     }
+
+    await CurrentStaffLocation.updateOne({ staff: staffId }, { $set: { lastRefreshRequestedAt: new Date() } });
     realtime.requestRefresh(staffId);
   } else {
     // Refresh all active staff in company
@@ -335,8 +345,11 @@ export const requestRefresh = asyncHandler(async (req, res) => {
       'checkOut.time': { $exists: false },
     }).select('staff');
 
+    const now = new Date();
     activeAttendance.forEach(a => {
-      realtime.requestRefresh(a.staff.toString());
+      const sId = a.staff.toString();
+      realtime.requestRefresh(sId);
+      CurrentStaffLocation.updateOne({ staff: sId }, { $set: { lastRefreshRequestedAt: now } }).catch(() => {});
     });
   }
 

@@ -30,6 +30,15 @@ export default function LiveTracking() {
   };
 
   const getStatusInfo = (item) => {
+    // Show 'REFRESH PENDING' if a refresh was requested in the last 20 seconds and we're still waiting for a fresh ping
+    const isPending = item.lastRefreshRequestedAt &&
+      (new Date() - new Date(item.lastRefreshRequestedAt)) < 20000 &&
+      (!item.recordedAt || new Date(item.recordedAt) < new Date(item.lastRefreshRequestedAt));
+
+    if (isPending) {
+       return { label: 'REFRESH PENDING', color: 'bg-indigo-50 text-indigo-600 animate-pulse' };
+    }
+
     const status = item.locationStatus || 'STALE';
     const colors = {
       'LIVE': 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',

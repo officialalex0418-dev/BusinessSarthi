@@ -14,6 +14,7 @@ const currentStaffLocationSchema = new mongoose.Schema(
     recordedAt: Date,
     source: String, // BACKGROUND, CHECKIN, LIVE_REFRESH, etc.
     lastStoredAt: Date, // Timestamp of the last point that was saved to historical LocationLog
+    lastRefreshRequestedAt: Date, // Server-side cooldown tracking
     status: String, // Calculated LIVE, RECENT, STALE, etc.
   },
   { timestamps: true }
