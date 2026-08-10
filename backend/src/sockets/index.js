@@ -51,11 +51,18 @@ export function initSocket(server) {
     socket.on('staff:location:live', async (payload) => {
        const { lat, lng, accuracy, batteryLevel, recordedAt } = payload;
 
+       // Security: Verify user still active and belongs to company
+       const { User, Attendance } = await import('../models/index.js');
+       const u = await User.findById(id).select('isActive company role');
+       if (!u || !u.isActive || u.company?.toString() !== company?.toString()) {
+          return socket.disconnect(true);
+       }
+
        // Broadcast to company managers
        if (company) {
           io.to(`company:${company}`).to('platform').emit('location:update', {
              staffId: id,
-             staffName: socket.user.name || 'Staff', // Need to ensure name is in user object
+             staffName: socket.user.name || 'Staff',
              lat, lng, accuracy, batteryLevel,
              recordedAt: recordedAt || new Date(),
              source: 'LIVE_REFRESH'

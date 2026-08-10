@@ -107,6 +107,7 @@ export function useLocationTracker(enabled = true) {
       }
 
       const info = await Device.getInfo();
+      const battery = await Device.getBatteryInfo();
       const isNative = info.platform === 'android' || info.platform === 'ios';
       if (!isNative) return null;
 
@@ -130,6 +131,7 @@ export function useLocationTracker(enabled = true) {
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
+          batteryLevel: Math.round((battery.batteryLevel || 0) * 100),
           recordedAt: new Date(pos.timestamp).toISOString(),
           deviceInfo: {
             platform: info.platform,
@@ -180,7 +182,7 @@ export function useLocationTracker(enabled = true) {
     } catch { /* keep queued */ }
   }, []);
 
-  const ping = useCallback(async (source = 'BACKGROUND') => {
+  const ping = useCallback(async (source = 'BACKGROUND', preCaptured = null) => {
     // Throttling: If it's a normal background/persistent ping, respect the local interval gate
     if (source === 'BACKGROUND' && lastPersistentGpsAt) {
        const diff = (new Date() - new Date(lastPersistentGpsAt)) / 60000;
@@ -188,7 +190,8 @@ export function useLocationTracker(enabled = true) {
     }
 
     try {
-      const point = await capture();
+      // Use preCaptured point (e.g. from background watcher) or capture fresh
+      const point = preCaptured || await capture();
       if (!point) return;
       point.source = source;
 
@@ -209,13 +212,18 @@ export function useLocationTracker(enabled = true) {
       try {
         // Handle persistent pings (BACKGROUND, CHECKIN, CHECKOUT)
         await flush();
-        setLastPersistentGpsAt(new Date());
 
         await api.post('/locations', point);
+
+        // ONLY update the throttle timer AFTER successful server response
+        setLastPersistentGpsAt(new Date());
         setLastPing(new Date());
 
       } catch {
-        writeQueue([...readQueue(), point]);
+        // Only queue persistent points if upload fails
+        if (source !== 'LIVE_REFRESH') {
+          writeQueue([...readQueue(), point]);
+        }
       }
     } catch (e) {
        console.error('Ping failed:', e.message);
@@ -223,7 +231,6 @@ export function useLocationTracker(enabled = true) {
   }, [capture, flush, lastPersistentGpsAt, intervalMinutes, socket]);
 
   // Handle server-side requests for immediate refresh (LIVE_REFRESH)
-  // This bypasses the persistent interval gate.
   useSocketEvent('location:force_update', useCallback(() => {
     if (enabled) {
       console.log('Force refresh requested via socket');
@@ -247,7 +254,6 @@ export function useLocationTracker(enabled = true) {
       try {
         const { data } = await api.get('/locations/config');
         if (!data.data.enabled) return;
-        // Use the actual package interval for mobile-side throttling
         minutes = data.data.packageInterval || data.data.intervalMinutes || 60;
       } catch { return; }
       if (cancelled) return;
@@ -255,7 +261,7 @@ export function useLocationTracker(enabled = true) {
       setIntervalMinutes(minutes);
       setStatus('active');
 
-      // Start the native background watcher with intelligent filtering
+      // Start the native background watcher with intelligent movement detection
       try {
         await BackgroundGeolocation.addWatcher(
           {
@@ -264,12 +270,29 @@ export function useLocationTracker(enabled = true) {
             backgroundMessage: 'Shift active. Tracking for route and heatmap...',
             requestPermissions: true,
             stale: false,
-            distanceFilter: 100, // Only trigger after 100m movement to save battery
+            distanceFilter: 100, // Move 100m before triggering callback (Save Battery)
           },
           async (pos, err) => {
             if (err) return;
-            // Native callback uses the central throttled ping function
-            if (pos) ping('BACKGROUND');
+            if (pos) {
+               // Optimization: Use native pos directly, don't call capture() again
+               const info = await Device.getInfo();
+               const battery = await Device.getBatteryInfo();
+               const point = {
+                  latitude: pos.latitude,
+                  longitude: pos.longitude,
+                  accuracy: pos.accuracy,
+                  batteryLevel: Math.round((battery.batteryLevel || 0) * 100),
+                  recordedAt: new Date(pos.time).toISOString(),
+                  deviceInfo: {
+                    platform: info.platform,
+                    model: info.model,
+                    osVersion: info.osVersion,
+                  },
+                  source: 'BACKGROUND',
+               };
+               ping('BACKGROUND', point);
+            }
           }
         );
       } catch (e) {

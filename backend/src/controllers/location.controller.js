@@ -157,7 +157,7 @@ export const liveLocations = asyncHandler(async (req, res) => {
   const stateMap = new Map(states.map(s => [s.staff.toString(), s]));
 
   // Get company package for dynamic status calculation
-  const companyDoc = await mongoose.model('Company').findById(companyId).populate('package');
+  const companyDoc = await mongoose.model('Company').findById(req.companyId).populate('package');
   const interval = companyDoc?.package?.trackingIntervalMinutes || 60;
 
   const items = activeAttendance.filter(a => a.staff).map(a => {
