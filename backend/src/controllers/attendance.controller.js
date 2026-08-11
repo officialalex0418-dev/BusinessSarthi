@@ -194,6 +194,15 @@ export const checkIn = asyncHandler(async (req, res) => {
   realtime.dashboard(companyId.toString(), { event: 'check_in', staffId: req.user._id });
   realtime.activity(companyId.toString(), { text: `${req.user.name} checked in${isLate ? ' (late)' : ''}`, at: now });
 
+  // Shift Notification (Sticky)
+  realtime.notify(req.user._id.toString(), {
+    title: 'Your shift is Active',
+    message: 'Tracking is active. Please check out at the end of your shift.',
+    type: 'SHIFT_ACTIVE',
+    sticky: true,
+    ongoing: true
+  });
+
   res.status(201).json({ success: true, data: { attendance } });
 });
 
@@ -304,6 +313,12 @@ export const checkOut = asyncHandler(async (req, res) => {
 
   audit({ req, action: 'CHECK_OUT', entity: 'Attendance', entityId: attendance._id });
   realtime.dashboard(req.user.company._id.toString(), { event: 'check_out', staffId: req.user._id });
+
+  // Clear Shift Notification
+  realtime.notify(req.user._id.toString(), {
+    type: 'SHIFT_INACTIVE',
+    clearSticky: true
+  });
 
   res.json({ success: true, data: { attendance } });
 });

@@ -35,10 +35,6 @@ export function useLocationTracker(enabled = true) {
   const alertTimerRef = useRef(null);
   const gpsOffStartTimeRef = useRef(null);
   const checkOutTimerRef = useRef(null);
-  const audioRef = useRef(null);
-  const alertTimerRef = useRef(null);
-  const gpsOffStartTimeRef = useRef(null);
-  const checkOutTimerRef = useRef(null);
 
   const notifyUser = useCallback(async (title, message) => {
     await LocalNotifications.schedule({

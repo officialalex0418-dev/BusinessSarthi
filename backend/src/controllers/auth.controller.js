@@ -308,3 +308,14 @@ export const requestDeviceReset = asyncHandler(async (req, res) => {
   audit({ req, user: user._id, action: 'DEVICE_RESET_REQUESTED', entity: 'Auth' });
   res.json({ success: true, message: 'Device reset request submitted to your company owner.' });
 });
+
+/** PATCH /auth/fcm-token */
+export const updateFcmToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  if (!token) throw ApiError.badRequest('FCM token is required');
+
+  await User.findByIdAndUpdate(req.user._id, { $set: { fcmToken: token } });
+
+  res.json({ success: true, message: 'FCM token updated successfully' });
+});
+

@@ -63,6 +63,8 @@ const userSchema = new mongoose.Schema(
       paid: { type: Number, default: 12 },
       sick: { type: Number, default: 6 },
     },
+    fcmToken: { type: String, default: null },
+    trackingEnabled: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
