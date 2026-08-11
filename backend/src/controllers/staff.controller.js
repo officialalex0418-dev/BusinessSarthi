@@ -172,6 +172,13 @@ export const updateStaff = asyncHandler(async (req, res) => {
     if (k === 'role') continue; // Handled above
     if (req.body[k] !== undefined) user[k] = req.body[k];
   }
+
+  // Increment auth version if role/status/company changed (Invalidates sessions)
+  if (req.body.role !== undefined || req.body.isActive !== undefined || req.body.designation !== undefined) {
+    user.authVersion = (user.authVersion || 1) + 1;
+    user.refreshTokens = []; // Force logout for serious changes
+  }
+
   await user.save();
 
   if (oldPosition !== user.position || oldRole !== user.role) {
@@ -194,6 +201,7 @@ export const deleteStaff = asyncHandler(async (req, res) => {
   assertSameCompanyOrPlatform(req, user);
   user.isActive = false;
   user.refreshTokens = [];
+  user.authVersion = (user.authVersion || 1) + 1;
   await user.save({ validateBeforeSave: false });
   audit({ req, action: 'DEACTIVATE_STAFF', entity: 'User', entityId: user._id });
   res.json({ success: true, message: 'User deactivated' });

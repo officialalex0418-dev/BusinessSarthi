@@ -38,6 +38,8 @@ const locationLogSchema = new mongoose.Schema(
       enum: Object.values(LOCATION_SOURCES),
       default: LOCATION_SOURCES.BACKGROUND
     },
+    isAnomaly: { type: Boolean, default: false },
+    anomalyReason: { type: String, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

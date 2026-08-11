@@ -20,18 +20,28 @@ export function initSocket(server) {
     transports: ['websocket', 'polling'],
   });
 
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     try {
       const token =
         socket.handshake.auth?.token ||
         socket.handshake.headers?.authorization?.split(' ')[1];
       if (!token) return next(new Error('Authentication required'));
       const payload = jwt.verify(token, env.jwt.accessSecret);
+
+      const { User } = await import('../models/index.js');
+      const user = await User.findById(payload.sub).select('isActive authVersion company role');
+      if (!user || !user.isActive) return next(new Error('Account inactive'));
+
+      // authVersion check (Invalidates stale sessions)
+      if (payload.v && user.authVersion !== payload.v) {
+         return next(new Error('Session expired'));
+      }
+
       socket.user = {
-        id: payload.sub,
-        role: payload.role,
-        company: payload.company,
-        name: payload.name // Ensure name is available from JWT
+        id: user._id.toString(),
+        role: user.role,
+        company: user.company?.toString(),
+        name: payload.name
       };
       next();
     } catch {

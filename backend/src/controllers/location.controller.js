@@ -105,6 +105,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
       const isSpecial = ['CHECKIN', 'CHECKOUT', 'MANUAL'].includes(source);
 
       let shouldPersist = false;
+      let currentState = await CurrentStaffLocation.findOne({ staff: staffId });
 
       if (isSpecial) {
         shouldPersist = true;
@@ -125,6 +126,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
 
         if (state) {
           shouldPersist = true;
+          currentState = state; // Update for speed check
         }
       }
 
@@ -132,6 +134,25 @@ export const pushLocation = asyncHandler(async (req, res) => {
         let address = p.address;
         if (!address && isSpecial) {
           address = await reverseGeocode(latitude, longitude);
+        }
+
+        // 7. Anomaly Detection (Speed Check)
+        let isAnomaly = false;
+        let anomalyReason = null;
+
+        if (currentState?.location?.coordinates?.length === 2 && currentState.recordedAt) {
+          const prevLat = currentState.location.coordinates[1];
+          const prevLng = currentState.location.coordinates[0];
+          const distKm = haversine(prevLat, prevLng, latitude, longitude);
+          const timeHrs = (pTime - new Date(currentState.recordedAt)) / 3600000;
+
+          if (timeHrs > 0) {
+            const speedKph = distKm / timeHrs;
+            if (speedKph > 200) { // Impossible speed (> 200km/h)
+              isAnomaly = true;
+              anomalyReason = `IMPOSSIBLE_SPEED: ${Math.round(speedKph)} km/h`;
+            }
+          }
         }
 
         logsToPersist.push({
@@ -145,6 +166,8 @@ export const pushLocation = asyncHandler(async (req, res) => {
           recordedAt: pTime,
           receivedAt: serverNow,
           source: isSpecial ? source : 'BACKGROUND',
+          isAnomaly,
+          anomalyReason
         });
 
         // Update lastStoredAt for UI status logic
@@ -244,7 +267,7 @@ export const liveLocations = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { items } });
 });
 
-/** GET /locations/history/:staffId?from=&to=&period= — route history / playback */
+/** GET /locations/history/:staffId?from=&to=&period=&simplify=true — route history / playback */
 export const routeHistory = asyncHandler(async (req, res) => {
   const staff = await User.findById(req.params.staffId);
   if (!staff) throw ApiError.notFound('Staff not found');
@@ -260,24 +283,32 @@ export const routeHistory = asyncHandler(async (req, res) => {
     to = req.query.to ? new Date(req.query.to) : new Date();
   }
 
-  const [logs, attendance] = await Promise.all([
+  const page = parseInt(req.query.page) || 1;
+  const limit = Math.min(parseInt(req.query.limit) || 1000, 5000);
+  const skip = (page - 1) * limit;
+
+  const [logs, attendance, total] = await Promise.all([
     LocationLog.find({
       staff: staff._id,
       recordedAt: { $gte: from, $lte: to },
-    }).sort('recordedAt').limit(5000).lean(),
+    }).sort('recordedAt').skip(skip).limit(limit).lean(),
     Attendance.find({
       staff: staff._id,
       date: {
         $gte: from.toISOString().split('T')[0],
         $lte: to.toISOString().split('T')[0]
       }
-    }).sort('date').lean()
+    }).sort('date').lean(),
+    LocationLog.countDocuments({
+      staff: staff._id,
+      recordedAt: { $gte: from, $lte: to },
+    })
   ]);
 
   const attMap = new Map(attendance.map((a) => [a.date, a]));
 
   // Filter logs to only include those between check-in and check-out for each day
-  const filteredPoints = logs.filter((log) => {
+  let filteredPoints = logs.filter((log) => {
     const logDate = log.recordedAt.toISOString().split('T')[0];
     const dailyAttendance = attMap.get(logDate);
 
@@ -293,6 +324,20 @@ export const routeHistory = asyncHandler(async (req, res) => {
     return log.recordedAt >= checkInTime && log.recordedAt <= checkOutTime;
   });
 
+  // Simplify route if requested (Simple distance-based reduction)
+  if (req.query.simplify === 'true' && filteredPoints.length > 500) {
+     const simplified = [];
+     const minDistKm = 0.05; // 50m
+     let last = null;
+     for (const p of filteredPoints) {
+        if (!last || haversine(last.location.coordinates[1], last.location.coordinates[0], p.location.coordinates[1], p.location.coordinates[0]) >= minDistKm) {
+           simplified.push(p);
+           last = p;
+        }
+     }
+     filteredPoints = simplified;
+  }
+
   res.json({
     success: true,
     data: {
@@ -305,6 +350,8 @@ export const routeHistory = asyncHandler(async (req, res) => {
         recordedAt: l.recordedAt,
         receivedAt: l.receivedAt,
         source: l.source,
+        isAnomaly: l.isAnomaly,
+        anomalyReason: l.anomalyReason,
       })),
       attendance: attendance.map(a => ({
         date: a.date,
@@ -321,8 +368,33 @@ export const routeHistory = asyncHandler(async (req, res) => {
           time: a.checkOut.time
         } : null
       })),
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) },
       packageInterval: staff.company ? (await mongoose.model('Company').findById(staff.company).populate('package'))?.package?.trackingIntervalMinutes || 60 : 60
     },
+  });
+});
+
+/** GET /locations/metrics (Super Admin) — tracking health metrics */
+export const getTrackingMetrics = asyncHandler(async (req, res) => {
+  const lookback = new Date(Date.now() - 24 * 3600 * 1000); // 24h
+
+  const [total, anomalies, sources] = await Promise.all([
+    LocationLog.countDocuments({ recordedAt: { $gte: lookback } }),
+    LocationLog.countDocuments({ recordedAt: { $gte: lookback }, isAnomaly: true }),
+    LocationLog.aggregate([
+      { $match: { recordedAt: { $gte: lookback } } },
+      { $group: { _id: '$source', count: { $sum: 1 } } }
+    ])
+  ]);
+
+  res.json({
+    success: true,
+    data: {
+      period: '24h',
+      totalPings: total,
+      anomalies,
+      sources: sources.reduce((acc, s) => ({ ...acc, [s._id]: s.count }), {})
+    }
   });
 });
 

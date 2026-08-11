@@ -95,6 +95,7 @@ r.post('/locations', protect, authorize('STAFF', 'COMPANY_MANAGER'), validate({ 
 r.get('/locations/config', protect, authorize('STAFF', 'COMPANY_MANAGER'), requireFeature('employeeTracking'), location.getTrackingConfig);
 r.get('/locations/live', protect, authorize(...MANAGERS), scopeCompany, location.liveLocations);
 r.post('/locations/request-refresh', protect, authorize(...MANAGERS), scopeCompany, location.requestRefresh);
+r.get('/locations/metrics', protect, authorize('SUPER_ADMIN'), location.getTrackingMetrics);
 r.get('/locations/heatmap', protect, authorize(...MANAGERS), scopeCompany, location.heatmap);
 r.get('/locations/history/:staffId', protect, authorize(...MANAGERS), location.routeHistory);
 r.get('/locations/analysis/:staffId', protect, authorize(...MANAGERS), location.movementAnalysis);

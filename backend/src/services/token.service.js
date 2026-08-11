@@ -9,6 +9,7 @@ export function signAccessToken(user) {
       role: user.role,
       company: user.company?._id?.toString() || user.company?.toString() || null,
       name: user.name,
+      v: user.authVersion || 1,
       needsPasswordChange: !!user.needsPasswordChange,
     },
     env.jwt.accessSecret,

@@ -65,6 +65,7 @@ const userSchema = new mongoose.Schema(
     },
     fcmToken: { type: String, default: null },
     trackingEnabled: { type: Boolean, default: true },
+    authVersion: { type: Number, default: 1 },
   },
   { timestamps: true }
 );

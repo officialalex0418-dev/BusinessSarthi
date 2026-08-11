@@ -9,16 +9,43 @@ import { useSocket, useSocketEvent } from '@/context/SocketContext';
 
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 
-const QUEUE_KEY = 'bs_location_queue';
-// A simple short high-pitched beep sound in base64
-const ALERT_SOUND_BASE64 = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YT1vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT18=';
+// Robust Offline Storage via IndexedDB (Better than localStorage for large tracking queues)
+const DB_NAME = 'bs_tracking';
+const STORE_NAME = 'location_queue';
 
-function readQueue() {
-  try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch { return []; }
+async function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = (e) => {
+      e.target.result.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
 }
-function writeQueue(q) {
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(q.slice(-500))); // Store more points
+
+async function addToQueue(point) {
+  const db = await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).add({ ...point, status: 'pending' });
+  return new Promise(resolve => tx.oncomplete = resolve);
 }
+
+async function readQueue() {
+  const db = await openDB();
+  const tx = db.transaction(STORE_NAME, 'readonly');
+  const request = tx.objectStore(STORE_NAME).getAll();
+  return new Promise(resolve => request.onsuccess = () => resolve(request.result));
+}
+
+async function clearQueue() {
+  const db = await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).clear();
+  return new Promise(resolve => tx.oncomplete = resolve);
+}
+
+const ALERT_SOUND_BASE64 = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YT1vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT18=';
 
 export function useLocationTracker(enabled = true) {
   const [status, setStatus] = useState('idle');
@@ -177,11 +204,11 @@ export function useLocationTracker(enabled = true) {
   }, [playAlert, stopAlert, notifyUser]);
 
   const flush = useCallback(async () => {
-    const queue = readQueue();
+    const queue = await readQueue();
     if (!queue.length) return;
     try {
       await api.post('/locations', { pings: queue });
-      writeQueue([]);
+      await clearQueue();
     } catch { /* keep queued */ }
   }, []);
 
@@ -235,7 +262,7 @@ export function useLocationTracker(enabled = true) {
 
       } catch (err) {
         // Queue persistent points if upload fails
-        writeQueue([...readQueue(), point]);
+        await addToQueue(point);
       } finally {
         uploadInFlightRef.current = false;
       }
