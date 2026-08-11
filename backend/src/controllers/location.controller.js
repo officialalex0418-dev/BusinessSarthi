@@ -55,7 +55,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
   const packageIntervalMs = (company.package?.trackingIntervalMinutes || 60) * 60000;
 
   const logsToPersist = [];
-  let lastProcessedPoint = null;
+  let latestValidPoint = null;
 
   for (const p of incoming) {
     const { latitude, longitude, accuracy, batteryLevel, source, recordedAt } = p;
@@ -65,7 +65,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) continue;
     if (accuracy != null && accuracy < 0) continue;
 
-    lastProcessedPoint = {
+    latestValidPoint = {
       lat: latitude,
       lng: longitude,
       accuracy,
@@ -75,42 +75,17 @@ export const pushLocation = asyncHandler(async (req, res) => {
       receivedAt: serverNow
     };
 
-    // 5. LIVE TRACKING: Update current state and broadcast for EVERY valid ping
-    // This is the "Live" purpose - where is the employee RIGHT NOW.
-    await CurrentStaffLocation.findOneAndUpdate(
-      { staff: staffId },
-      { $set: {
-          location: { type: 'Point', coordinates: [longitude, latitude] },
-          accuracy,
-          batteryLevel,
-          recordedAt: pTime,
-          receivedAt: serverNow,
-          source,
-          company: companyId
-      } },
-      { upsert: true }
-    );
-
-    realtime.staffLocation(companyId.toString(), {
-      staffId: staffId.toString(),
-      staffName: staff.name,
-      position: staff.position || 'Staff',
-      profilePhoto: staff.profilePhoto,
-      ...lastProcessedPoint
-    });
-
-    // 6. HISTORICAL TRACKING: Determine if this point should be persisted to MongoDB
-    // Decision must be atomic to prevent concurrent request duplicates.
+    // 5. HISTORICAL TRACKING: Atomic decision
     if (isCheckedIn && source !== 'LIVE_REFRESH') {
       const isSpecial = ['CHECKIN', 'CHECKOUT', 'MANUAL'].includes(source);
 
       let shouldPersist = false;
-      let currentState = await CurrentStaffLocation.findOne({ staff: staffId });
+      let currentStateForSpeed = await CurrentStaffLocation.findOne({ staff: staffId });
 
       if (isSpecial) {
         shouldPersist = true;
       } else {
-        // Atomic Interval Enforcement: Reserve the slot
+        // Atomic slot reservation
         const state = await CurrentStaffLocation.findOneAndUpdate(
           {
             staff: staffId,
@@ -126,7 +101,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
 
         if (state) {
           shouldPersist = true;
-          currentState = state; // Update for speed check
+          currentStateForSpeed = state;
         }
       }
 
@@ -136,15 +111,15 @@ export const pushLocation = asyncHandler(async (req, res) => {
           address = await reverseGeocode(latitude, longitude);
         }
 
-        // 7. Anomaly Detection (Speed Check)
+        // 6. Anomaly Detection (Speed Check)
         let isAnomaly = false;
         let anomalyReason = null;
 
-        if (currentState?.location?.coordinates?.length === 2 && currentState.recordedAt) {
-          const prevLat = currentState.location.coordinates[1];
-          const prevLng = currentState.location.coordinates[0];
+        if (currentStateForSpeed?.location?.coordinates?.length === 2 && currentStateForSpeed.recordedAt) {
+          const prevLat = currentStateForSpeed.location.coordinates[1];
+          const prevLng = currentStateForSpeed.location.coordinates[0];
           const distKm = haversine(prevLat, prevLng, latitude, longitude);
-          const timeHrs = (pTime - new Date(currentState.recordedAt)) / 3600000;
+          const timeHrs = (pTime - new Date(currentStateForSpeed.recordedAt)) / 3600000;
 
           if (timeHrs > 0) {
             const speedKph = distKm / timeHrs;
@@ -169,24 +144,50 @@ export const pushLocation = asyncHandler(async (req, res) => {
           isAnomaly,
           anomalyReason
         });
-
-        // Update lastStoredAt for UI status logic
-        await CurrentStaffLocation.updateOne(
-          { staff: staffId },
-          { $set: { lastStoredAt: pTime } }
-        );
       }
     }
   }
 
+  // 7. LIVE STATE: Update once per batch with the latest valid data
+  if (latestValidPoint) {
+    await CurrentStaffLocation.findOneAndUpdate(
+      { staff: staffId },
+      { $set: {
+          location: { type: 'Point', coordinates: [latestValidPoint.lng, latestValidPoint.lat] },
+          accuracy: latestValidPoint.accuracy,
+          batteryLevel: latestValidPoint.batteryLevel,
+          recordedAt: latestValidPoint.recordedAt,
+          receivedAt: serverNow,
+          source: latestValidPoint.source,
+          company: companyId
+      } },
+      { upsert: true }
+    );
+
+    realtime.staffLocation(companyId.toString(), {
+      staffId: staffId.toString(),
+      staffName: staff.name,
+      position: staff.position || 'Staff',
+      profilePhoto: staff.profilePhoto,
+      ...latestValidPoint
+    });
+  }
+
   if (logsToPersist.length > 0) {
     await LocationLog.insertMany(logsToPersist, { ordered: false });
+
+    // Update lastStoredAt for UI status logic (using the very last point persisted)
+    const lastP = logsToPersist[logsToPersist.length - 1];
+    await CurrentStaffLocation.updateOne(
+      { staff: staffId },
+      { $set: { lastStoredAt: lastP.recordedAt } }
+    );
   }
 
   res.status(201).json({
     success: true,
     saved: logsToPersist.length,
-    live: !!lastProcessedPoint
+    live: !!latestValidPoint
   });
 });
 

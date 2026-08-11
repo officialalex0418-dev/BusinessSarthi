@@ -22,6 +22,8 @@ const currentStaffLocationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+currentStaffLocationSchema.index({ staff: 1 }, { unique: true });
 currentStaffLocationSchema.index({ company: 1, recordedAt: -1 });
+currentStaffLocationSchema.index({ company: 1, status: 1 }); // For filtering on dashboard
 
 export default mongoose.model('CurrentStaffLocation', currentStaffLocationSchema);

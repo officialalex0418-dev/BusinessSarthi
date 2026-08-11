@@ -162,16 +162,27 @@ export const checkIn = asyncHandler(async (req, res) => {
       location: { type: 'Point', coordinates: [longitude, latitude] },
       address,
       deviceInfo, source: LOCATION_SOURCES.CHECKIN, recordedAt: now,
+      receivedAt: now
     };
 
     LocationLog.create(point).catch(() => {});
 
-    // Also update CurrentState for the live dashboard
+    // Get company package for interval calculation
+    const company = await Company.findById(companyId).populate('package');
+    const intervalMs = (company?.package?.trackingIntervalMinutes || 60) * 60000;
+
+    // Update CurrentState for the live dashboard AND align tracking interval
     CurrentStaffLocation.findOneAndUpdate(
       { staff: req.user._id },
       { $set: {
-          location: point.location, address, recordedAt: now, source: point.source,
-          lastStoredAt: now, company: companyId
+          location: point.location,
+          address,
+          recordedAt: now,
+          receivedAt: now,
+          source: point.source,
+          lastStoredAt: now,
+          nextAllowedAt: new Date(now.getTime() + intervalMs), // Align next background ping
+          company: companyId
       } },
       { upsert: true }
     ).catch(() => {});
@@ -283,16 +294,23 @@ export const checkOut = asyncHandler(async (req, res) => {
       location: { type: 'Point', coordinates: [longitude, latitude] },
       address,
       deviceInfo, source: LOCATION_SOURCES.CHECKOUT, recordedAt: now,
+      receivedAt: now
     };
 
     LocationLog.create(point).catch(() => {});
 
-    // Also update CurrentState
+    // Clear tracking state / Align next allowed (though background tracking should stop)
     CurrentStaffLocation.findOneAndUpdate(
       { staff: req.user._id },
       { $set: {
-          location: point.location, address, recordedAt: now, source: point.source,
-          lastStoredAt: now, company: req.user.company._id
+          location: point.location,
+          address,
+          recordedAt: now,
+          receivedAt: now,
+          source: point.source,
+          lastStoredAt: now,
+          nextAllowedAt: null, // Reset for next shift
+          company: req.user.company._id
       } },
       { upsert: true }
     ).catch(() => {});

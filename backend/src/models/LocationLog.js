@@ -45,6 +45,7 @@ const locationLogSchema = new mongoose.Schema(
 );
 
 // ---------- Indexes ----------
+locationLogSchema.index({ staff: 1, company: 1, recordedAt: 1 }, { unique: true }); // Prevent exact duplicate persistence
 locationLogSchema.index({ staff: 1, recordedAt: -1 });
 locationLogSchema.index({ company: 1, recordedAt: -1 });
 locationLogSchema.index({ company: 1, staff: 1, recordedAt: -1 }); // Compound index for performance
