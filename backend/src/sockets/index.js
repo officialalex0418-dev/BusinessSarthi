@@ -52,42 +52,57 @@ export function initSocket(server) {
        const { lat, lng, accuracy, batteryLevel, recordedAt } = payload;
        const serverNow = new Date();
 
-       // 1. Validation: Coordinates and user status
+       // 1. Strict Validation
        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+       if (accuracy != null && accuracy < 0) return;
+       if (batteryLevel != null && (batteryLevel < 0 || batteryLevel > 100)) return;
 
-       const { User, Attendance } = await import('../models/index.js');
-       const u = await User.findById(id).select('isActive company role');
-       if (!u || !u.isActive || u.company?.toString() !== company?.toString()) {
-          return socket.disconnect(true);
+       const { User, Attendance, CurrentStaffLocation } = await import('../models/index.js');
+       const { todayStr } = await import('../utils/dates.js');
+
+       // 2. Authorization Check (Real-time account state)
+       const u = await User.findOne({ _id: id, company: company, isActive: true }).select('name position profilePhoto trackingEnabled');
+       if (!u || !u.trackingEnabled) {
+          return; // Silently ignore or disconnect if malicious
        }
 
-       // 2. Broadcast to company managers
+       // 3. Attendance Check (Live purpose only allowed during shift)
+       const attendance = await Attendance.findOne({
+          staff: id,
+          date: todayStr(),
+          'checkIn.time': { $exists: true },
+          'checkOut.time': { $exists: false }
+       });
+       if (!attendance) return;
+
+       // 4. Update CurrentState (Live Tracking Purpose)
+       await CurrentStaffLocation.findOneAndUpdate(
+         { staff: id },
+         {
+           $set: {
+             location: { type: 'Point', coordinates: [lng, lat] },
+             accuracy, batteryLevel,
+             recordedAt: recordedAt ? new Date(recordedAt) : serverNow,
+             receivedAt: serverNow,
+             source: 'LIVE_REFRESH',
+             company: company
+           }
+         },
+         { upsert: true }
+       ).catch(err => console.error('Socket state update failed', err));
+
+       // 5. Broadcast to company managers + platform with receivedAt
        if (company) {
           io.to(`company:${company}`).to('platform').emit('location:update', {
              staffId: id,
-             staffName: socket.user.name || 'Staff',
+             staffName: u.name,
+             position: u.position || 'Staff',
+             profilePhoto: u.profilePhoto,
              lat, lng, accuracy, batteryLevel,
              recordedAt: recordedAt || serverNow,
              receivedAt: serverNow,
              source: 'LIVE_REFRESH'
           });
-
-          // 3. Update the CurrentStaffLocation for consistency in the "Live" table
-          const { CurrentStaffLocation } = await import('../models/index.js');
-          await CurrentStaffLocation.findOneAndUpdate(
-            { staff: id },
-            {
-              $set: {
-                location: { type: 'Point', coordinates: [lng, lat] },
-                accuracy, batteryLevel,
-                recordedAt: recordedAt || serverNow,
-                receivedAt: serverNow,
-                source: 'LIVE_REFRESH',
-                company: company
-              }
-            },
-            { upsert: true }
-          ).catch(err => console.error('Socket state update failed', err));
        }
     });
 

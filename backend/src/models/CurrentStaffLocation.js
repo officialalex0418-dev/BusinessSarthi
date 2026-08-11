@@ -15,6 +15,7 @@ const currentStaffLocationSchema = new mongoose.Schema(
     receivedAt: Date, // Time at server
     source: String, // BACKGROUND, CHECKIN, LIVE_REFRESH, etc.
     lastStoredAt: Date, // Timestamp of the last point that was saved to historical LocationLog
+    nextAllowedAt: Date, // Next timestamp when persistence to LocationLog is allowed (for atomic throttling)
     lastRefreshRequestedAt: Date, // Server-side cooldown tracking
     status: String, // Calculated LIVE, RECENT, STALE, etc.
   },

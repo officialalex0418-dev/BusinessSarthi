@@ -23,10 +23,10 @@ export const pushLocation = asyncHandler(async (req, res) => {
   const incoming = req.body.pings || [req.body];
   if (!incoming.length) throw ApiError.badRequest('No pings provided');
 
-  // Sort by recordedAt
+  // Sort by recordedAt to process chronologically
   incoming.sort((a, b) => new Date(a.recordedAt || 0) - new Date(b.recordedAt || 0));
 
-  // 2. Validate Staff/Company
+  // 2. Validate Staff/Company/Tracking Permissions
   const staff = await User.findOne({ _id: staffId, company: companyId, isActive: true }).populate('company');
   if (!staff) throw ApiError.unauthorized('User is inactive or no longer belongs to the company');
 
@@ -39,38 +39,33 @@ export const pushLocation = asyncHandler(async (req, res) => {
     throw ApiError.forbidden('Company is not active');
   }
 
-  // Verify employee tracking is enabled in package
   if (!company.package?.features?.employeeTracking) {
     throw ApiError.forbidden('Employee tracking is not enabled for your company package');
   }
 
-  // 3. Validate Attendance (Staff must be checked in)
+  // 3. Attendance Status (Cached for this request)
   const attendance = await Attendance.findOne({
     staff: staffId,
     date: todayStr(),
     'checkIn.time': { $exists: true },
     'checkOut.time': { $exists: false }
   });
-
   const isCheckedIn = !!attendance;
 
-  const packageInterval = company.package?.trackingIntervalMinutes || 60;
-  let currentState = await CurrentStaffLocation.findOne({ staff: staffId });
-  let lastStoredAt = currentState?.lastStoredAt || null;
+  const packageIntervalMs = (company.package?.trackingIntervalMinutes || 60) * 60000;
 
   const logsToPersist = [];
-  let latestPoint = null;
+  let lastProcessedPoint = null;
 
   for (const p of incoming) {
     const { latitude, longitude, accuracy, batteryLevel, source, recordedAt } = p;
     const pTime = recordedAt ? new Date(recordedAt) : serverNow;
 
-    // 4. Validate Coordinates
+    // 4. Strict Coordinate Validation
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) continue;
+    if (accuracy != null && accuracy < 0) continue;
 
-    // 5. Determine LIVE vs PERSISTENT
-    // All valid pings update LIVE state
-    latestPoint = {
+    lastProcessedPoint = {
       lat: latitude,
       lng: longitude,
       accuracy,
@@ -80,7 +75,8 @@ export const pushLocation = asyncHandler(async (req, res) => {
       receivedAt: serverNow
     };
 
-    // 6. Update Live State & Broadcast
+    // 5. LIVE TRACKING: Update current state and broadcast for EVERY valid ping
+    // This is the "Live" purpose - where is the employee RIGHT NOW.
     await CurrentStaffLocation.findOneAndUpdate(
       { staff: staffId },
       { $set: {
@@ -100,23 +96,35 @@ export const pushLocation = asyncHandler(async (req, res) => {
       staffName: staff.name,
       position: staff.position || 'Staff',
       profilePhoto: staff.profilePhoto,
-      ...latestPoint
+      ...lastProcessedPoint
     });
 
-    // 7. Persistent Decision (Store history if allowed)
-    // Only persist if staff is checked in AND interval has passed
+    // 6. HISTORICAL TRACKING: Determine if this point should be persisted to MongoDB
+    // Decision must be atomic to prevent concurrent request duplicates.
     if (isCheckedIn && source !== 'LIVE_REFRESH') {
       const isSpecial = ['CHECKIN', 'CHECKOUT', 'MANUAL'].includes(source);
-      let shouldPersist = isSpecial;
 
-      if (!shouldPersist) {
-        if (!lastStoredAt) {
+      let shouldPersist = false;
+
+      if (isSpecial) {
+        shouldPersist = true;
+      } else {
+        // Atomic Interval Enforcement: Reserve the slot
+        const state = await CurrentStaffLocation.findOneAndUpdate(
+          {
+            staff: staffId,
+            $or: [
+              { nextAllowedAt: { $lte: pTime } },
+              { nextAllowedAt: { $exists: false } },
+              { nextAllowedAt: null }
+            ]
+          },
+          { $set: { nextAllowedAt: new Date(pTime.getTime() + packageIntervalMs) } },
+          { new: true }
+        );
+
+        if (state) {
           shouldPersist = true;
-        } else {
-          const diffMinutes = (pTime - new Date(lastStoredAt)) / (1000 * 60);
-          if (diffMinutes >= packageInterval) {
-            shouldPersist = true;
-          }
         }
       }
 
@@ -126,7 +134,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
           address = await reverseGeocode(latitude, longitude);
         }
 
-        const log = {
+        logsToPersist.push({
           staff: staffId,
           company: companyId,
           location: { type: 'Point', coordinates: [longitude, latitude] },
@@ -137,11 +145,9 @@ export const pushLocation = asyncHandler(async (req, res) => {
           recordedAt: pTime,
           receivedAt: serverNow,
           source: isSpecial ? source : 'BACKGROUND',
-        };
-        logsToPersist.push(log);
-        lastStoredAt = pTime;
+        });
 
-        // Update lastStoredAt in CurrentStaffLocation
+        // Update lastStoredAt for UI status logic
         await CurrentStaffLocation.updateOne(
           { staff: staffId },
           { $set: { lastStoredAt: pTime } }
@@ -157,7 +163,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     saved: logsToPersist.length,
-    live: !!latestPoint
+    live: !!lastProcessedPoint
   });
 });
 
@@ -227,6 +233,7 @@ export const liveLocations = asyncHandler(async (req, res) => {
       accuracy: state?.accuracy || 0,
       batteryLevel: state?.batteryLevel,
       recordedAt,
+      receivedAt: state?.receivedAt || a.checkIn?.time,
       locationStatus,
       source: state?.source,
       checkInTime: a.checkIn?.time,
@@ -296,6 +303,7 @@ export const routeHistory = asyncHandler(async (req, res) => {
         address: l.address,
         accuracy: l.accuracy,
         recordedAt: l.recordedAt,
+        receivedAt: l.receivedAt,
         source: l.source,
       })),
       attendance: attendance.map(a => ({

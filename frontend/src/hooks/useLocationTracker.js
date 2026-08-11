@@ -187,23 +187,25 @@ export function useLocationTracker(enabled = true) {
 
   const ping = useCallback(async (source = 'BACKGROUND', preCaptured = null) => {
     const now = Date.now();
-    const intervalMs = (intervalMinutes || 60) * 60 * 1000;
+    const intervalMs = (intervalMinutes || 60) * 60000;
 
-    // 1. Throttling Gate: Use Ref to prevent React-state race conditions
-    if (source === 'BACKGROUND' && lastPersistentGpsAtRef.current) {
+    // 1. Throttling Gate (PERSISTENT ONLY)
+    // Live refresh and check-in/out should ALWAYS bypass throttle
+    const isPersistent = ['BACKGROUND', 'MANUAL'].includes(source);
+    if (isPersistent && lastPersistentGpsAtRef.current) {
        if (now - lastPersistentGpsAtRef.current < intervalMs) return;
     }
 
-    // 2. Concurrency Lock: Prevent multiple simultaneous uploads
+    // 2. Concurrency Lock (PERSISTENT ONLY)
+    // Prevent multiple overlapping REST uploads
     if (uploadInFlightRef.current && source !== 'LIVE_REFRESH') return;
 
     try {
-      // Use preCaptured point (e.g. from background watcher) or capture fresh
       const point = preCaptured || await capture();
       if (!point) return;
       point.source = source;
 
-      // Handle Live Refresh via direct Socket.IO (No DB storage, no REST call)
+      // 3. LIVE TRACKING PURPOSE: Immediate Socket Emit (Zero delay, No DB)
       if (source === 'LIVE_REFRESH') {
         if (socket?.connected) {
           socket.emit('staff:location:live', {
@@ -217,28 +219,28 @@ export function useLocationTracker(enabled = true) {
         return;
       }
 
-      // Start Upload
+      // 4. HISTORICAL TRACKING PURPOSE: REST API
       uploadInFlightRef.current = true;
       try {
-        // Handle persistent pings (BACKGROUND, CHECKIN, CHECKOUT)
+        // First try to flush any offline queue
         await flush();
 
-        await api.post('/locations', point);
+        const { data } = await api.post('/locations', point);
 
-        // ONLY update the throttle timer AFTER successful server response
-        lastPersistentGpsAtRef.current = Date.now();
+        // Update throttle ref only on successful PERSISTENT storage
+        if (data.saved > 0) {
+          lastPersistentGpsAtRef.current = Date.now();
+        }
         setLastPing(new Date());
 
-      } catch {
-        // Only queue persistent points if upload fails
-        if (source !== 'LIVE_REFRESH') {
-          writeQueue([...readQueue(), point]);
-        }
+      } catch (err) {
+        // Queue persistent points if upload fails
+        writeQueue([...readQueue(), point]);
       } finally {
         uploadInFlightRef.current = false;
       }
     } catch (e) {
-       console.error('Ping failed:', e.message);
+       console.error('Location tracking failed:', e.message);
     }
   }, [capture, flush, intervalMinutes, socket]);
 
