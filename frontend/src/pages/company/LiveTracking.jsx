@@ -121,7 +121,18 @@ export default function LiveTracking() {
     { value: 'monthly', label: 'Last 30 days' },
   ];
 
+  const handleStaffFocus = (staffId) => {
+    // If clicking same staff, temporarily unset and set back to trigger useEffect in MapEffects
+    if (focusedStaffId === staffId) {
+      setFocusedStaffId(null);
+      setTimeout(() => setFocusedStaffId(staffId), 10);
+    } else {
+      setFocusedStaffId(staffId);
+    }
+  };
+
   if (!markers) return <Spinner />;
+
 
   return (
     <div className="space-y-6">
@@ -146,7 +157,7 @@ export default function LiveTracking() {
               <LiveMap
                 markers={activeMarkers}
                 focusedId={focusedStaffId}
-                onMarkerClick={(m) => setFocusedStaffId(m.staffId)}
+                onMarkerClick={(m) => handleStaffFocus(m.staffId)}
               />
           </div>
           <Card>
@@ -156,7 +167,7 @@ export default function LiveTracking() {
                 <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
               </Button>}
             />
-            <CardBody className="max-h-[420px] space-y-3 overflow-y-auto">
+            <CardBody className="max-h-[420px] space-y-3 overflow-y-auto text-slate-900 dark:text-slate-100">
               {activeMarkers.length === 0 && <p className="text-sm text-slate-400">No location pings in the last 24h.</p>}
               {activeMarkers.map((m) => (
                 <div
@@ -166,8 +177,9 @@ export default function LiveTracking() {
                       ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500 dark:bg-primary-900/10'
                       : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
                   }`}
-                  onClick={() => setFocusedStaffId(m.staffId)}
+                  onClick={() => handleStaffFocus(m.staffId)}
                 >
+
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                       {m.profilePhoto ? <img src={fixFileUrl(m.profilePhoto)} alt={m.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-500">{(m.name || '?').slice(0, 1)}</div>}

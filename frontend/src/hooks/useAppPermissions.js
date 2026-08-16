@@ -21,15 +21,22 @@ export function useAppPermissions() {
       const geo = await Geolocation.requestPermissions();
 
       // 3. Background Location (Android 11+ requirements)
-      // This often requires a second prompt or showing settings.
-      // We trigger the standard request again which might help on some platforms.
-      if (geo.location === 'granted') {
-        // Log to console for debugging
-        console.log('Foreground location granted');
+      if (isNative) {
+        try {
+          // Native background-geolocation plugin might handle this,
+          // but we can also trigger a standard background request.
+          // Note: Android 11+ requires users to select 'Allow all the time' in settings.
+          await Geolocation.requestPermissions();
+          console.log('Requesting background location permissions...');
+        } catch (e) {
+          console.warn('Background permission request failed', e);
+        }
       }
+
 
       // 4. Camera
       await Camera.requestPermissions();
+
 
       // 5. Storage
       await Filesystem.requestPermissions();

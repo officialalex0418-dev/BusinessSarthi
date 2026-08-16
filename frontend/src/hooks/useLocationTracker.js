@@ -6,46 +6,12 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { api } from '@/api/client';
 import { useSocket, useSocketEvent } from '@/context/SocketContext';
+import { localDb } from '@/lib/storage';
 
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 
-// Robust Offline Storage via IndexedDB (Better than localStorage for large tracking queues)
-const DB_NAME = 'bs_tracking';
-const STORE_NAME = 'location_queue';
-
-async function openDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = (e) => {
-      e.target.result.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-    };
-    request.onsuccess = (e) => resolve(e.target.result);
-    request.onerror = (e) => reject(e.target.error);
-  });
-}
-
-async function addToQueue(point) {
-  const db = await openDB();
-  const tx = db.transaction(STORE_NAME, 'readwrite');
-  tx.objectStore(STORE_NAME).add({ ...point, status: 'pending' });
-  return new Promise(resolve => tx.oncomplete = resolve);
-}
-
-async function readQueue() {
-  const db = await openDB();
-  const tx = db.transaction(STORE_NAME, 'readonly');
-  const request = tx.objectStore(STORE_NAME).getAll();
-  return new Promise(resolve => request.onsuccess = () => resolve(request.result));
-}
-
-async function clearQueue() {
-  const db = await openDB();
-  const tx = db.transaction(STORE_NAME, 'readwrite');
-  tx.objectStore(STORE_NAME).clear();
-  return new Promise(resolve => tx.oncomplete = resolve);
-}
-
 const ALERT_SOUND_BASE64 = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YT1vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT18=';
+
 
 export function useLocationTracker(enabled = true) {
   const [status, setStatus] = useState('idle');
@@ -57,8 +23,10 @@ export function useLocationTracker(enabled = true) {
   const lastPersistentGpsAtRef = useRef(null);
   const uploadInFlightRef = useRef(false);
 
-  const timerRef = useRef(null);
+  const liveTimerRef = useRef(null);
+  const persistentTimerRef = useRef(null);
   const audioRef = useRef(null);
+
   const alertTimerRef = useRef(null);
   const gpsOffStartTimeRef = useRef(null);
   const checkOutTimerRef = useRef(null);
@@ -204,11 +172,11 @@ export function useLocationTracker(enabled = true) {
   }, [playAlert, stopAlert, notifyUser]);
 
   const flush = useCallback(async () => {
-    const queue = await readQueue();
+    const queue = await localDb.getAllLocations();
     if (!queue.length) return;
     try {
       await api.post('/locations', { pings: queue });
-      await clearQueue();
+      await localDb.clearLocations();
     } catch { /* keep queued */ }
   }, []);
 
@@ -217,14 +185,12 @@ export function useLocationTracker(enabled = true) {
     const intervalMs = (intervalMinutes || 60) * 60000;
 
     // 1. Throttling Gate (PERSISTENT ONLY)
-    // Live refresh and check-in/out should ALWAYS bypass throttle
     const isPersistent = ['BACKGROUND', 'MANUAL'].includes(source);
     if (isPersistent && lastPersistentGpsAtRef.current) {
        if (now - lastPersistentGpsAtRef.current < intervalMs) return;
     }
 
-    // 2. Concurrency Lock (PERSISTENT ONLY)
-    // Prevent multiple overlapping REST uploads
+    // 2. Concurrency Lock
     if (uploadInFlightRef.current && source !== 'LIVE_REFRESH') return;
 
     try {
@@ -232,7 +198,7 @@ export function useLocationTracker(enabled = true) {
       if (!point) return;
       point.source = source;
 
-      // 3. LIVE TRACKING PURPOSE: Immediate Socket Emit (Zero delay, No DB)
+      // 3. LIVE TRACKING: Socket Emit (Zero delay, No DB)
       if (source === 'LIVE_REFRESH') {
         if (socket?.connected) {
           socket.emit('staff:location:live', {
@@ -246,23 +212,17 @@ export function useLocationTracker(enabled = true) {
         return;
       }
 
-      // 4. HISTORICAL TRACKING PURPOSE: REST API
+      // 4. HISTORICAL TRACKING: REST API
       uploadInFlightRef.current = true;
       try {
-        // First try to flush any offline queue
         await flush();
-
         const { data } = await api.post('/locations', point);
-
-        // Update throttle ref only on successful PERSISTENT storage
         if (data.saved > 0) {
           lastPersistentGpsAtRef.current = Date.now();
         }
         setLastPing(new Date());
-
       } catch (err) {
-        // Queue persistent points if upload fails
-        await addToQueue(point);
+        await localDb.addLocation(point);
       } finally {
         uploadInFlightRef.current = false;
       }
@@ -270,6 +230,7 @@ export function useLocationTracker(enabled = true) {
        console.error('Location tracking failed:', e.message);
     }
   }, [capture, flush, intervalMinutes, socket]);
+
 
   // Handle server-side requests for immediate refresh (LIVE_REFRESH)
   useSocketEvent('location:force_update', useCallback(() => {
@@ -302,7 +263,12 @@ export function useLocationTracker(enabled = true) {
       setIntervalMinutes(minutes);
       setStatus('active');
 
-      // Start the native background watcher with intelligent movement detection
+      // 1. Live Tracking: Ping every 1 minute for live dashboard (Socket only, no DB)
+      liveTimerRef.current = setInterval(() => {
+        ping('LIVE_REFRESH');
+      }, 60000);
+
+      // 2. Persistent Tracking: Native background watcher with intelligent movement detection
       try {
         await BackgroundGeolocation.addWatcher(
           {
@@ -311,12 +277,11 @@ export function useLocationTracker(enabled = true) {
             backgroundMessage: 'Shift active. Tracking for route and heatmap...',
             requestPermissions: true,
             stale: false,
-            distanceFilter: 100, // Move 100m before triggering callback (Save Battery)
+            distanceFilter: 50, // Reduced to 50m for better route precision
           },
           async (pos, err) => {
             if (err) return;
             if (pos) {
-               // Optimization: Use native pos directly, don't call capture() again
                const info = await Device.getInfo();
                const battery = await Device.getBatteryInfo();
                const point = {
@@ -340,12 +305,13 @@ export function useLocationTracker(enabled = true) {
         console.error('Failed to start native background watcher:', e);
       }
 
-      // Foreground Intervals - also throttled by the 'ping' function's internal check
-      ping();
-      timerRef.current = setInterval(ping, minutes * 60 * 1000);
+      // 3. Persistent Tracking: Foreground interval fallback
+      ping(); // Initial ping
+      persistentTimerRef.current = setInterval(ping, minutes * 60 * 1000);
 
       const onVisible = () => { if (document.visibilityState === 'visible') ping(); };
       document.addEventListener('visibilitychange', onVisible);
+
 
       const onNetChange = (status) => {
         if (status.connected) {
@@ -365,10 +331,12 @@ export function useLocationTracker(enabled = true) {
 
     return () => {
       cancelled = true;
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (liveTimerRef.current) clearInterval(liveTimerRef.current);
+      if (persistentTimerRef.current) clearInterval(persistentTimerRef.current);
       stopAlert();
     };
   }, [enabled, ping, flush, playAlert, stopAlert, updateTrackingNotification]);
+
 
   return { status, intervalMinutes, lastPing, isAlerting, ping };
 }

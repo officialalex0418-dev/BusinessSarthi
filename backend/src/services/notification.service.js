@@ -1,10 +1,31 @@
-import { Notification, User } from '../models/index.js';
+import { Notification, User, Attendance } from '../models/index.js';
 import { realtime } from '../sockets/index.js';
+import { todayStr } from '../utils/dates.js';
 
 /** Create DB notification + push over socket + FCM. Fire-and-forget safe. */
 export async function notify({ recipient, company, type, title, message, link, sticky = false, ongoing = false }) {
   try {
+    // 1. Staff Check-In Guard (Requirement 1)
+    // Most notifications should only be pushed if the staff is currently checked in.
+    // Exceptions: CRITICAL system alerts, payroll, or leave updates might still be sent.
+    const isCritical = ['PAYROLL_GENERATED', 'LEAVE_APPROVED', 'LEAVE_REJECTED', 'SYSTEM_ALERT'].includes(type);
+
+    if (!isCritical) {
+       const activeAtt = await Attendance.findOne({
+          staff: recipient,
+          date: todayStr(),
+          'checkIn.time': { $exists: true },
+          'checkOut.time': { $exists: false }
+       }).select('_id').lean();
+
+       if (!activeAtt) {
+          // If not checked in, we still record in DB but skip the real-time/push delivery
+          return await Notification.create({ recipient, company, type, title, message, link });
+       }
+    }
+
     const n = await Notification.create({ recipient, company, type, title, message, link });
+
 
     // Socket.IO for real-time app users
     realtime.notify(recipient.toString(), { ...n.toObject(), sticky, ongoing });

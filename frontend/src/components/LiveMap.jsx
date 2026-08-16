@@ -10,6 +10,8 @@ const DEFAULT_CENTER = { lat: 27.7172, lng: 85.324 }; // Kathmandu
 
 function MapEffects({ points, focusedId, markers }) {
   const map = useMap();
+  const lastTargetIdRef = useRef(null);
+  const lastTargetPosRef = useRef(null);
 
   useEffect(() => {
     // Invalidate size on mount and after a short delay to account for sidebar animations
@@ -27,14 +29,24 @@ function MapEffects({ points, focusedId, markers }) {
   }, [map]);
 
   useEffect(() => {
-    // Priority 1: If a specific staff is focused, zoom in deep (5m equivalent)
+    // Priority 1: If a specific staff is focused, zoom in deep
     if (focusedId && markers?.length) {
       const target = markers.find(m => m.staffId === focusedId);
       if (target && target.lat != null) {
-        map.setView([target.lat, target.lng], 19, { animate: true }); // Level 19-20 is very deep zoom
+        const currentPos = `${target.lat},${target.lng}`;
+
+        // Always set view if it's a new focus or position has changed significantly
+        if (lastTargetIdRef.current !== focusedId || lastTargetPosRef.current !== currentPos) {
+           map.setView([target.lat, target.lng], 19, { animate: true });
+           lastTargetIdRef.current = focusedId;
+           lastTargetPosRef.current = currentPos;
+        }
         return;
       }
     }
+
+    lastTargetIdRef.current = focusedId;
+
 
     // Priority 2: General point fitting
     if (!points || !points.length) return;

@@ -34,8 +34,13 @@ export default function StaffDashboard() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const { status: trackingStatus, intervalMinutes, lastPing } = useLocationTracker(true);
+
+  // APP LOGIC: Only track if checked in AND not checked out (Requirement 3)
+  const isTrackingNeeded = data ? (data.checkInStatus && !data.checkOutStatus) : false;
+  const { status: trackingStatus, intervalMinutes, lastPing } = useLocationTracker(isTrackingNeeded);
+
   const dateFormat = user?.company?.settings?.dateFormat || 'BS';
+
   const language = user?.company?.settings?.language || 'English';
 
   const load = useCallback(async () => {
