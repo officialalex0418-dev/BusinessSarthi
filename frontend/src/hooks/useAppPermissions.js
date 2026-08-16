@@ -54,10 +54,22 @@ export function useAppPermissions() {
     }
   }, [isNative]);
 
+  const requestCamera = useCallback(async () => {
+    if (!isNative) return true;
+    try {
+      const status = await Camera.requestPermissions();
+      // On some platforms, 'camera' is enough for photos, on others 'photos' is separate.
+      // For picking from gallery or taking photo, we usually need at least one of these.
+      return status.camera === 'granted' || status.photos === 'granted';
+    } catch (e) {
+      return false;
+    }
+  }, [isNative]);
+
   const checkConnectivity = useCallback(async () => {
     const status = await Network.getStatus();
     return status.connected;
   }, []);
 
-  return { requestLocation, requestAllPermissions, checkConnectivity };
+  return { requestLocation, requestCamera, requestAllPermissions, checkConnectivity };
 }

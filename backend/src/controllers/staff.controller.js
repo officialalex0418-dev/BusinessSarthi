@@ -170,7 +170,14 @@ export const updateStaff = asyncHandler(async (req, res) => {
 
   for (const k of allowed) {
     if (k === 'role') continue; // Handled above
-    if (req.body[k] !== undefined) user[k] = req.body[k];
+    if (req.body[k] !== undefined) {
+      if (k === 'profilePhoto' && req.body[k] && req.body[k].startsWith('data:')) {
+        const { uploadFile } = await import('../services/storage.service.js');
+        user.profilePhoto = await uploadFile(req.body[k], 'profiles');
+      } else {
+        user[k] = req.body[k];
+      }
+    }
   }
 
   // Increment auth version if role/status/company changed (Invalidates sessions)

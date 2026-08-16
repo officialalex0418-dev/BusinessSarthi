@@ -1,17 +1,17 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Save, ArrowLeft } from 'lucide-react';
+import { Camera as CameraIcon, Save, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAppPermissions } from '@/hooks/useAppPermissions';
 import { api } from '@/api/client';
 import { Card, CardBody, Button, Input, Textarea } from '@/components/ui';
-import { fileToDataUrl } from '@/lib/utils';
+import { fixFileUrl } from '@/lib/utils';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 export default function EditProfile() {
   const { user, setUser } = useAuth();
   const { requestCamera } = useAppPermissions();
   const navigate = useNavigate();
-  const photoInputRef = useRef(null);
 
   const [form, setForm] = useState({
     name: user?.name || '',
@@ -41,18 +41,30 @@ export default function EditProfile() {
     }
   };
 
-  const handlePhotoUpload = async (file) => {
+  const handlePhotoUpload = async () => {
     const hasPermission = await requestCamera();
     if (!hasPermission) {
       setError('Camera/Media permission is required to update photo.');
       return;
     }
-    if (!file) return;
+
     try {
-      const dataUrl = await fileToDataUrl(file);
-      setForm({ ...form, profilePhoto: dataUrl });
+      const image = await Camera.getPhoto({
+        quality: 70, // Slightly lower quality for faster upload
+        allowEditing: true,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Prompt, // Asks: Camera or Photos
+        width: 800, // Resize for profile photo
+        height: 800
+      });
+
+      if (image.dataUrl) {
+        setForm({ ...form, profilePhoto: image.dataUrl });
+      }
     } catch (e) {
-      setError('Failed to process image');
+      if (e.message !== 'User cancelled photos app') {
+        setError('Failed to process image');
+      }
     }
   };
 
@@ -75,28 +87,21 @@ export default function EditProfile() {
               <div className="group relative">
                 <div className="h-32 w-32 overflow-hidden rounded-2xl border-4 border-slate-100 bg-slate-50 shadow-md dark:border-slate-800">
                   {form.profilePhoto ? (
-                    <img src={form.profilePhoto} alt="Profile preview" className="h-full w-full object-cover" />
+                    <img src={fixFileUrl(form.profilePhoto)} alt="Profile preview" className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-slate-300">
-                      <Camera className="h-10 w-10" />
+                      <CameraIcon className="h-10 w-10" />
                     </div>
                   )}
                 </div>
                 <button
                   type="button"
-                  onClick={() => photoInputRef.current?.click()}
+                  onClick={handlePhotoUpload}
                   className="absolute bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
                 >
-                  <Camera className="h-5 w-5" />
+                  <CameraIcon className="h-5 w-5" />
                 </button>
               </div>
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handlePhotoUpload(e.target.files?.[0])}
-              />
               <p className="text-xs text-slate-500">Tap to update profile photo</p>
             </div>
 

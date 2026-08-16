@@ -8,7 +8,7 @@ const baseURL = `${import.meta.env.VITE_API_URL || ''}/api/v1`;
 export const api = axios.create({
   baseURL,
   withCredentials: true,
-  timeout: 20000 // 20 second timeout to prevent infinite hangs
+  timeout: 60000 // Increased to 60s for large uploads (like profile photos)
 });
 
 // ---------- automatic retry logic ----------
