@@ -4,6 +4,7 @@ import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { realtime } from '../sockets/index.js';
 import { rangeFromPeriod, todayStr } from '../utils/dates.js';
 import { LOCATION_SOURCES, PERSISTENT_LOCATION_SOURCES } from '../constants/location.js';
+import { authCache, companyCache } from '../utils/cache.js';
 
 import { reverseGeocode } from '../utils/geocoder.js';
 
@@ -27,7 +28,9 @@ export const pushLocation = asyncHandler(async (req, res) => {
   incoming.sort((a, b) => new Date(a.recordedAt || 0) - new Date(b.recordedAt || 0));
 
   // 2. Validate Staff/Company/Tracking Permissions
-  const staff = await User.findOne({ _id: staffId, company: companyId, isActive: true }).populate('company');
+  const staff = await authCache.getOrSet(`staff:${staffId}`, () =>
+    User.findOne({ _id: staffId, company: companyId, isActive: true }).populate('company').lean()
+  );
   if (!staff) throw ApiError.unauthorized('User is inactive or no longer belongs to the company');
 
   if (!staff.trackingEnabled) {
@@ -35,6 +38,7 @@ export const pushLocation = asyncHandler(async (req, res) => {
   }
 
   const company = staff.company;
+
   if (!company || company.status !== 'ACTIVE') {
     throw ApiError.forbidden('Company is not active');
   }

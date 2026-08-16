@@ -38,5 +38,8 @@ const attendanceSchema = new mongoose.Schema(
 
 attendanceSchema.index({ staff: 1, date: -1 }, { unique: true });
 attendanceSchema.index({ company: 1, date: -1 });
+attendanceSchema.index({ company: 1, status: 1, date: -1 }); // Added for dashboard/reports
+attendanceSchema.index({ company: 1, 'checkIn.time': 1 }); // Added for live dashboard active staff check
+
 
 export default mongoose.model('Attendance', attendanceSchema);

@@ -3,8 +3,10 @@ import { asyncHandler, ApiError } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
 import { uploadFile, deleteFile } from '../services/storage.service.js';
+import { companyCache } from '../utils/cache.js';
 
 // ---------- Notifications ----------
+
 
 // ---------- Notifications ----------
 export const myNotifications = asyncHandler(async (req, res) => {
@@ -45,17 +47,19 @@ export const listAuditLogs = asyncHandler(async (req, res) => {
 
 // ---------- Settings ----------
 export const getPublicSettings = asyncHandler(async (req, res) => {
-  const settings = await Setting.findOne({ scope: 'PLATFORM' }).select('branding');
-  res.json({
-    success: true,
-    data: {
-      branding: settings?.branding || {
-        appName: 'Business Sarthi',
-        logoUrl: '/logo.png',
-        tagline: 'Driving Business Forward'
-      }
+  const cached = companyCache.get('public_settings');
+  if (cached) return res.json({ success: true, data: cached });
+
+  const settings = await Setting.findOne({ scope: 'PLATFORM' }).select('branding').lean();
+  const data = {
+    branding: settings?.branding || {
+      appName: 'Business Sarthi',
+      logoUrl: '/logo.png',
+      tagline: 'Driving Business Forward'
     }
-  });
+  };
+  companyCache.set('public_settings', data, 3600); // 1 hour cache
+  res.json({ success: true, data });
 });
 
 export const getSettings = asyncHandler(async (req, res) => {
@@ -63,8 +67,16 @@ export const getSettings = asyncHandler(async (req, res) => {
     ? 'PLATFORM'
     : req.user.company?._id?.toString();
   if (!scope) throw ApiError.badRequest('No settings scope');
-  let settings = await Setting.findOne({ scope });
-  if (!settings) settings = await Setting.create({ scope });
+
+  const cached = companyCache.get(`settings:${scope}`);
+  if (cached) return res.json({ success: true, data: { settings: cached } });
+
+  let settings = await Setting.findOne({ scope }).lean();
+  if (!settings) {
+    settings = await Setting.create({ scope });
+  }
+
+  companyCache.set(`settings:${scope}`, settings, 300); // 5 minutes cache
   res.json({ success: true, data: { settings } });
 });
 
@@ -79,10 +91,15 @@ export const updateSettings = asyncHandler(async (req, res) => {
     { scope },
     { $set: allowed },
     { new: true, upsert: true, runValidators: true }
-  );
+  ).lean();
+
+  companyCache.delete(`settings:${scope}`);
+  if (scope === 'PLATFORM') companyCache.delete('public_settings');
+
   audit({ req, action: 'UPDATE_SETTINGS', entity: 'Setting', entityId: settings._id });
   res.json({ success: true, data: { settings } });
 });
+
 
 // ---------- File Proxy ----------
 export const getFile = asyncHandler(async (req, res) => {

@@ -18,6 +18,8 @@ const saleSchema = new mongoose.Schema(
 
 saleSchema.index({ company: 1, saleDate: -1 });
 saleSchema.index({ company: 1, staff: 1, saleDate: -1 });
+saleSchema.index({ company: 1, product: 1, saleDate: -1 }); // Added for product-based reports
+saleSchema.index({ company: 1, customer: 1, saleDate: -1 }); // Added for customer-based ledgers
 saleSchema.index({ company: 1, productName: 1 });
 
 export default mongoose.model('Sale', saleSchema);

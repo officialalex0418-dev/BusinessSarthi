@@ -16,28 +16,17 @@ export const monthStr = (d = new Date()) => {
 
 /** Returns total minutes from midnight in Nepal Time (Asia/Kathmandu) */
 export function getNepalMinutes(d = new Date()) {
-  try {
-    const options = {
-      timeZone: 'Asia/Kathmandu',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: false,
-    };
-    const formatter = new Intl.DateTimeFormat('en-US', options);
-    const parts = formatter.formatToParts(d);
+  // Nepal is +5:45 (345 minutes) from UTC
+  const utcMins = d.getUTCHours() * 60 + d.getUTCMinutes();
+  let nepalMins = utcMins + 345;
 
-    const getPart = (type) => parts.find(p => p.type === type)?.value;
-    const hour = getPart('hour') || '0';
-    const minute = getPart('minute') || '0';
+  // Handle wrap-around (midnight)
+  if (nepalMins >= 1440) nepalMins -= 1440;
+  if (nepalMins < 0) nepalMins += 1440;
 
-    return parseInt(hour, 10) * 60 + parseInt(minute, 10);
-  } catch (err) {
-    // Fallback if Intl fails
-    const nepalOffset = 5.75 * 60 * 60 * 1000; // +5:45
-    const nepalTime = new Date(d.getTime() + nepalOffset);
-    return nepalTime.getUTCHours() * 60 + nepalTime.getUTCMinutes();
-  }
+  return nepalMins;
 }
+
 
 /** Pure function to check if a check-in is late */
 export function isLateArrival(checkInTime, shiftStartTime, bufferMinutes = 0) {

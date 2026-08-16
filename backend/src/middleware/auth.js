@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { User } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
+import { authCache } from '../utils/cache.js';
 
 /** Verifies access token (Authorization: Bearer <token>) and attaches req.user */
 export const protect = asyncHandler(async (req, _res, next) => {
@@ -16,16 +17,24 @@ export const protect = asyncHandler(async (req, _res, next) => {
     throw ApiError.unauthorized(e.name === 'TokenExpiredError' ? 'Access token expired' : 'Invalid token');
   }
 
-  const user = await User.findById(payload.sub).populate({
-    path: 'company',
-    select: 'name status package settings address phone panVat registrationNumber logo website description additionalInfo',
-    populate: { path: 'package', select: 'name status features chatRetentionDays trackingIntervalMinutes' }
-  }).populate({
-    path: 'designation',
-    populate: { path: 'department', select: 'name' }
-  });
+  // Cache user context for 60 seconds to reduce DB load on rapid API calls
+  const user = await authCache.getOrSet(`user_ctx:${payload.sub}`, async () => {
+    return await User.findById(payload.sub).populate({
+      path: 'company',
+      select: 'name status package settings address phone panVat registrationNumber logo website description additionalInfo',
+      populate: { path: 'package', select: 'name status features chatRetentionDays trackingIntervalMinutes' }
+    }).populate({
+      path: 'designation',
+      populate: { path: 'department', select: 'name' }
+    }).populate('shift');
+  }, 60);
 
-  if (!user || !user.isActive) throw ApiError.unauthorized('Account disabled or not found');
+
+  if (!user || !user.isActive) {
+    authCache.delete(`user_ctx:${payload.sub}`);
+    throw ApiError.unauthorized('Account disabled or not found');
+  }
+
   if (user.company && user.company.status === 'SUSPENDED') {
     throw ApiError.forbidden('Company account is suspended');
   }

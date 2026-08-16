@@ -31,16 +31,13 @@ export async function connectDB() {
       // --------------------------------------------------
       // CONNECTION POOL
       // --------------------------------------------------
-      // Conservative settings for:
-      // Northflank 1 vCPU / 1 GB RAM
-      // MongoDB Atlas M0
-      //
-      // Increase later based on monitoring.
-      maxPoolSize: 10,
-      minPoolSize: 2,
+      // Optimized for concurrent users
+      maxPoolSize: 50,
+      minPoolSize: 5,
 
       // Close idle connections after 60 seconds.
       maxIdleTimeMS: 60000,
+
 
       // --------------------------------------------------
       // TIMEOUTS

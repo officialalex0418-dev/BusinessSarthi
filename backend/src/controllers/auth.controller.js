@@ -126,12 +126,14 @@ export const refresh = asyncHandler(async (req, res) => {
   const user = await User.findById(payload.sub).select('+refreshTokens').populate({
     path: 'company',
     select: 'name status package settings address phone panVat registrationNumber logo website description additionalInfo',
-    populate: { path: 'package', select: 'name status features chatRetentionDays' }
+    populate: { path: 'package', select: 'name status features chatRetentionDays trackingIntervalMinutes' }
   }).populate({
     path: 'designation',
     populate: { path: 'department', select: 'name' }
   });
+
   if (!user || !user.isActive) throw ApiError.unauthorized('Account not found');
+
 
   const tokenHash = hashToken(token);
   const stored = user.refreshTokens?.find((t) => t.tokenHash === tokenHash);
@@ -265,9 +267,11 @@ export const me = asyncHandler(async (req, res) => {
     date: today,
     'checkIn.time': { $exists: true },
     'checkOut.time': { $exists: false }
-  });
+  }).select('_id').lean();
+
   res.json({ success: true, data: { user: { ...req.user.toSafeJSON(), isCheckedIn: !!activeAtt } } });
 });
+
 
 /** PATCH /auth/change-password */
 export const changePassword = asyncHandler(async (req, res) => {

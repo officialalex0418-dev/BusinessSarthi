@@ -75,10 +75,10 @@ export const generatePayroll = asyncHandler(async (req, res) => {
     }
   }
 
-  const staffList = await User.find(staffFilter);
+  const staffList = await User.find(staffFilter).lean();
   if (!staffList.length) throw ApiError.badRequest('No active staff to generate payroll for');
 
-  const leaveTypes = company ? await LeaveType.find({ company: company._id }) : [];
+  const leaveTypes = company ? await LeaveType.find({ company: company._id }).lean() : [];
   const paidLeaveTypeNames = leaveTypes.filter(lt => lt.isPaid).map(lt => lt.name);
   if (!paidLeaveTypeNames.includes('PAID')) paidLeaveTypeNames.push('PAID');
   if (!paidLeaveTypeNames.includes('SICK')) paidLeaveTypeNames.push('SICK');
@@ -93,33 +93,42 @@ export const generatePayroll = asyncHandler(async (req, res) => {
     endMonth = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
   }
 
+  // OPTIMIZATION: Prefetch all attendance and leaves for the month to avoid N+1 queries
+  const [allAttendance, allLeaves, existingPayroll] = await Promise.all([
+    company ? Attendance.find({ company: company._id, date: dateFilter, status: { $in: ['PRESENT', 'HALF_DAY'] } }).lean() : Promise.resolve([]),
+    company ? Leave.find({ company: company._id, status: 'APPROVED', $or: [{ fromDate: { $gte: startMonth, $lte: endMonth } }, { toDate: { $gte: startMonth, $lte: endMonth } }] }).lean() : Promise.resolve([]),
+    Payroll.find({ company: company?._id || null, month }).select('staff').lean()
+  ]);
+
+  const existingStaffIds = new Set(existingPayroll.map(p => p.staff.toString()));
+  const attendanceMap = {};
+  allAttendance.forEach(a => {
+    const sId = a.staff.toString();
+    attendanceMap[sId] = attendanceMap[sId] || [];
+    attendanceMap[sId].push(a);
+  });
+
+  const leaveMap = {};
+  allLeaves.forEach(l => {
+    const sId = l.staff.toString();
+    leaveMap[sId] = leaveMap[sId] || [];
+    leaveMap[sId].push(l);
+  });
+
   const results = [];
 
   for (const staff of staffList) {
-    const exists = await Payroll.findOne({ staff: staff._id, month });
-    if (exists) { results.push({ staff: staff.name, skipped: true }); continue; }
+    if (existingStaffIds.has(staff._id.toString())) {
+      results.push({ staff: staff.name, skipped: true });
+      continue;
+    }
 
-    const attendanceRecords = company
-      ? await Attendance.find({
-          staff: staff._id,
-          date: dateFilter,
-          status: { $in: ['PRESENT', 'HALF_DAY'] },
-        })
-      : [];
-
+    const attendanceRecords = attendanceMap[staff._id.toString()] || [];
     const presentDays = company
       ? attendanceRecords.reduce((acc, curr) => acc + (curr.status === 'HALF_DAY' ? 0.5 : 1), 0)
       : totalWorkingDays;
 
-    const approvedLeaves = company
-      ? await Leave.find({
-          staff: staff._id, status: 'APPROVED',
-          $or: [
-            { fromDate: { $gte: startMonth, $lte: endMonth } },
-            { toDate: { $gte: startMonth, $lte: endMonth } },
-          ],
-        })
-      : [];
+    const approvedLeaves = leaveMap[staff._id.toString()] || [];
 
     let paidLeaveDays = 0;
     for (const l of approvedLeaves) {

@@ -6,11 +6,15 @@ import {
 import { asyncHandler } from '../utils/ApiError.js';
 import { todayStr } from '../utils/dates.js';
 import { adToBs } from '../utils/nepaliDate.js';
+import { statsCache } from '../utils/cache.js';
 
 const oid = (id) => new mongoose.Types.ObjectId(id);
 
 /** GET /dashboard/super — Super Admin dashboard */
 export const superDashboard = asyncHandler(async (_req, res) => {
+  const cachedData = statsCache.get('super_dashboard');
+  if (cachedData) return res.json({ success: true, data: cachedData });
+
   const today = todayStr();
   const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
 
@@ -38,26 +42,33 @@ export const superDashboard = asyncHandler(async (_req, res) => {
     { $group: { _id: null, monthlyRevenue: { $sum: '$pkg.price' } } },
   ]);
 
+  const dashboardData = {
+    totalCompanies,
+    companiesToday,
+    totalStaff,
+    activeStaff,
+    checkedInToday,
+    monthlyRevenue: revenueAgg[0]?.monthlyRevenue || 0,
+    activePackages,
+    packages,
+    trackingPingsToday,
+    recentActivities,
+  };
+
+  statsCache.set('super_dashboard', dashboardData, 60); // 1 minute cache
+
   res.json({
     success: true,
-    data: {
-      totalCompanies,
-      companiesToday,
-      totalStaff,
-      activeStaff,
-      checkedInToday,
-      monthlyRevenue: revenueAgg[0]?.monthlyRevenue || 0,
-      activePackages,
-      packages,
-      trackingPingsToday,
-      recentActivities,
-    },
+    data: dashboardData,
   });
 });
 
 /** GET /dashboard/company — Company owner / manager dashboard */
 export const companyDashboard = asyncHandler(async (req, res) => {
   const companyId = req.companyId;
+  const cachedData = statsCache.get(`company_dashboard:${companyId}`);
+  if (cachedData) return res.json({ success: true, data: cachedData });
+
   const today = todayStr();
   const month = today.slice(0, 7);
   const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
@@ -68,7 +79,7 @@ export const companyDashboard = asyncHandler(async (req, res) => {
     company, totalStaff, activeStaff, checkedInToday, monthlyAttendance,
     dailySalesAgg, monthlySalesAgg, salesGraph, recentActivities, pendingLeaves,
   ] = await Promise.all([
-    Company.findById(companyId).populate('package', 'name'),
+    Company.findById(companyId).populate('package', 'name').lean(),
     User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] } }),
     User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] }, isActive: true }),
     Attendance.countDocuments({ company: companyId, date: today, 'checkIn.time': { $exists: true } }),
@@ -91,23 +102,31 @@ export const companyDashboard = asyncHandler(async (req, res) => {
     Leave.countDocuments({ company: companyId, status: 'PENDING' }),
   ]);
 
+  const dashboardData = {
+    company,
+    totalStaff, activeStaff, checkedInToday, monthlyAttendance,
+    dailySales: dailySalesAgg[0]?.total || 0,
+    monthlySales: monthlySalesAgg[0]?.total || 0,
+    salesGraph,
+    pendingLeaves,
+    recentActivities,
+  };
+
+  statsCache.set(`company_dashboard:${companyId}`, dashboardData, 30); // 30 seconds cache
+
   res.json({
     success: true,
-    data: {
-      company,
-      totalStaff, activeStaff, checkedInToday, monthlyAttendance,
-      dailySales: dailySalesAgg[0]?.total || 0,
-      monthlySales: monthlySalesAgg[0]?.total || 0,
-      salesGraph,
-      pendingLeaves,
-      recentActivities,
-    },
+    data: dashboardData,
   });
 });
+
 
 /** GET /dashboard/staff — Staff app dashboard */
 export const staffDashboard = asyncHandler(async (req, res) => {
   const userId = oid(req.user._id);
+  const cachedData = statsCache.get(`staff_dashboard:${userId}`);
+  if (cachedData) return res.json({ success: true, data: cachedData });
+
   const companyId = req.user.company?._id;
   const today = todayStr();
   const month = today.slice(0, 7);
@@ -124,13 +143,13 @@ export const staffDashboard = asyncHandler(async (req, res) => {
     todayAttendance, monthAttendance, salesAgg,
     monthlyTarget, upcomingHolidays, recentLeaves
   ] = await Promise.all([
-    Attendance.findOne({ staff: userId, date: today }),
+    Attendance.findOne({ staff: userId, date: today }).lean(),
     Attendance.find({ staff: userId, date: { $regex: `^${month}` } }).lean(),
     Sale.aggregate([
       { $match: { staff: userId, saleDate: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
-    Target.findOne({ staff: userId, month: targetMonth, calendarType: dateFormat }),
+    Target.findOne({ staff: userId, month: targetMonth, calendarType: dateFormat }).lean(),
     Holiday.find({ company: companyId, startDate: { $gte: new Date() } })
       .sort('startDate').limit(5).lean(),
     Leave.find({ staff: userId }).sort('-createdAt').limit(5).lean(),
@@ -142,33 +161,37 @@ export const staffDashboard = asyncHandler(async (req, res) => {
   const achieved = salesAgg[0]?.total || 0;
   const target = monthlyTarget?.amount || 0;
 
+  const dashboardData = {
+    profile: {
+      name: req.user.name,
+      position: req.user.position,
+      designationName: req.user.designation?.name || req.user.position || 'Staff',
+      profilePhoto: req.user.profilePhoto,
+      company: req.user.company?.name,
+      email: req.user.email,
+      phone: req.user.phone,
+      department: req.user.designation?.department?.name || '—',
+    },
+    checkInStatus: !!todayAttendance?.checkIn?.time,
+    checkOutStatus: !!todayAttendance?.checkOut?.time,
+    checkInTime: todayAttendance?.checkIn?.time || null,
+    checkOutTime: todayAttendance?.checkOut?.time || null,
+    leaveBalance: req.user.leaveBalance,
+    lateDays,
+    presentDays,
+    monthlyTarget: target,
+    achievedTarget: achieved,
+    remainingTarget: Math.max(target - achieved, 0),
+    salesProgressPct: target ? Math.min(Math.round((achieved / target) * 100), 100) : 0,
+    attendanceProgressPct: Math.min(Math.round((presentDays / 26) * 100), 100),
+    upcomingHolidays,
+    recentLeaves,
+  };
+
+  statsCache.set(`staff_dashboard:${userId}`, dashboardData, 60); // 1 minute cache
+
   res.json({
     success: true,
-    data: {
-      profile: {
-        name: req.user.name,
-        position: req.user.position,
-        designationName: req.user.designation?.name || req.user.position || 'Staff',
-        profilePhoto: req.user.profilePhoto,
-        company: req.user.company?.name,
-        email: req.user.email,
-        phone: req.user.phone,
-        department: req.user.designation?.department?.name || '—',
-      },
-      checkInStatus: !!todayAttendance?.checkIn?.time,
-      checkOutStatus: !!todayAttendance?.checkOut?.time,
-      checkInTime: todayAttendance?.checkIn?.time || null,
-      checkOutTime: todayAttendance?.checkOut?.time || null,
-      leaveBalance: req.user.leaveBalance,
-      lateDays,
-      presentDays,
-      monthlyTarget: target,
-      achievedTarget: achieved,
-      remainingTarget: Math.max(target - achieved, 0),
-      salesProgressPct: target ? Math.min(Math.round((achieved / target) * 100), 100) : 0,
-      attendanceProgressPct: Math.min(Math.round((presentDays / 26) * 100), 100),
-      upcomingHolidays,
-      recentLeaves,
-    },
+    data: dashboardData,
   });
 });

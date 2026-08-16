@@ -8,15 +8,15 @@ export async function checkAttendanceRestriction(user, dateStr) {
   const date = new Date(dateStr);
   const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
 
-  // 1. Check Shift Off-Days
-  if (user.shift) {
-    const shift = await Shift.findById(user.shift);
-    if (shift && shift.workingDays?.length > 0) {
-      if (!shift.workingDays.includes(dayName)) {
-        return { restricted: true, reason: `Today (${dayName}) is an off-day in your shift.` };
-      }
+  // 1. Check Shift Off-Days (User context may have populated shift)
+  const shift = user.shift?._id ? user.shift : (user.shift ? await Shift.findById(user.shift).lean() : null);
+
+  if (shift && shift.workingDays?.length > 0) {
+    if (!shift.workingDays.includes(dayName)) {
+      return { restricted: true, reason: `Today (${dayName}) is an off-day in your shift.` };
     }
   }
+
 
   // 2. Check Public Holidays
   const holiday = await Holiday.findOne({

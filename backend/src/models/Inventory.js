@@ -41,6 +41,9 @@ const inventorySchema = new mongoose.Schema(
 inventorySchema.index({ company: 1, sku: 1 }, { unique: true });
 inventorySchema.index({ company: 1, productName: 1 });
 inventorySchema.index({ company: 1, category: 1 });
+inventorySchema.index({ company: 1, quantity: 1 }); // Added for low-stock alerts
+inventorySchema.index({ company: 1, expiryDate: 1 }); // Added for expiry tracking
+
 
 inventorySchema.virtual('isLowStock').get(function () {
   return this.quantity <= this.reorderLevel;

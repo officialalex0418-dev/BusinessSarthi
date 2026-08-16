@@ -1,9 +1,11 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
+import { authCache } from '../utils/cache.js';
 
 /**
  * Socket.io with JWT auth + room-based multi-tenancy.
+
  * Rooms:
  *   platform            → super admin / admin employees
  *   company:<companyId> → owner + managers of that company
@@ -29,8 +31,16 @@ export function initSocket(server) {
       const payload = jwt.verify(token, env.jwt.accessSecret);
 
       const { User } = await import('../models/index.js');
-      const user = await User.findById(payload.sub).select('isActive authVersion company role');
-      if (!user || !user.isActive) return next(new Error('Account inactive'));
+
+      const user = await authCache.getOrSet(`user_socket_auth:${payload.sub}`, async () => {
+        return await User.findById(payload.sub).select('isActive authVersion company role').lean();
+      }, 60);
+
+      if (!user || !user.isActive) {
+        authCache.delete(`user_socket_auth:${payload.sub}`);
+        return next(new Error('Account inactive'));
+      }
+
 
       // authVersion check (Invalidates stale sessions)
       if (payload.v && user.authVersion !== payload.v) {
@@ -71,19 +81,25 @@ export function initSocket(server) {
        const { todayStr } = await import('../utils/dates.js');
 
        // 2. Authorization Check (Real-time account state)
-       const u = await User.findOne({ _id: id, company: company, isActive: true }).select('name position profilePhoto trackingEnabled');
-       if (!u || !u.trackingEnabled) {
-          return; // Silently ignore or disconnect if malicious
-       }
+       const u = await authCache.getOrSet(`staff_min:${id}`, async () => {
+         const { User } = await import('../models/index.js');
+         return await User.findOne({ _id: id, company: company, isActive: true }).select('name position profilePhoto trackingEnabled').lean();
+       }, 300);
+
+       if (!u || !u.trackingEnabled) return;
 
        // 3. Attendance Check (Live purpose only allowed during shift)
+       const { Attendance, CurrentStaffLocation } = await import('../models/index.js');
+       const { todayStr } = await import('../utils/dates.js');
+
        const attendance = await Attendance.findOne({
           staff: id,
           date: todayStr(),
           'checkIn.time': { $exists: true },
           'checkOut.time': { $exists: false }
-       });
+       }).select('_id').lean();
        if (!attendance) return;
+
 
        // 4. Update CurrentState (Live Tracking Purpose)
        await CurrentStaffLocation.findOneAndUpdate(

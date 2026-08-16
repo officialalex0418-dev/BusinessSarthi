@@ -86,11 +86,12 @@ export const checkIn = asyncHandler(async (req, res) => {
 
   // 2. Shift Window Restriction (1 hour prior until shift end)
   if (req.user.shift) {
-    const shift = await Shift.findById(req.user.shift);
+    const shift = req.user.shift.startTime ? req.user.shift : await Shift.findById(req.user.shift).lean();
     if (shift) {
       const nowNepal = getNepalMinutes();
       const [sh, sm] = shift.startTime.split(':').map(Number);
       const [eh, em] = shift.endTime.split(':').map(Number);
+
 
       const shiftStartMins = sh * 60 + sm;
       let shiftEndMins = eh * 60 + em;
@@ -117,9 +118,10 @@ export const checkIn = asyncHandler(async (req, res) => {
   // Late detection from shift settings (Requirement: Check-In > StartTime + Buffer)
   let isLate = false;
   if (req.user.shift) {
-    const shift = await Shift.findById(req.user.shift);
+    const shift = req.user.shift.startTime ? req.user.shift : await Shift.findById(req.user.shift).lean();
     if (shift) {
       const [sh, sm] = shift.startTime.split(':').map(Number);
+
       const buffer = shift.bufferTime || 0;
 
       // Current time in Nepal
@@ -265,9 +267,10 @@ export const checkOut = asyncHandler(async (req, res) => {
   let thresholdMinutes = 192; // Default 40% of 8 hours (3.2 hours) fallback
 
   if (req.user.shift) {
-    const shift = await Shift.findById(req.user.shift);
+    const shift = req.user.shift.startTime ? req.user.shift : await Shift.findById(req.user.shift).lean();
     if (shift) {
       const [sh, sm] = shift.startTime.split(':').map(Number);
+
       const [eh, em] = shift.endTime.split(':').map(Number);
 
       let startMins = sh * 60 + sm;
