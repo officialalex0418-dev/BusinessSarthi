@@ -1,13 +1,15 @@
 /**
  * Reusable employee CRUD table.
  */
-import { useEffect, useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, FileDown, UserMinus, X, RefreshCw, Camera, User as UserIcon } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Plus, Pencil, Trash2, FileDown, UserMinus, X, RefreshCw, Camera, User as UserIcon, Upload } from 'lucide-react';
 import { api, downloadFile } from '@/api/client';
 import { Card, Button, Input, Select, Modal, Table, Badge, Spinner, Pagination } from '@/components/ui';
-import { formatMoney, cn, fixFileUrl } from '@/lib/utils';
+import { formatMoney, cn, fixFileUrl, fileToDataUrl } from '@/lib/utils';
 import { useAppPermissions } from '@/hooks/useAppPermissions';
 import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
+
 
 const emptyForm = {
   name: '', email: '', phone: '', address: '', pan: '', position: '',
@@ -20,7 +22,9 @@ const emptyForm = {
 
 export default function StaffManager({ mode = 'company', companyId = null, allowCompanySelection = false }) {
   const { requestCamera } = useAppPermissions();
+  const fileInputRef = useRef(null);
   const [data, setData] = useState(null);
+
 
   const [companies, setCompanies] = useState([]);
   const [designations, setDesignations] = useState([]);
@@ -72,9 +76,16 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
   useEffect(() => { load(); }, [load]);
 
   const handlePhotoUpload = async () => {
+    // If on web/desktop, use standard file input for better compatibility
+    if (!Capacitor.isNativePlatform()) {
+      fileInputRef.current?.click();
+      return;
+    }
+
     const hasPermission = await requestCamera();
     if (!hasPermission) {
-      alert('Camera/Media permission is required to update photo.');
+      // Fallback to file input if permission denied or unavailable
+      fileInputRef.current?.click();
       return;
     }
 
@@ -94,10 +105,24 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
     } catch (e) {
       const msg = e.message?.toLowerCase() || '';
       if (!msg.includes('cancel') && !msg.includes('user closed')) {
-        setError('Failed to process image: ' + (e.message || 'Unknown error'));
+        console.error('Photo capture error:', e);
+        // On error, try standard file input as ultimate fallback
+        fileInputRef.current?.click();
       }
     }
   };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setForm(prev => ({ ...prev, profilePhoto: dataUrl }));
+    } catch (err) {
+      setError('Failed to process image file');
+    }
+  };
+
 
   const submit = async (e) => {
 
@@ -349,7 +374,6 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
         title={editing ? `Edit ${editing.name}` : `Add Employee`} wide>
         {error && <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100">{error}</div>}
         <form onSubmit={submit} className="space-y-8">
-          {/* Profile Photo Section */}
           <div className="flex flex-col items-center gap-3 border-b pb-6">
             <div className="relative group">
               <div className="h-24 w-24 overflow-hidden rounded-2xl border-4 border-slate-100 bg-slate-50 shadow-sm dark:border-slate-800">
@@ -369,8 +393,16 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
                 <Camera className="h-4 w-4" />
               </button>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Employee Photo</p>
           </div>
+
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
 

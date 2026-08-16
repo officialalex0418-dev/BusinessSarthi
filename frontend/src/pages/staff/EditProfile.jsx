@@ -1,17 +1,20 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera as CameraIcon, Save, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAppPermissions } from '@/hooks/useAppPermissions';
 import { api } from '@/api/client';
 import { Card, CardBody, Button, Input, Textarea } from '@/components/ui';
-import { fixFileUrl } from '@/lib/utils';
+import { fixFileUrl, fileToDataUrl } from '@/lib/utils';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
 
 export default function EditProfile() {
   const { user, setUser } = useAuth();
   const { requestCamera } = useAppPermissions();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+
 
   const [form, setForm] = useState({
     name: user?.name || '',
@@ -54,19 +57,25 @@ export default function EditProfile() {
 
 
   const handlePhotoUpload = async () => {
+    // Web/Desktop fallback
+    if (!Capacitor.isNativePlatform()) {
+      fileInputRef.current?.click();
+      return;
+    }
+
     const hasPermission = await requestCamera();
     if (!hasPermission) {
-      setError('Camera/Media permission is required to update photo.');
+      fileInputRef.current?.click();
       return;
     }
 
     try {
       const image = await Camera.getPhoto({
-        quality: 60, // Better compression
+        quality: 60,
         allowEditing: true,
         resultType: CameraResultType.DataUrl,
         source: CameraSource.Prompt,
-        width: 600, // Reduced size for profile photo (plenty for 32x32 view)
+        width: 600,
         height: 600
       });
 
@@ -74,14 +83,25 @@ export default function EditProfile() {
         setForm(prev => ({ ...prev, profilePhoto: image.dataUrl }));
       }
     } catch (e) {
-      // Ignore user cancellations
       const msg = e.message?.toLowerCase() || '';
       if (!msg.includes('cancel') && !msg.includes('user closed')) {
         console.error('Photo capture error:', e);
-        setError('Failed to process image: ' + (e.message || 'Unknown error'));
+        fileInputRef.current?.click();
       }
     }
   };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setForm(prev => ({ ...prev, profilePhoto: dataUrl }));
+    } catch (err) {
+      setError('Failed to process image file');
+    }
+  };
+
 
 
   return (
@@ -118,8 +138,16 @@ export default function EditProfile() {
                   <CameraIcon className="h-5 w-5" />
                 </button>
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
               <p className="text-xs text-slate-500">Tap to update profile photo</p>
             </div>
+
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input label="Full Name *" required value={form.name}
