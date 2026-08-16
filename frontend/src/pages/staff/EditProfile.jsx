@@ -29,17 +29,29 @@ export default function EditProfile() {
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true); setError(''); setSuccess('');
+
+    // Safety check: don't send massive data if not changed
+    const payload = { ...form };
+    if (payload.profilePhoto === user?.profilePhoto) {
+      delete payload.profilePhoto;
+    }
+
     try {
-      const { data } = await api.patch('/profile/me', form);
+      const { data } = await api.patch('/profile/me', payload);
       setUser(data.data.user);
       setSuccess('Profile updated successfully ✓');
       setTimeout(() => navigate('/staff/profile'), 1500);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update profile');
+      const msg = err.response?.data?.message || err.message || 'Failed to update profile';
+      setError(msg);
+      if (err.message?.includes('timeout')) {
+        setError('Request timed out. The image might be too large for your connection.');
+      }
     } finally {
       setLoading(false);
     }
   };
+
 
   const handlePhotoUpload = async () => {
     const hasPermission = await requestCamera();
@@ -50,23 +62,27 @@ export default function EditProfile() {
 
     try {
       const image = await Camera.getPhoto({
-        quality: 70, // Slightly lower quality for faster upload
+        quality: 60, // Better compression
         allowEditing: true,
         resultType: CameraResultType.DataUrl,
-        source: CameraSource.Prompt, // Asks: Camera or Photos
-        width: 800, // Resize for profile photo
-        height: 800
+        source: CameraSource.Prompt,
+        width: 600, // Reduced size for profile photo (plenty for 32x32 view)
+        height: 600
       });
 
-      if (image.dataUrl) {
-        setForm({ ...form, profilePhoto: image.dataUrl });
+      if (image && image.dataUrl) {
+        setForm(prev => ({ ...prev, profilePhoto: image.dataUrl }));
       }
     } catch (e) {
-      if (e.message !== 'User cancelled photos app') {
-        setError('Failed to process image');
+      // Ignore user cancellations
+      const msg = e.message?.toLowerCase() || '';
+      if (!msg.includes('cancel') && !msg.includes('user closed')) {
+        console.error('Photo capture error:', e);
+        setError('Failed to process image: ' + (e.message || 'Unknown error'));
       }
     }
   };
+
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

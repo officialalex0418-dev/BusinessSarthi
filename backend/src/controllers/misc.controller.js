@@ -3,7 +3,8 @@ import { asyncHandler, ApiError } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
 import { uploadFile, deleteFile } from '../services/storage.service.js';
-import { companyCache } from '../utils/cache.js';
+import { authCache, companyCache } from '../utils/cache.js';
+
 
 // ---------- Notifications ----------
 
@@ -124,10 +125,13 @@ export const getFile = asyncHandler(async (req, res) => {
 // ---------- Profile (staff self-service) ----------
 export const updateMyProfile = asyncHandler(async (req, res) => {
   const { name, phone, address, pan, profilePhoto } = req.body;
+
   const user = await User.findById(req.user._id).populate({
     path: 'designation',
     populate: { path: 'department', select: 'name' }
   }).populate('company');
+
+  if (!user) throw ApiError.notFound('User not found');
 
   if (name !== undefined) user.name = name;
   if (phone !== undefined) user.phone = phone;
@@ -136,15 +140,23 @@ export const updateMyProfile = asyncHandler(async (req, res) => {
 
   if (profilePhoto !== undefined) {
     if (profilePhoto && profilePhoto.startsWith('data:')) {
-      // If there was an old photo, we could delete it, but often we just overwrite URL
-      // deleteFile(user.profilePhoto).catch(() => {});
-      user.profilePhoto = await uploadFile(profilePhoto, 'profiles');
+      try {
+        user.profilePhoto = await uploadFile(profilePhoto, 'profiles');
+      } catch (uploadErr) {
+        console.error('Profile photo upload failed:', uploadErr.message);
+        throw ApiError.badRequest('Failed to upload profile photo');
+      }
     } else {
       user.profilePhoto = profilePhoto;
     }
   }
 
+
   await user.save({ validateBeforeSave: true });
+  authCache.delete(`user_ctx:${user._id}`);
+  authCache.delete(`user_socket_auth:${user._id}`);
+
   audit({ req, action: 'UPDATE_PROFILE', entity: 'User', entityId: user._id });
   res.json({ success: true, data: { user: user.toSafeJSON() } });
 });
+

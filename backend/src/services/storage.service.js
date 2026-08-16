@@ -33,20 +33,29 @@ const getS3Client = () => {
  */
 export const uploadFile = async (fileContent, folder = 'general', contentType = 'image/jpeg') => {
   const s3 = getS3Client();
-  if (!s3) throw new Error('Storage service not configured');
+  if (!s3) {
+    console.error('Storage error: S3 client not initialized');
+    throw new Error('Storage service not configured');
+  }
 
   try {
     let buffer;
     if (typeof fileContent === 'string' && fileContent.startsWith('data:')) {
       // Handle Base64 Data URL
-      const base64Data = fileContent.split(',')[1];
+      const parts = fileContent.split(',');
+      if (parts.length < 2) throw new Error('Invalid Data URL format');
+
+      const base64Data = parts[1];
       buffer = Buffer.from(base64Data, 'base64');
       contentType = fileContent.split(';')[0].split(':')[1];
+
+      console.log(`Uploading base64 file: ${buffer.length} bytes, type: ${contentType}`);
     } else if (Buffer.isBuffer(fileContent)) {
       buffer = fileContent;
     } else {
       throw new Error('Invalid file content type');
     }
+
 
     const fileExtension = contentType.split('/')[1] || 'jpg';
     const fileName = `${folder}/${uuidv4()}.${fileExtension}`;

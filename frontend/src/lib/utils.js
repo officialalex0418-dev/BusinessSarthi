@@ -108,24 +108,43 @@ export const fileToDataUrl = (file) => new Promise((resolve, reject) => {
 });
 
 /**
- * Fixes legacy or broken Cloudflare R2 URLs by routing them through the API proxy
+ * Fixes legacy or broken Cloudflare R2 URLs by routing them through the API proxy.
+ * Also ensures relative paths are prefixed with the API base URL.
  */
 export const fixFileUrl = (url) => {
   if (!url) return url;
   if (url.startsWith('data:')) return url;
+  if (url.startsWith('blob:')) return url;
 
-  // If it's a full Cloudflare R2 URL, extract everything after the bucket name
-  if (url.includes('r2.cloudflarestorage.com')) {
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/').filter(Boolean);
-    // Usually R2 URLs are hostname/bucket/key or bucket.hostname/key
-    // In our case, the key is the part we need for our API proxy
-    const key = pathParts.join('/');
-    const apiBase = import.meta.env.VITE_API_URL || '';
-    return `${apiBase}/api/v1/files/${key}`;
+  const apiBase = import.meta.env.VITE_API_URL || '';
+
+  // If it's already an absolute URL but not from R2, return as is
+  if (url.startsWith('http')) {
+    if (url.includes('r2.cloudflarestorage.com')) {
+      try {
+        const urlObj = new URL(url);
+        const pathParts = urlObj.pathname.split('/').filter(Boolean);
+        const key = pathParts.join('/');
+        return `${apiBase}/api/v1/files/${key}`;
+      } catch (e) {
+        return url;
+      }
+    }
+    return url;
   }
-  return url;
+
+  // If it's a relative path (the key), prefix with API base
+  // Remove leading slash if present to avoid double slashes
+  const cleanKey = url.startsWith('/') ? url.substring(1) : url;
+
+  // If it doesn't already contain /api/v1/files, add it
+  if (!cleanKey.includes('api/v1/files')) {
+    return `${apiBase}/api/v1/files/${cleanKey}`;
+  }
+
+  return `${apiBase}/${cleanKey}`;
 };
+
 
 export const ROLE_LABELS = {
   SUPER_ADMIN: 'Super Admin',

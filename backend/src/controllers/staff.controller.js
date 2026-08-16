@@ -6,6 +6,8 @@ import { audit } from '../utils/audit.js';
 import { emails } from '../services/email.service.js';
 import { realtime } from '../sockets/index.js';
 import { ROLES, ADMIN_EMPLOYEE_SUBROLES } from '../constants/roles.js';
+import { authCache } from '../utils/cache.js';
+
 
 /**
  * Staff & system-employee management.
@@ -187,8 +189,11 @@ export const updateStaff = asyncHandler(async (req, res) => {
   }
 
   await user.save();
+  authCache.delete(`user_ctx:${user._id}`);
+  authCache.delete(`user_socket_auth:${user._id}`);
 
   if (oldPosition !== user.position || oldRole !== user.role) {
+
     emails.staffRoleChanged(user.email, {
       name: user.name,
       oldPosition: oldPosition || oldRole,
