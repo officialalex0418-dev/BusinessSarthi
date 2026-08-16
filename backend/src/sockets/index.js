@@ -82,16 +82,12 @@ export function initSocket(server) {
 
        // 2. Authorization Check (Real-time account state)
        const u = await authCache.getOrSet(`staff_min:${id}`, async () => {
-         const { User } = await import('../models/index.js');
          return await User.findOne({ _id: id, company: company, isActive: true }).select('name position profilePhoto trackingEnabled').lean();
        }, 300);
 
        if (!u || !u.trackingEnabled) return;
 
        // 3. Attendance Check (Live purpose only allowed during shift)
-       const { Attendance, CurrentStaffLocation } = await import('../models/index.js');
-       const { todayStr } = await import('../utils/dates.js');
-
        const attendance = await Attendance.findOne({
           staff: id,
           date: todayStr(),
@@ -99,6 +95,7 @@ export function initSocket(server) {
           'checkOut.time': { $exists: false }
        }).select('_id').lean();
        if (!attendance) return;
+
 
 
        // 4. Update CurrentState (Live Tracking Purpose)
