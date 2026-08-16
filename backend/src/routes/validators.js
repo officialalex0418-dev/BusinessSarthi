@@ -126,7 +126,9 @@ export const schemas = {
     companyId: objectId.allow(null, ''),
     allowedMobileCount: Joi.number().integer().min(1),
     allowedWebCount: Joi.number().integer().min(1),
+    profilePhoto: Joi.string().allow(null, ''),
   }),
+
 
   updateStaff: Joi.object({
     name: Joi.string().max(120),

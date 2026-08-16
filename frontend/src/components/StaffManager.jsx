@@ -2,20 +2,26 @@
  * Reusable employee CRUD table.
  */
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, FileDown, UserMinus, X, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileDown, UserMinus, X, RefreshCw, Camera, User as UserIcon } from 'lucide-react';
 import { api, downloadFile } from '@/api/client';
 import { Card, Button, Input, Select, Modal, Table, Badge, Spinner, Pagination } from '@/components/ui';
-import { formatMoney, cn } from '@/lib/utils';
+import { formatMoney, cn, fixFileUrl } from '@/lib/utils';
+import { useAppPermissions } from '@/hooks/useAppPermissions';
+import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 const emptyForm = {
   name: '', email: '', phone: '', address: '', pan: '', position: '',
   basicSalary: 0, allowances: 0, role: 'STAFF', designation: '',
   workMode: 'OUTDOOR', branch: 'MAIN', shift: '',
   allowedMobileCount: 1, allowedWebCount: 1,
+  profilePhoto: '',
 };
 
+
 export default function StaffManager({ mode = 'company', companyId = null, allowCompanySelection = false }) {
+  const { requestCamera } = useAppPermissions();
   const [data, setData] = useState(null);
+
   const [companies, setCompanies] = useState([]);
   const [designations, setDesignations] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -65,7 +71,36 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
 
   useEffect(() => { load(); }, [load]);
 
+  const handlePhotoUpload = async () => {
+    const hasPermission = await requestCamera();
+    if (!hasPermission) {
+      alert('Camera/Media permission is required to update photo.');
+      return;
+    }
+
+    try {
+      const image = await CapCamera.getPhoto({
+        quality: 60,
+        allowEditing: true,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Prompt,
+        width: 600,
+        height: 600
+      });
+
+      if (image && image.dataUrl) {
+        setForm(prev => ({ ...prev, profilePhoto: image.dataUrl }));
+      }
+    } catch (e) {
+      const msg = e.message?.toLowerCase() || '';
+      if (!msg.includes('cancel') && !msg.includes('user closed')) {
+        setError('Failed to process image: ' + (e.message || 'Unknown error'));
+      }
+    }
+  };
+
   const submit = async (e) => {
+
     e.preventDefault();
     setSaving(true); setError('');
     try {
@@ -84,8 +119,13 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
       };
       if (editing) {
         delete body.email; delete body.role;
+        // Don't resend old photo URL to save bandwidth
+        if (body.profilePhoto === editing.profilePhoto) {
+          delete body.profilePhoto;
+        }
         await api.patch(`/staff/${editing._id}`, body);
       } else {
+
         await api.post('/staff', body);
       }
       setModal(false); setEditing(null); setForm(emptyForm); load();
@@ -193,9 +233,21 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
               <td className="table-td">
                 <div className="flex gap-1">
                   <button className="rounded p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" title="Edit"
-                    onClick={() => { setEditing(u); setForm({ ...emptyForm, ...u, designation: u.designation?._id || '', branch: u.branch?._id || 'MAIN', shift: u.shift?._id || '' }); setModal(true); }}>
+                    onClick={() => {
+                      setEditing(u);
+                      setForm({
+                        ...emptyForm,
+                        ...u,
+                        designation: u.designation?._id || '',
+                        branch: u.branch?._id || 'MAIN',
+                        shift: u.shift?._id || '',
+                        profilePhoto: u.profilePhoto || ''
+                      });
+                      setModal(true);
+                    }}>
                     <Pencil className="h-4 w-4" />
                   </button>
+
                   {mode === 'company' && (
                     <button className="rounded p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" title="Employee PDF"
                       onClick={() => downloadFile(`/reports/employee/${u._id}/pdf`, `employee-${u.name}.pdf`)}>
@@ -260,9 +312,22 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <Button variant="outline" size="sm" className="justify-start px-2" onClick={() => { setEditing(u); setForm({ ...emptyForm, ...u, designation: u.designation?._id || '', branch: u.branch?._id || 'MAIN', shift: u.shift?._id || '' }); setModal(true); }}>
+                <Button variant="outline" size="sm" className="justify-start px-2"
+                  onClick={() => {
+                    setEditing(u);
+                    setForm({
+                      ...emptyForm,
+                      ...u,
+                      designation: u.designation?._id || '',
+                      branch: u.branch?._id || 'MAIN',
+                      shift: u.shift?._id || '',
+                      profilePhoto: u.profilePhoto || ''
+                    });
+                    setModal(true);
+                  }}>
                   <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
                 </Button>
+
                 <Button variant="outline" size="sm" className="justify-start px-2 text-amber-600" onClick={() => deactivate(u)}>
                   <UserMinus className="h-3.5 w-3.5 mr-1.5" /> Deactivate
                 </Button>
@@ -284,7 +349,31 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
         title={editing ? `Edit ${editing.name}` : `Add Employee`} wide>
         {error && <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100">{error}</div>}
         <form onSubmit={submit} className="space-y-8">
+          {/* Profile Photo Section */}
+          <div className="flex flex-col items-center gap-3 border-b pb-6">
+            <div className="relative group">
+              <div className="h-24 w-24 overflow-hidden rounded-2xl border-4 border-slate-100 bg-slate-50 shadow-sm dark:border-slate-800">
+                {form.profilePhoto ? (
+                  <img src={fixFileUrl(form.profilePhoto)} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-slate-300">
+                    <UserIcon className="h-10 w-10" />
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handlePhotoUpload}
+                className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Employee Photo</p>
+          </div>
+
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+
             <div className="space-y-4">
                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Basic Information</p>
                <Input label="Full Name *" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

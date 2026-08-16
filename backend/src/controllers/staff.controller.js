@@ -51,8 +51,9 @@ export const createStaff = asyncHandler(async (req, res) => {
   const {
     name, email, phone, address, pan, position,
     basicSalary, dailyAllowance, allowances, role, designation, shift, companyId, monthlyTarget, workMode, branch,
-    allowedMobileCount, allowedWebCount,
+    allowedMobileCount, allowedWebCount, profilePhoto
   } = req.body;
+
 
   if (await User.findOne({ email })) throw ApiError.conflict('Email already in use');
 
@@ -99,6 +100,12 @@ export const createStaff = asyncHandler(async (req, res) => {
     }
   }
 
+  let finalPhoto = profilePhoto || null;
+  if (profilePhoto && profilePhoto.startsWith('data:')) {
+    const { uploadFile } = await import('../services/storage.service.js');
+    finalPhoto = await uploadFile(profilePhoto, 'profiles');
+  }
+
   const tempPassword = crypto.randomBytes(6).toString('base64url');
   const user = await User.create({
     name, email, phone, address, pan, position,
@@ -113,7 +120,9 @@ export const createStaff = asyncHandler(async (req, res) => {
     allowedWebCount: allowedWebCount || 1,
     password: tempPassword,
     needsPasswordChange: true,
+    profilePhoto: finalPhoto,
   });
+
 
   if (targetCompany) {
     const company = await Company.findById(targetCompany);
