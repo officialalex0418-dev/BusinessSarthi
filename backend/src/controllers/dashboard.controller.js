@@ -37,21 +37,54 @@ export const companyDashboard = asyncHandler(async (req, res) => {
   const cachedData = statsCache.get(`company_dashboard:${companyId}`);
   if (cachedData) return res.json({ success: true, data: cachedData });
 
-  const [totalStaff, activeStaff, pendingLeaves] = await Promise.all([
+  const today = todayStr();
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+  const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+
+  const [
+    company, totalStaff, activeStaff, checkedInToday,
+    todaySalesAgg, monthlySalesGraph, productSalesAgg, recentActivities
+  ] = await Promise.all([
+    Company.findById(companyId).populate('package', 'name').lean(),
     User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] } }),
     User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] }, isActive: true }),
-    Leave.countDocuments({ company: companyId, status: 'PENDING' }),
+    Attendance.countDocuments({ company: companyId, date: today, 'checkIn.time': { $exists: true } }),
+    Sale.aggregate([
+      { $match: { company: oid(companyId), saleDate: { $gte: startOfToday } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]),
+    Sale.aggregate([
+      { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth } } },
+      { $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$saleDate' } },
+          total: { $sum: '$amount' }
+      }},
+      { $sort: { _id: 1 } }
+    ]),
+    Sale.aggregate([
+      { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth } } },
+      { $group: { _id: '$productName', total: { $sum: '$amount' }, quantity: { $sum: '$quantity' } } },
+      { $sort: { total: -1 } },
+      { $limit: 10 }
+    ]),
+    AuditLog.find({ company: companyId }).populate('user', 'name').sort('-createdAt').limit(10).lean(),
   ]);
 
   const dashboardData = {
+    company,
     totalStaff,
     activeStaff,
-    pendingLeaves,
+    checkedInToday,
+    todaySales: todaySalesAgg[0]?.total || 0,
+    monthlySalesGraph: monthlySalesGraph.map(i => ({ date: i._id, amount: i.total })),
+    productSales: productSalesAgg.map(i => ({ name: i._id, amount: i.total, quantity: i.quantity })),
+    recentActivities,
   };
 
   statsCache.set(`company_dashboard:${companyId}`, dashboardData, 60);
   res.json({ success: true, data: dashboardData });
 });
+
 
 /** GET /dashboard/staff — Staff app dashboard */
 export const staffDashboard = asyncHandler(async (req, res) => {
