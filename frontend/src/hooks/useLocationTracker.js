@@ -3,7 +3,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { Device } from '@capacitor/device';
 import { Network } from '@capacitor/network';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { registerPlugin } from '@capacitor/core';
 import { api } from '@/api/client';
 import { useSocket, useSocketEvent } from '@/context/SocketContext';
 import { localDb } from '@/lib/storage';
@@ -12,20 +12,18 @@ const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 
 const ALERT_SOUND_BASE64 = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YT1vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT18=';
 
-
 export function useLocationTracker(enabled = true) {
   const [status, setStatus] = useState('idle');
   const [intervalMinutes, setIntervalMinutes] = useState(null);
   const [lastPing, setLastPing] = useState(null);
   const [isAlerting, setIsAlerting] = useState(false);
 
-  const socket = useSocket();
+  const { socket, connected } = useSocket() || {};
   const lastPersistentGpsAtRef = useRef(null);
   const uploadInFlightRef = useRef(false);
 
   const persistentTimerRef = useRef(null);
   const audioRef = useRef(null);
-
 
   const alertTimerRef = useRef(null);
   const gpsOffStartTimeRef = useRef(null);
@@ -48,21 +46,18 @@ export function useLocationTracker(enabled = true) {
     if (isAlerting) return;
     setIsAlerting(true);
 
-    // Specific notification based on reason
     if (reason === 'GPS_OFF') {
       notifyUser('GPS Turned Off', 'Please turn on GPS/Location Services to continue tracking your shift.');
     } else if (reason === 'NO_INTERNET') {
       notifyUser('Internet Disconnected', 'Please enable Mobile Data or Wi-Fi to sync your tracking data.');
     }
 
-    // Play sound
     if (!audioRef.current) {
       audioRef.current = new Audio(ALERT_SOUND_BASE64);
       audioRef.current.loop = true;
     }
     audioRef.current.play().catch(() => {});
 
-    // Stop after 30 seconds
     if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
     alertTimerRef.current = setTimeout(() => {
       stopAlert();
@@ -85,10 +80,9 @@ export function useLocationTracker(enabled = true) {
           id: 999,
           title: 'Business Sarthi Tracking',
           body: 'Your shift is active and location is being tracked.',
-          ongoing: true, // Makes it a foreground service notification
+          ongoing: true,
           sticky: true,
           channelId: 'bs_alerts',
-          smallIcon: 'ic_stat_name', // Needs to exist in android res
         }]
       }).catch(() => {});
     } else {
@@ -116,14 +110,13 @@ export function useLocationTracker(enabled = true) {
           maximumAge: 0
         });
 
-        // GPS is ON - Reset 45-min timer
         gpsOffStartTimeRef.current = null;
         if (checkOutTimerRef.current) {
           clearTimeout(checkOutTimerRef.current);
           checkOutTimerRef.current = null;
         }
 
-        stopAlert(); // Location and Internet are fine
+        stopAlert();
 
         return {
           latitude: pos.coords.latitude,
@@ -139,12 +132,10 @@ export function useLocationTracker(enabled = true) {
           source: 'BACKGROUND',
         };
       } catch (geoErr) {
-        // GPS is OFF or Unreachable
         if (!gpsOffStartTimeRef.current) {
           gpsOffStartTimeRef.current = Date.now();
           playAlert('GPS_OFF');
 
-          // Start 45-minute countdown for auto-checkout
           const FORTY_FIVE_MINS = 45 * 60 * 1000;
           checkOutTimerRef.current = setTimeout(async () => {
             try {
@@ -184,13 +175,11 @@ export function useLocationTracker(enabled = true) {
     const now = Date.now();
     const intervalMs = (intervalMinutes || 60) * 60000;
 
-    // 1. Throttling Gate (PERSISTENT ONLY)
     const isPersistent = ['BACKGROUND', 'MANUAL'].includes(source);
     if (isPersistent && lastPersistentGpsAtRef.current) {
        if (now - lastPersistentGpsAtRef.current < intervalMs) return;
     }
 
-    // 2. Concurrency Lock
     if (uploadInFlightRef.current && source !== 'LIVE_REFRESH') return;
 
     try {
@@ -198,9 +187,8 @@ export function useLocationTracker(enabled = true) {
       if (!point) return;
       point.source = source;
 
-      // 3. LIVE TRACKING: Socket Emit (Zero delay, No DB)
       if (source === 'LIVE_REFRESH') {
-        if (socket?.connected) {
+        if (connected && socket) {
           socket.emit('staff:location:live', {
              lat: point.latitude,
              lng: point.longitude,
@@ -212,7 +200,6 @@ export function useLocationTracker(enabled = true) {
         return;
       }
 
-      // 4. HISTORICAL TRACKING: REST API
       uploadInFlightRef.current = true;
       try {
         await flush();
@@ -227,15 +214,10 @@ export function useLocationTracker(enabled = true) {
     } catch (e) {
        console.error('Location tracking failed:', e.message);
     }
-  }, [capture, flush, intervalMinutes, socket]);
+  }, [capture, flush, intervalMinutes, socket, connected]);
 
-
-
-
-  // Handle server-side requests for immediate refresh (LIVE_REFRESH)
   useSocketEvent('location:force_update', useCallback(() => {
     if (enabled) {
-      console.log('Force refresh requested via socket');
       ping('LIVE_REFRESH');
     }
   }, [enabled, ping]));
@@ -252,7 +234,7 @@ export function useLocationTracker(enabled = true) {
     let cancelled = false;
 
     (async () => {
-      let minutes = 60; // Default to 60 if config fails
+      let minutes = 60;
       try {
         const { data } = await api.get('/locations/config');
         if (!data.data.enabled) return;
@@ -263,17 +245,15 @@ export function useLocationTracker(enabled = true) {
       setIntervalMinutes(minutes);
       setStatus('active');
 
-      // 1. Persistent Tracking: Native background watcher
       try {
         await BackgroundGeolocation.addWatcher(
-
           {
             id: 'bs_watcher',
             backgroundTitle: 'Business Sarthi Tracking',
             backgroundMessage: 'Shift active. Tracking for route and heatmap...',
             requestPermissions: true,
             stale: false,
-            distanceFilter: 50, // Reduced to 50m for better route precision
+            distanceFilter: 50,
           },
           async (pos, err) => {
             if (err) return;
@@ -301,23 +281,21 @@ export function useLocationTracker(enabled = true) {
         console.error('Failed to start native background watcher:', e);
       }
 
-      // 3. Persistent Tracking: Foreground interval fallback
-      ping(); // Initial ping
+      ping();
       persistentTimerRef.current = setInterval(ping, minutes * 60 * 1000);
 
       const onVisible = () => { if (document.visibilityState === 'visible') ping(); };
       document.addEventListener('visibilitychange', onVisible);
 
-
-      const onNetChange = (status) => {
-        if (status.connected) {
+      const onNetChange = (s) => {
+        if (s.connected) {
           stopAlert();
           flush();
         } else {
           playAlert('NO_INTERNET');
         }
       };
-      const netHandler = Network.addListener('networkStatusChange', status => onNetChange(status));
+      const netHandler = Network.addListener('networkStatusChange', onNetChange);
 
       return () => {
         document.removeEventListener('visibilitychange', onVisible);
@@ -327,12 +305,10 @@ export function useLocationTracker(enabled = true) {
 
     return () => {
       cancelled = true;
-      if (liveTimerRef.current) clearInterval(liveTimerRef.current);
       if (persistentTimerRef.current) clearInterval(persistentTimerRef.current);
       stopAlert();
     };
   }, [enabled, ping, flush, playAlert, stopAlert, updateTrackingNotification]);
-
 
   return { status, intervalMinutes, lastPing, isAlerting, ping };
 }

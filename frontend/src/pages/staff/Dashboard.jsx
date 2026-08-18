@@ -1,33 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarCheck, CalendarOff, Target, Clock as ClockIcon, MapPin, AlertTriangle, MessageSquare, Mail, Phone, Building2, Calendar, Fingerprint } from 'lucide-react';
-import { ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
+import {
+  CalendarOff, Clock as ClockIcon, MapPin,
+  AlertTriangle, Mail, Phone, Building2, Calendar, Fingerprint
+} from 'lucide-react';
 import { api } from '@/api/client';
 import { NativeBiometric } from '@capgo/capacitor-native-biometric';
 import { Device } from '@capacitor/device';
 import { useAuth } from '@/context/AuthContext';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
-import { Card, CardHeader, CardBody, Spinner, Badge, Button, EmptyState } from '@/components/ui';
-import { formatMoney, formatTime, formatDate, cn, fixFileUrl } from '@/lib/utils';
-import { adToBs } from '@/lib/nepaliDate';
+import { Card, CardBody, Spinner, Badge, Button } from '@/components/ui';
+import { formatTime, cn } from '@/lib/utils';
 import { t } from '@/lib/i18n';
 import LiveClock from '@/components/Clock';
-
-function ProgressRing({ value, color, label, sub }) {
-  return (
-    <div className="flex flex-col items-center">
-      <ResponsiveContainer width={140} height={140}>
-        <RadialBarChart innerRadius="72%" outerRadius="100%" data={[{ value }]} startAngle={90} endAngle={-270}>
-          <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-          <RadialBar dataKey="value" fill={color} cornerRadius={8} background={{ fill: '#e2e8f0' }} />
-        </RadialBarChart>
-      </ResponsiveContainer>
-      <p className="-mt-[88px] text-2xl font-bold">{value}%</p>
-      <p className="mt-[52px] text-sm font-medium">{label}</p>
-      {sub && <p className="text-xs text-slate-400">{sub}</p>}
-    </div>
-  );
-}
 
 export default function StaffDashboard() {
   const { user } = useAuth();
@@ -35,11 +20,8 @@ export default function StaffDashboard() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // APP LOGIC: Only track if checked in AND not checked out (Requirement 3)
   const isTrackingNeeded = data ? (data.checkInStatus && !data.checkOutStatus) : false;
   const { status: trackingStatus, intervalMinutes, lastPing } = useLocationTracker(isTrackingNeeded);
-
-  const dateFormat = user?.company?.settings?.dateFormat || 'BS';
 
   const language = user?.company?.settings?.language || 'English';
 
@@ -58,6 +40,7 @@ export default function StaffDashboard() {
   const [bioActive, setBioActive] = useState(localStorage.getItem(`biometric_${user?._id}`) === 'true');
 
   useEffect(() => {
+    if (!user?._id) return;
     (async () => {
       try {
         const info = await Device.getInfo();
@@ -117,10 +100,10 @@ export default function StaffDashboard() {
     </div>
   );
 
-  if (!data) return <Spinner />;
+  if (!data) return <div className="flex h-screen items-center justify-center"><Spinner className="h-10 w-10" /></div>;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6 pb-10">
       {/* Profile header */}
       <Card className="overflow-hidden">
         <div className="bg-gradient-to-r from-primary-600 to-primary-800 px-6 py-8 text-white">
@@ -142,7 +125,9 @@ export default function StaffDashboard() {
             <p className="text-[10px] text-slate-400 uppercase tracking-tighter sm:tracking-normal">Paid / Sick Leaves</p>
           </div>
           <div className="text-center p-1">
-            <Badge color="green">Shift Active</Badge>
+            <Badge color={data.checkInStatus ? "green" : "gray"}>
+              {data.checkInStatus ? "Shift Active" : "Off Duty"}
+            </Badge>
             <p className="mt-1 text-[10px] text-slate-400 uppercase">Status</p>
           </div>
         </CardBody>
@@ -171,10 +156,35 @@ export default function StaffDashboard() {
               <p className="font-medium">Location permission denied — enable it in browser settings.</p>
             </>
           ) : (
-            <p className="text-slate-400">Location tracking inactive (not in your company package or initializing…)</p>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
+                 <ClockIcon className="h-4 w-4 text-slate-400" />
+              </div>
+              <p className="text-slate-500 font-medium italic text-xs">Tracking will resume once you check in.</p>
+            </div>
           )}
         </div>
       </Card>
+
+      {/* Biometric */}
+      {bioAvailable && (
+        <Card className="p-4 bg-primary-50 dark:bg-primary-900/10 border-primary-100 dark:border-primary-900/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn("p-2 rounded-full", bioActive ? "bg-primary-600 text-white" : "bg-slate-200 text-slate-500")}>
+                <Fingerprint className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-bold text-sm">Biometric Login</p>
+                <p className="text-xs text-slate-500">{bioActive ? 'Fingerprint/Face ID is active' : 'Secure your attendance with Biometrics'}</p>
+              </div>
+            </div>
+            <Button variant={bioActive ? "outline" : "primary"} size="sm" onClick={toggleBiometric}>
+              {bioActive ? 'Disable' : 'Enable'}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-4">
@@ -188,4 +198,3 @@ export default function StaffDashboard() {
     </div>
   );
 }
-

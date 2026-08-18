@@ -156,16 +156,22 @@ export const staffDashboard = asyncHandler(async (req, res) => {
   const cachedData = statsCache.get(`staff_dashboard:${userId}`);
   if (cachedData) return res.json({ success: true, data: cachedData });
 
+  const today = todayStr();
+  const attendance = await Attendance.findOne({ staff: userId, date: today }).lean();
+
   const dashboardData = {
     profile: {
       name: req.user.name,
       position: req.user.position,
       company: req.user.company?.name,
     },
+    checkInStatus: !!attendance?.checkIn?.time,
+    checkOutStatus: !!attendance?.checkOut?.time,
     leaveBalance: req.user.leaveBalance,
   };
 
   statsCache.set(`staff_dashboard:${userId}`, dashboardData, 60);
   res.json({ success: true, data: dashboardData });
 });
+
 
