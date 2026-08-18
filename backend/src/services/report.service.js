@@ -12,85 +12,36 @@ function imageBuffer(source) {
 }
 
 /**
- * Stream an Excel workbook to the response.
+ * Stream an Excel workbook to the response (Memory Efficient).
  */
 export async function sendExcel(res, { filename, sheetName, columns, rows }) {
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Business Sarthi';
-  const ws = wb.addWorksheet(sheetName || 'Report', {
-    views: [{ state: 'frozen', ySplit: 2 }],
-    pageSetup: { paperSize: 9, orientation: 'landscape' }
-  });
-
-  // 1. Add Report Title Row
-  const title = (sheetName || 'Business Report').toUpperCase();
-  ws.addRow([title]);
-  ws.mergeCells(1, 1, 1, columns.length);
-  const titleRow = ws.getRow(1);
-  titleRow.height = 35;
-  titleRow.getCell(1).font = { size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
-  titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } }; // Slate 900
-  titleRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
-
-  // 2. Setup Columns & Headers
-  ws.columns = columns.map(c => ({
-    header: c.header.toUpperCase(),
-    key: c.key,
-    width: c.width || 15
-  }));
-
-  const headerRow = ws.getRow(2);
-  headerRow.height = 25;
-  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } }; // Blue 500
-  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-
-  // 3. Add Data Rows
-  rows.forEach((r, idx) => {
-    const row = ws.addRow(r);
-    // Alternate row colors
-    if (idx % 2 === 0) {
-      row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }; // Slate 100
-    }
-    row.height = 20;
-    row.alignment = { vertical: 'middle' };
-
-    // Format numbers
-    row.eachCell((cell) => {
-      if (typeof cell.value === 'number') {
-        cell.alignment = { vertical: 'middle', horizontal: 'right' };
-        if (cell.value > 1000) cell.numFmt = '#,##0.00';
-      }
-    });
-  });
-
-  // 4. Style all cells & Auto-width estimation
-  ws.eachRow((row, rowNumber) => {
-    row.eachCell((cell) => {
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
-      };
-    });
-  });
-
-  // Auto-width adjustment based on content
-  ws.columns.forEach(column => {
-    let maxLen = 0;
-    column.eachCell({ includeEmpty: true }, cell => {
-      const len = cell.value ? String(cell.value).length : 0;
-      if (len > maxLen) maxLen = len;
-    });
-    column.width = Math.min(Math.max(column.width || 15, maxLen + 2), 50);
-  });
-
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}.xlsx"`);
-  await wb.xlsx.write(res);
-  res.end();
+
+  const options = {
+    stream: res, // write directly to response
+    useStyles: true,
+    useSharedStrings: true
+  };
+
+  const workbook = new ExcelJS.stream.xlsx.WorkbookWriter(options);
+  const worksheet = workbook.addWorksheet(sheetName || 'Report');
+
+  // 1. Setup Columns
+  worksheet.columns = columns.map(c => ({
+    header: c.header.toUpperCase(),
+    key: c.key,
+    width: c.width || 20
+  }));
+
+  // 2. Add Data
+  rows.forEach((row) => {
+    worksheet.addRow(row).commit();
+  });
+
+  await workbook.commit();
 }
+
 
 /**
  * Stream a simple tabular PDF report.

@@ -13,187 +13,77 @@ const toObjectId = (id) => new mongoose.Types.ObjectId(id);
 /**
  * POST /locations — staff device pushes a location ping
  * Body: { latitude, longitude, accuracy, batteryLevel, deviceInfo, recordedAt, source }
- * Supports batch: { pings: [...] } for offline-queued points.
  */
 export const pushLocation = asyncHandler(async (req, res) => {
   const staffId = req.user._id;
   const companyId = req.user.company?._id || req.user.company;
   const serverNow = new Date();
 
-  // 1. Validate Payload
-  const incoming = req.body.pings || [req.body];
-  if (!incoming.length) throw ApiError.badRequest('No pings provided');
+  const { latitude, longitude, accuracy, batteryLevel, source, recordedAt } = req.body;
+  const pTime = recordedAt ? new Date(recordedAt) : serverNow;
 
-  // Sort by recordedAt to process chronologically
-  incoming.sort((a, b) => new Date(a.recordedAt || 0) - new Date(b.recordedAt || 0));
-
-  // 2. Validate Staff/Company/Tracking Permissions
-  const staff = await authCache.getOrSet(`staff:${staffId}`, () =>
-    User.findOne({ _id: staffId, company: companyId, isActive: true }).populate('company').lean()
-  );
-  if (!staff) throw ApiError.unauthorized('User is inactive or no longer belongs to the company');
-
-  if (!staff.trackingEnabled) {
-    throw ApiError.forbidden('Tracking is disabled for this user');
+  // 1. Strict Coordinate Validation
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return res.status(201).json({ success: true, saved: 0 });
   }
 
-  const company = staff.company;
-
-  if (!company || company.status !== 'ACTIVE') {
-    throw ApiError.forbidden('Company is not active');
-  }
-
-  if (!company.package?.features?.employeeTracking) {
-    throw ApiError.forbidden('Employee tracking is not enabled for your company package');
-  }
-
-  // 3. Attendance Status (Cached for this request)
-  const attendance = await Attendance.findOne({
-    staff: staffId,
-    date: todayStr(),
-    'checkIn.time': { $exists: true },
-    'checkOut.time': { $exists: false }
+  // 2. LIVE BROADCAST (Zero DB for live tracking)
+  realtime.staffLocation(companyId.toString(), {
+    staffId: staffId.toString(),
+    staffName: req.user.name,
+    position: req.user.position || 'Staff',
+    profilePhoto: req.user.profilePhoto,
+    lat: latitude, lng: longitude, accuracy, batteryLevel,
+    recordedAt: pTime,
+    source
   });
-  const isCheckedIn = !!attendance;
 
-  const packageIntervalMs = (company.package?.trackingIntervalMinutes || 60) * 60000;
+  // 3. PERSISTENT TRACKING: Only on specific interval or special events
+  const isSpecial = ['CHECKIN', 'CHECKOUT', 'MANUAL'].includes(source);
+  const packageIntervalMs = (req.user.company?.package?.trackingIntervalMinutes || 60) * 60000;
 
-  const logsToPersist = [];
-  let latestValidPoint = null;
+  let shouldStore = isSpecial;
 
-  for (const p of incoming) {
-    const { latitude, longitude, accuracy, batteryLevel, source, recordedAt } = p;
-    const pTime = recordedAt ? new Date(recordedAt) : serverNow;
+  if (!shouldStore) {
+    const state = await CurrentStaffLocation.findOne({
+      staff: staffId,
+      $or: [
+        { nextAllowedAt: { $lte: pTime } },
+        { nextAllowedAt: { $exists: false } },
+        { nextAllowedAt: null }
+      ]
+    }).select('_id').lean();
+    if (state) shouldStore = true;
+  }
 
-    // 4. Strict Coordinate Validation
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) continue;
-    if (accuracy != null && accuracy < 0) continue;
-
-    latestValidPoint = {
-      lat: latitude,
-      lng: longitude,
+  if (shouldStore) {
+    const point = {
+      staff: staffId,
+      company: companyId,
+      location: { type: 'Point', coordinates: [longitude, latitude] },
+      address: isSpecial ? await reverseGeocode(latitude, longitude) : undefined,
       accuracy,
       batteryLevel,
-      source,
       recordedAt: pTime,
-      receivedAt: serverNow
+      source: isSpecial ? source : 'BACKGROUND',
     };
 
-    // 5. HISTORICAL TRACKING: Atomic decision
-    if (isCheckedIn && source !== 'LIVE_REFRESH') {
-      const isSpecial = ['CHECKIN', 'CHECKOUT', 'MANUAL'].includes(source);
-
-      let shouldPersist = false;
-      let currentStateForSpeed = await CurrentStaffLocation.findOne({ staff: staffId });
-
-      if (isSpecial) {
-        shouldPersist = true;
-      } else {
-        // Atomic slot reservation
-        const state = await CurrentStaffLocation.findOneAndUpdate(
-          {
-            staff: staffId,
-            $or: [
-              { nextAllowedAt: { $lte: pTime } },
-              { nextAllowedAt: { $exists: false } },
-              { nextAllowedAt: null }
-            ]
-          },
-          { $set: { nextAllowedAt: new Date(pTime.getTime() + packageIntervalMs) } },
-          { new: true }
-        );
-
-        if (state) {
-          shouldPersist = true;
-          currentStateForSpeed = state;
-        }
-      }
-
-      if (shouldPersist) {
-        let address = p.address;
-        if (!address && isSpecial) {
-          address = await reverseGeocode(latitude, longitude);
-        }
-
-        // 6. Anomaly Detection (Speed Check)
-        let isAnomaly = false;
-        let anomalyReason = null;
-
-        if (currentStateForSpeed?.location?.coordinates?.length === 2 && currentStateForSpeed.recordedAt) {
-          const prevLat = currentStateForSpeed.location.coordinates[1];
-          const prevLng = currentStateForSpeed.location.coordinates[0];
-          const distKm = haversine(prevLat, prevLng, latitude, longitude);
-          const timeHrs = (pTime - new Date(currentStateForSpeed.recordedAt)) / 3600000;
-
-          if (timeHrs > 0) {
-            const speedKph = distKm / timeHrs;
-            if (speedKph > 200) { // Impossible speed (> 200km/h)
-              isAnomaly = true;
-              anomalyReason = `IMPOSSIBLE_SPEED: ${Math.round(speedKph)} km/h`;
-            }
-          }
-        }
-
-        logsToPersist.push({
-          staff: staffId,
-          company: companyId,
-          location: { type: 'Point', coordinates: [longitude, latitude] },
-          address,
-          accuracy,
-          batteryLevel,
-          deviceInfo: p.deviceInfo,
-          recordedAt: pTime,
-          receivedAt: serverNow,
-          source: isSpecial ? source : 'BACKGROUND',
-          isAnomaly,
-          anomalyReason
-        });
-      }
-    }
+    await Promise.all([
+      LocationLog.create(point),
+      CurrentStaffLocation.updateOne(
+        { staff: staffId },
+        { $set: { ...point, nextAllowedAt: new Date(pTime.getTime() + packageIntervalMs) } },
+        { upsert: true }
+      )
+    ]);
   }
 
-  // 7. LIVE STATE: Update once per batch with the latest valid data
-  if (latestValidPoint) {
-    await CurrentStaffLocation.findOneAndUpdate(
-      { staff: staffId },
-      { $set: {
-          location: { type: 'Point', coordinates: [latestValidPoint.lng, latestValidPoint.lat] },
-          accuracy: latestValidPoint.accuracy,
-          batteryLevel: latestValidPoint.batteryLevel,
-          recordedAt: latestValidPoint.recordedAt,
-          receivedAt: serverNow,
-          source: latestValidPoint.source,
-          company: companyId
-      } },
-      { upsert: true }
-    );
 
-    realtime.staffLocation(companyId.toString(), {
-      staffId: staffId.toString(),
-      staffName: staff.name,
-      position: staff.position || 'Staff',
-      profilePhoto: staff.profilePhoto,
-      ...latestValidPoint
-    });
-  }
-
-  if (logsToPersist.length > 0) {
-    await LocationLog.insertMany(logsToPersist, { ordered: false });
-
-    // Update lastStoredAt for UI status logic (using the very last point persisted)
-    const lastP = logsToPersist[logsToPersist.length - 1];
-    await CurrentStaffLocation.updateOne(
-      { staff: staffId },
-      { $set: { lastStoredAt: lastP.recordedAt } }
-    );
-  }
-
-  res.status(201).json({
-    success: true,
-    saved: logsToPersist.length,
-    live: !!latestValidPoint
-  });
+  res.status(201).json({ success: true, saved: shouldStore ? 1 : 0 });
 });
+
+
+
 
 /** GET /locations/interval — staff app asks how often to ping (from company package) */
 export const getTrackingConfig = asyncHandler(async (req, res) => {
@@ -483,38 +373,8 @@ export const requestRefresh = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Refresh request sent to active staff' });
 });
 
-/** GET /locations/analysis/:staffId?period= — movement stats (distance, pings, active hours) */
-export const movementAnalysis = asyncHandler(async (req, res) => {
-  const staff = await User.findById(req.params.staffId);
-  if (!staff) throw ApiError.notFound('Staff not found');
-  assertScope(req, staff);
-
-  const { start, end } = rangeFromPeriod(req.query.period || 'daily');
-  const logs = await LocationLog.find({ staff: staff._id, recordedAt: { $gte: start, $lte: end } })
-    .sort('recordedAt').lean();
-
-  let distanceKm = 0;
-  for (let i = 1; i < logs.length; i++) {
-    distanceKm += haversine(
-      logs[i - 1].location.coordinates[1], logs[i - 1].location.coordinates[0],
-      logs[i].location.coordinates[1], logs[i].location.coordinates[0]
-    );
-  }
-
-  res.json({
-    success: true,
-    data: {
-      staff: { id: staff._id, name: staff.name },
-      period: req.query.period || 'daily',
-      totalPings: logs.length,
-      distanceKm: Math.round(distanceKm * 100) / 100,
-      firstPing: logs[0]?.recordedAt || null,
-      lastPing: logs[logs.length - 1]?.recordedAt || null,
-    },
-  });
-});
-
 // ---------- helpers ----------
+
 function assertScope(req, staff) {
   if (['SUPER_ADMIN', 'ADMIN_EMPLOYEE'].includes(req.user.role)) return;
   if (staff.company?.toString() !== req.user.company?._id?.toString()) {

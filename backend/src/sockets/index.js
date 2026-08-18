@@ -96,25 +96,7 @@ export function initSocket(server) {
        }).select('_id').lean();
        if (!attendance) return;
 
-
-
-       // 4. Update CurrentState (Live Tracking Purpose)
-       await CurrentStaffLocation.findOneAndUpdate(
-         { staff: id },
-         {
-           $set: {
-             location: { type: 'Point', coordinates: [lng, lat] },
-             accuracy, batteryLevel,
-             recordedAt: recordedAt ? new Date(recordedAt) : serverNow,
-             receivedAt: serverNow,
-             source: 'LIVE_REFRESH',
-             company: company
-           }
-         },
-         { upsert: true }
-       ).catch(err => console.error('Socket state update failed', err));
-
-       // 5. Broadcast to company managers + platform with receivedAt
+       // 4. Broadcast to company managers + platform
        if (company) {
           io.to(`company:${company}`).to('platform').emit('location:update', {
              staffId: id,
@@ -127,7 +109,9 @@ export function initSocket(server) {
              source: 'LIVE_REFRESH'
           });
        }
+
     });
+
 
     socket.on('disconnect', () => {});
   });

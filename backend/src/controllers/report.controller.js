@@ -23,9 +23,10 @@ export const trackingExcel = asyncHandler(async (req, res) => {
   if (req.companyId) match.company = oid(req.companyId);
 
   const [logs, company] = await Promise.all([
-    LocationLog.find(match).populate('staff', 'name position').sort('recordedAt').limit(20000).lean(),
+    LocationLog.find(match).populate('staff', 'name position').sort('recordedAt').limit(5000).lean(),
     Company.findById(req.companyId).populate('package').lean()
   ]);
+
 
   const interval = company?.package?.trackingIntervalMinutes || 60;
   const filtered = [];

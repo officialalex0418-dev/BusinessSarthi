@@ -45,12 +45,10 @@ const locationLogSchema = new mongoose.Schema(
 );
 
 // ---------- Indexes ----------
-locationLogSchema.index({ staff: 1, company: 1, recordedAt: 1 }, { unique: true }); // Prevent exact duplicate persistence
 locationLogSchema.index({ staff: 1, recordedAt: -1 });
 locationLogSchema.index({ company: 1, recordedAt: -1 });
-locationLogSchema.index({ company: 1, staff: 1, recordedAt: -1 }); // Compound index for performance
-locationLogSchema.index({ location: '2dsphere' });
-// Optional auto-purge of raw pings after 180 days (route summaries should be aggregated)
-locationLogSchema.index({ recordedAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 180 });
+// Auto-purge of raw pings after 45 days (Requirement 7)
+locationLogSchema.index({ recordedAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 45 });
+
 
 export default mongoose.model('LocationLog', locationLogSchema);

@@ -97,17 +97,14 @@ export default function LiveTracking() {
 
   const loadRoute = async () => {
     if (!selectedStaff) return;
-    const [r, a] = await Promise.all([
-      api.get(`/locations/history/${selectedStaff}?period=${period}`),
-      api.get(`/locations/analysis/${selectedStaff}?period=${period}`),
-    ]);
+    const { data } = await api.get(`/locations/history/${selectedStaff}?period=${period}`);
     setRouteData({
-      points: r.data.data.points,
-      attendance: r.data.data.attendance || [],
-      packageInterval: r.data.data.packageInterval || 60
+      points: data.data.points,
+      attendance: data.data.attendance || [],
+      packageInterval: data.data.packageInterval || 60
     });
-    setAnalysis(a.data.data);
   };
+
 
   const loadHeat = async () => {
     const { data } = await api.get(`/locations/heatmap?period=${period}&staffId=${selectedStaff}`);
@@ -221,28 +218,9 @@ export default function LiveTracking() {
                 options={periodOptions} className="w-44" />
               <Button onClick={loadRoute} disabled={!selectedStaff}>Load Route</Button>
             </div>
-            {analysis && (
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-lg bg-slate-50 p-3 text-center dark:bg-slate-800">
-                  <p className="text-xl font-bold">{analysis.distanceKm} km</p>
-                  <p className="text-xs text-slate-500">Distance</p>
-                </div>
-                <div className="rounded-lg bg-slate-50 p-3 text-center dark:bg-slate-800">
-                  <p className="text-xl font-bold">{analysis.totalPings}</p>
-                  <p className="text-xs text-slate-500">Pings</p>
-                </div>
-                <div className="rounded-lg bg-slate-50 p-3 text-center dark:bg-slate-800">
-                  <p className="text-sm font-bold">{analysis.firstPing ? new Date(analysis.firstPing).toLocaleTimeString() : '—'}</p>
-                  <p className="text-xs text-slate-500">First Ping</p>
-                </div>
-                <div className="rounded-lg bg-slate-50 p-3 text-center dark:bg-slate-800">
-                  <p className="text-sm font-bold">{analysis.lastPing ? new Date(analysis.lastPing).toLocaleTimeString() : '—'}</p>
-                  <p className="text-xs text-slate-500">Last Ping</p>
-                </div>
-              </div>
-            )}
           </Card>
           <LiveMap
+
             route={routeData.points}
             attendance={routeData.attendance}
             markerInterval={routeData.packageInterval}

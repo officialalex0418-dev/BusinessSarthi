@@ -98,9 +98,9 @@ r.post('/locations/request-refresh', protect, authorize(...MANAGERS), scopeCompa
 r.get('/locations/metrics', protect, authorize('SUPER_ADMIN'), location.getTrackingMetrics);
 r.get('/locations/heatmap', protect, authorize(...MANAGERS), scopeCompany, location.heatmap);
 r.get('/locations/history/:staffId', protect, authorize(...MANAGERS), location.routeHistory);
-r.get('/locations/analysis/:staffId', protect, authorize(...MANAGERS), location.movementAnalysis);
 
 // ============ ATTENDANCE ============
+
 r.post('/attendance/check-in', protect, authorize('STAFF', 'COMPANY_MANAGER'), validate({ body: schemas.checkInOut }), attendance.checkIn);
 r.post('/attendance/check-out', protect, authorize('STAFF', 'COMPANY_MANAGER'), validate({ body: schemas.checkInOut }), attendance.checkOut);
 r.get('/attendance/me', protect, attendance.myAttendance);

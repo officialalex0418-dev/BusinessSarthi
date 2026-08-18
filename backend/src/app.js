@@ -17,14 +17,19 @@ const app = express();
 app.set('trust proxy', 1); // behind Cloudflare / Northflank / proxies
 
 // ---------- Security ----------
-app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.url}`, { origin: req.headers.origin, ip: req.ip });
-  next();
-});
+if (env.isProd) {
+  app.use(morgan('combined', {
+    stream: logger.stream,
+    skip: (req) => req.url === '/health' || req.url === '/ready'
+  }));
+} else {
+  app.use(morgan('dev'));
+}
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -47,8 +52,9 @@ app.use(
 app.use(mongoSanitize());
 
 // ---------- Parsing / perf ----------
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
 
 
 

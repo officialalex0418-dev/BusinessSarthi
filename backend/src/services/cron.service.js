@@ -27,32 +27,41 @@ async function autoCheckoutInactiveUsers() {
     date: today,
     'checkIn.time': { $exists: true },
     'checkOut.time': { $exists: false }
-  }).populate('staff', 'name');
+  }).select('staff checkIn.time');
+
+  if (!activeSessions.length) return;
+
+  const staffIds = activeSessions.map(s => s.staff);
+
+  // 2. Fetch last known pings for all active staff in one query (Avoid N+1)
+  const lastPings = await LocationLog.aggregate([
+    { $match: { staff: { $in: staffIds }, recordedAt: { $gte: sixtyMinsAgo } } },
+    { $group: { _id: '$staff', lastPing: { $max: '$recordedAt' } } }
+  ]);
+
+  const activeStaffMap = new Map(lastPings.map(p => [p._id.toString(), p.lastPing]));
+  const now = new Date();
 
   for (const session of activeSessions) {
-    // 2. Check the last location ping for this staff
-    const lastLog = await LocationLog.findOne({ staff: session.staff._id })
-      .sort({ recordedAt: -1 })
-      .select('recordedAt');
-
-    // 3. If no ping ever OR last ping was > 60 mins ago
-    // We also check against checkIn.time in case they just checked in and haven't pinged yet
-    const lastActivity = lastLog ? lastLog.recordedAt : session.checkIn.time;
+    const lastActivity = activeStaffMap.get(session.staff.toString()) || session.checkIn.time;
 
     if (lastActivity < sixtyMinsAgo) {
-      console.log(`👤 Auto-checking out ${session.staff.name} due to 60m inactivity.`);
+      console.log(`👤 Auto-checking out staff ${session.staff} due to inactivity.`);
 
-      session.checkOut = {
-        time: new Date(),
-        address: 'System Auto Checkout (Inactivity)',
-        deviceInfo: { platform: 'system', model: 'automated' }
-      };
-
-      if (session.checkIn?.time) {
-        session.workedMinutes = Math.floor((session.checkOut.time - session.checkIn.time) / 60000);
-      }
-
-      await session.save();
+      await Attendance.updateOne(
+        { _id: session._id },
+        {
+          $set: {
+            checkOut: {
+              time: now,
+              address: 'System Auto Checkout (Inactivity)',
+              deviceInfo: { platform: 'system', model: 'automated' }
+            },
+            workedMinutes: Math.floor((now - session.checkIn.time) / 60000)
+          }
+        }
+      );
     }
   }
 }
+

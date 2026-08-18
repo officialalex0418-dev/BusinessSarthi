@@ -17,7 +17,7 @@ export const protect = asyncHandler(async (req, _res, next) => {
     throw ApiError.unauthorized(e.name === 'TokenExpiredError' ? 'Access token expired' : 'Invalid token');
   }
 
-  // Cache user context for 60 seconds to reduce DB load on rapid API calls
+  // Cache user context for 15 seconds to reduce DB load on rapid API calls
   const user = await authCache.getOrSet(`user_ctx:${payload.sub}`, async () => {
     return await User.findById(payload.sub).populate({
       path: 'company',
@@ -27,7 +27,8 @@ export const protect = asyncHandler(async (req, _res, next) => {
       path: 'designation',
       populate: { path: 'department', select: 'name' }
     }).populate('shift');
-  }, 60);
+  }, 15);
+
 
 
   if (!user || !user.isActive) {

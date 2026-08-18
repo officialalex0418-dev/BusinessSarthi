@@ -23,9 +23,9 @@ export function useLocationTracker(enabled = true) {
   const lastPersistentGpsAtRef = useRef(null);
   const uploadInFlightRef = useRef(false);
 
-  const liveTimerRef = useRef(null);
   const persistentTimerRef = useRef(null);
   const audioRef = useRef(null);
+
 
   const alertTimerRef = useRef(null);
   const gpsOffStartTimeRef = useRef(null);
@@ -216,10 +216,8 @@ export function useLocationTracker(enabled = true) {
       uploadInFlightRef.current = true;
       try {
         await flush();
-        const { data } = await api.post('/locations', point);
-        if (data.saved > 0) {
-          lastPersistentGpsAtRef.current = Date.now();
-        }
+        await api.post('/locations', point);
+        lastPersistentGpsAtRef.current = Date.now();
         setLastPing(new Date());
       } catch (err) {
         await localDb.addLocation(point);
@@ -230,6 +228,8 @@ export function useLocationTracker(enabled = true) {
        console.error('Location tracking failed:', e.message);
     }
   }, [capture, flush, intervalMinutes, socket]);
+
+
 
 
   // Handle server-side requests for immediate refresh (LIVE_REFRESH)
@@ -263,14 +263,10 @@ export function useLocationTracker(enabled = true) {
       setIntervalMinutes(minutes);
       setStatus('active');
 
-      // 1. Live Tracking: Ping every 1 minute for live dashboard (Socket only, no DB)
-      liveTimerRef.current = setInterval(() => {
-        ping('LIVE_REFRESH');
-      }, 60000);
-
-      // 2. Persistent Tracking: Native background watcher with intelligent movement detection
+      // 1. Persistent Tracking: Native background watcher
       try {
         await BackgroundGeolocation.addWatcher(
+
           {
             id: 'bs_watcher',
             backgroundTitle: 'Business Sarthi Tracking',
