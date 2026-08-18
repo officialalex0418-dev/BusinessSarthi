@@ -1,213 +1,341 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Users, UserCheck, TrendingUp, Activity, Clock, Building2, ShieldCheck } from 'lucide-react';
+import {
+  Users, UserCheck, UserMinus, Calendar, TrendingUp,
+  Activity, Clock, Building2, ShieldCheck, MapPin,
+  FileText, CreditCard, ChevronRight, LayoutGrid
+} from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, BarChart, Bar, Cell
+  Tooltip, PieChart, Pie, Cell, Legend, LineChart, Line
 } from 'recharts';
 import { api } from '@/api/client';
-import { Card, CardHeader, CardBody, Spinner, Badge } from '@/components/ui';
-import { formatMoney, formatDateTime, fixFileUrl } from '@/lib/utils';
+import { Card, CardHeader, CardBody, Spinner, Badge, Button, Select } from '@/components/ui';
+import { formatMoney, formatDateTime, fixFileUrl, cn } from '@/lib/utils';
 import LiveClock from '@/components/Clock';
+import { adToBs } from '@/lib/nepaliDate';
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#f43f5e'];
+
+const StatSparkline = ({ data, color }) => (
+  <div className="h-8 w-16">
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data}>
+        <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2} dot={false} />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+);
 
 export default function CompanyDashboard() {
   const [data, setData] = useState(null);
-
-  const load = useCallback(async () => {
-    const { data: res } = await api.get('/dashboard/company');
-    setData(res.data);
-  }, []);
-
   const [currentMonth, setCurrentMonth] = useState('');
 
   const load = useCallback(async () => {
-    const { data: res } = await api.get('/dashboard/company');
-    setData(res.data);
+    try {
+      const { data: res } = await api.get('/dashboard/company');
+      setData(res.data);
 
-    const dateFormat = res.data.company?.settings?.dateFormat || 'AD';
-    if (dateFormat === 'BS') {
-       const bs = adToBs(new Date());
-       setCurrentMonth(`${bs.year}-${String(bs.month).padStart(2, '0')}`);
-    } else {
-       setCurrentMonth(new Date().toISOString().slice(0, 7));
+      const dateFormat = res.data.company?.settings?.dateFormat || 'AD';
+      if (dateFormat === 'BS') {
+         const bs = adToBs(new Date());
+         setCurrentMonth(`${bs.year}-${String(bs.month).padStart(2, '0')}`);
+      } else {
+         setCurrentMonth(new Date().toISOString().slice(0, 7));
+      }
+    } catch (e) {
+      console.error('Failed to load dashboard', e);
     }
   }, []);
 
   useEffect(() => {
     load();
-
-    // Auto-refresh when month changes
     const checkInterval = setInterval(() => {
-      const dateFormat = data?.company?.settings?.dateFormat || 'AD';
       const now = new Date();
       let nowMonth;
+      const dateFormat = data?.company?.settings?.dateFormat || 'AD';
       if (dateFormat === 'BS') {
         const bs = adToBs(now);
         nowMonth = `${bs.year}-${String(bs.month).padStart(2, '0')}`;
       } else {
         nowMonth = now.toISOString().slice(0, 7);
       }
-
-      if (currentMonth && nowMonth !== currentMonth) {
-        load();
-      }
-    }, 60000); // Check every minute
-
+      if (currentMonth && nowMonth !== currentMonth) load();
+    }, 60000);
     return () => clearInterval(checkInterval);
-  }, [load, data?.company?.settings?.dateFormat, currentMonth]);
+  }, [load, currentMonth, data?.company?.settings?.dateFormat]);
 
-
-
-  if (!data) return <Spinner />;
+  if (!data) return <div className="flex h-[80vh] items-center justify-center"><Spinner className="h-10 w-10" /></div>;
 
   return (
-    <div className="space-y-6">
-      {/* Company Profile & Clock */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 overflow-hidden">
-          <div className="flex h-full flex-col sm:flex-row">
-            <div className="flex flex-1 items-center gap-5 p-6">
-              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-4 border-slate-50 bg-slate-100 shadow-sm dark:border-slate-800 dark:bg-slate-800">
-                {data.company?.logo ? (
-                  <img src={fixFileUrl(data.company.logo)} alt="Logo" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-primary-600">
-                    <Building2 className="h-10 w-10" />
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="truncate text-2xl font-bold">{data.company?.name}</h1>
-                <div className="mt-1 flex flex-wrap gap-3">
-                   <Badge color="blue" variant="outline" className="flex items-center gap-1">
-                     <ShieldCheck className="h-3 w-3" /> {data.company?.package?.name || 'Standard'}
-                   </Badge>
-                   <p className="text-sm text-slate-500">{data.company?.email}</p>
-                </div>
+    <div className="space-y-6 pb-10">
+      {/* Header Section */}
+      <Card className="overflow-hidden border-none shadow-sm">
+        <div className="flex flex-col items-center justify-between gap-6 p-6 sm:flex-row">
+          <div className="flex items-center gap-5">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-50 p-2 shadow-inner dark:bg-slate-800/50">
+              {data.company?.logo ? (
+                <img src={fixFileUrl(data.company.logo)} alt="Logo" className="h-full w-full object-contain" />
+              ) : (
+                <Building2 className="h-10 w-10 text-primary-600" />
+              )}
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{data.company?.name}</h1>
+              <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-sm text-slate-500">
+                <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {data.company?.address || 'Nepal'}</span>
+                <span className="flex items-center gap-1.5"><FileText className="h-4 w-4" /> Reg: {data.company?.registrationNumber || '—'}</span>
+                <span className="flex items-center gap-1.5"><CreditCard className="h-4 w-4" /> PAN: {data.company?.panVat || '—'}</span>
               </div>
             </div>
-            <div className="flex items-center justify-center border-t border-slate-100 bg-slate-50/50 p-6 dark:border-slate-800 dark:bg-slate-900/50 sm:border-l sm:border-t-0">
-               <LiveClock />
+          </div>
+          <div className="rounded-2xl bg-blue-50/50 p-4 px-6 text-center dark:bg-blue-900/10 sm:text-right">
+             <LiveClock className="text-slate-900 dark:text-white" showIcon={false} />
+          </div>
+        </div>
+      </Card>
+
+      {/* Top Stats Grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Today's Sales */}
+        <Card className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600 dark:bg-emerald-900/20">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+            <StatSparkline color="#10b981" data={[{value: 10}, {value: 25}, {value: 15}, {value: 30}]} />
+          </div>
+          <div className="mt-4 space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Today's Sales</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatMoney(data.todaySales)}</p>
+            <div className="flex items-center gap-1 text-xs font-medium">
+              <span className={cn(data.salesTrend >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                {data.salesTrend >= 0 ? '↑' : '↓'} {Math.abs(data.salesTrend)}%
+              </span>
+              <span className="text-slate-400">vs yesterday</span>
             </div>
           </div>
         </Card>
 
-        <div className="grid grid-cols-2 gap-4">
-           <Card className="p-5 flex flex-col justify-center text-center">
-              <div className="mx-auto mb-2 rounded-full bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-900/30">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <p className="text-xl font-bold">{formatMoney(data.todaySales)}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Today's Sales</p>
-           </Card>
-           <Card className="p-5 flex flex-col justify-center text-center">
-              <div className="mx-auto mb-2 rounded-full bg-blue-100 p-2 text-blue-600 dark:bg-blue-900/30">
-                <UserCheck className="h-5 w-5" />
-              </div>
-              <p className="text-xl font-bold">{data.checkedInToday}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Present Today</p>
-           </Card>
-        </div>
+        {/* Present Staff */}
+        <Card className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="rounded-xl bg-blue-50 p-2.5 text-blue-600 dark:bg-blue-900/20">
+              <Users className="h-6 w-6" />
+            </div>
+            <StatSparkline color="#3b82f6" data={[{value: 20}, {value: 28}, {value: 22}, {value: 35}]} />
+          </div>
+          <div className="mt-4 space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Present Staff</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{data.checkedInToday}</p>
+            <p className="text-xs font-medium text-slate-400">of {data.totalStaff} total staff</p>
+          </div>
+        </Card>
+
+        {/* Absent Staff */}
+        <Card className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="rounded-xl bg-orange-50 p-2.5 text-orange-600 dark:bg-orange-900/20">
+              <UserMinus className="h-6 w-6" />
+            </div>
+            <StatSparkline color="#f59e0b" data={[{value: 5}, {value: 2}, {value: 8}, {value: 4}]} />
+          </div>
+          <div className="mt-4 space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Absent Staff</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{data.absentToday}</p>
+            <p className="text-xs font-medium text-slate-400">
+              {data.totalStaff > 0 ? ((data.absentToday / data.totalStaff) * 100).toFixed(1) : 0}% of total staff
+            </p>
+          </div>
+        </Card>
+
+        {/* On Leave */}
+        <Card className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="rounded-xl bg-purple-50 p-2.5 text-purple-600 dark:bg-purple-900/20">
+              <Calendar className="h-6 w-6" />
+            </div>
+            <StatSparkline color="#8b5cf6" data={[{value: 2}, {value: 3}, {value: 1}, {value: 3}]} />
+          </div>
+          <div className="mt-4 space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">On Leave</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{data.onLeaveToday}</p>
+            <p className="text-xs font-medium text-slate-400">
+              {data.totalStaff > 0 ? ((data.onLeaveToday / data.totalStaff) * 100).toFixed(1) : 0}% of total staff
+            </p>
+          </div>
+        </Card>
       </div>
 
-      {/* Analytics */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader title="This Month Sales" subtitle="Daily revenue trend" />
-          <CardBody className="h-72">
-             {data.monthlySalesGraph?.length > 0 ? (
+      {/* Main Charts Grid */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        {/* Monthly Sales Overview */}
+        <Card className="lg:col-span-3">
+          <CardHeader
+            title="Monthly Sales Overview"
+            action={
+              <Select value="this-month" options={[{value: 'this-month', label: 'This Month'}]} className="w-32 h-9 text-xs" onChange={() => {}} />
+            }
+          />
+          <CardBody>
+            <div className="mb-6 space-y-1">
+              <p className="text-xs font-medium text-slate-400 uppercase">Total Sales</p>
+              <div className="flex items-end gap-3">
+                <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatMoney(data.monthlySales)}</p>
+                <div className="flex items-center gap-1 text-sm font-bold text-emerald-600 mb-1">
+                   ↑ {data.monthlyTrend}% <span className="text-[10px] font-medium text-slate-400 ml-1">vs last month</span>
+                </div>
+              </div>
+            </div>
+            <div className="h-72 w-full">
                <ResponsiveContainer width="100%" height="100%">
                  <AreaChart data={data.monthlySalesGraph}>
                    <defs>
-                     <linearGradient id="salesColor" x1="0" y1="0" x2="0" y2="1">
+                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                      </linearGradient>
                    </defs>
                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                   <XAxis dataKey="date" hide />
-                   <YAxis hide />
+                   <XAxis
+                     dataKey="date"
+                     axisLine={false}
+                     tickLine={false}
+                     tick={{fontSize: 10, fill: '#94a3b8'}}
+                     tickFormatter={(val) => val.split('-').slice(1).join('/')}
+                   />
+                   <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
                    <Tooltip
                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                      formatter={(v) => formatMoney(v)}
                    />
-                   <Area type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#salesColor)" />
+                   <Area type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
                  </AreaChart>
                </ResponsiveContainer>
-             ) : (
-               <div className="flex h-full items-center justify-center text-slate-400">No sales data for this month</div>
-             )}
+            </div>
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader title="Product Performance" subtitle="Top 10 products by revenue (This Month)" />
-          <CardBody className="h-72">
-             {data.productSales?.length > 0 ? (
-               <ResponsiveContainer width="100%" height="100%">
-                 <BarChart data={data.productSales} layout="vertical">
-                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                   <XAxis type="number" hide />
-                   <YAxis type="category" dataKey="name" width={100} fontSize={10} axisLine={false} tickLine={false} />
-                   <Tooltip
-                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                     formatter={(v) => formatMoney(v)}
-                   />
-                   <Bar dataKey="amount" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={20} />
-                 </BarChart>
-               </ResponsiveContainer>
-             ) : (
-               <div className="flex h-full items-center justify-center text-slate-400">No product sales recorded</div>
-             )}
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* Stats & Activity */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-         <Card className="lg:col-span-1">
-           <CardHeader title="Staff Stats" />
-           <CardBody className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                 <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-blue-500" />
-                    <span className="text-sm font-medium">Total Registered</span>
-                 </div>
-                 <span className="font-bold">{data.totalStaff}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                 <div className="flex items-center gap-3">
-                    <UserCheck className="h-5 w-5 text-emerald-500" />
-                    <span className="text-sm font-medium">Active Accounts</span>
-                 </div>
-                 <span className="font-bold">{data.activeStaff}</span>
-              </div>
-           </CardBody>
-         </Card>
-
-         <Card className="lg:col-span-2">
-           <CardHeader title="Recent Activity Log" />
-           <CardBody className="p-0">
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {data.recentActivities?.map((act) => (
-                  <div key={act._id} className="flex items-start gap-3 p-4 hover:bg-slate-50/50">
-                    <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary-500" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">
-                        <span className="text-slate-900 dark:text-slate-100">{act.user?.name || 'System'}</span>
-                        <span className="ml-1 text-slate-500">performed {act.action.replaceAll('_', ' ').toLowerCase()}</span>
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-400">{formatDateTime(act.createdAt)}</p>
-                    </div>
+        {/* Product Performance */}
+        <Card className="lg:col-span-2">
+           <CardHeader
+             title="Product Performance"
+             subtitle="(This Month)"
+             action={<Select value="this-month" options={[{value: 'this-month', label: 'This Month'}]} className="w-32 h-9 text-xs" onChange={() => {}} />}
+           />
+           <CardBody>
+             <div className="flex flex-col items-center gap-6">
+                <div className="relative h-56 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={data.productSales}
+                        cx="50%" cy="50%"
+                        innerRadius={60}
+                        outerRadius={85}
+                        paddingAngle={5}
+                        dataKey="amount"
+                      >
+                        {data.productSales.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v) => formatMoney(v)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Total Sales</p>
+                    <p className="text-lg font-bold text-slate-900 dark:text-white">{formatMoney(data.monthlySales)}</p>
+                    <p className="text-[10px] font-medium text-slate-400 uppercase">NPR</p>
                   </div>
-                ))}
-                {!data.recentActivities?.length && (
-                  <div className="p-8 text-center text-sm text-slate-400 italic">No recent activities found</div>
-                )}
-              </div>
+                </div>
+
+                <div className="w-full space-y-4">
+                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b pb-2">
+                      <span>Product</span>
+                      <div className="flex gap-10">
+                         <span>Sales (NPR)</span>
+                         <span className="w-6 text-right">%</span>
+                      </div>
+                   </div>
+                   <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                      {data.productSales.map((p, i) => (
+                        <div key={i} className="flex items-center justify-between group">
+                           <div className="flex items-center gap-3 min-w-0">
+                              <div className="h-2 w-2 shrink-0 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                              <p className="truncate text-xs font-semibold text-slate-700 dark:text-slate-300 group-hover:text-primary-600 transition-colors">{p.name}</p>
+                           </div>
+                           <div className="flex items-center gap-8 font-mono">
+                              <p className="text-xs font-bold text-slate-900 dark:text-white">{p.amount.toLocaleString()}</p>
+                              <p className="w-6 text-right text-xs font-bold text-slate-500">{p.percent}%</p>
+                           </div>
+                        </div>
+                      ))}
+                   </div>
+                   <Button variant="outline" size="sm" className="w-full text-xs font-bold group" onClick={() => window.location.href='/company/inventory'}>
+                     View All Products <ChevronRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                   </Button>
+                </div>
+             </div>
            </CardBody>
-         </Card>
+        </Card>
       </div>
+
+      {/* Activity Log */}
+      <Card>
+        <CardHeader
+          title="Recent Activity Log"
+          action={<Button variant="outline" size="sm" className="text-xs font-bold" onClick={() => window.location.href='/company/reports'}>View All</Button>}
+        />
+        <CardBody className="p-0">
+           <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50/50 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:bg-slate-800/30">
+                    <th className="px-6 py-4">Activity</th>
+                    <th className="px-6 py-4">User</th>
+                    <th className="px-6 py-4 text-right">Time</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {data.recentActivities.map((act) => (
+                    <tr key={act._id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                           <ActivityIcon action={act.action} />
+                           <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                             {act.action.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}
+                             <span className="ml-1 text-slate-400 font-normal">performed</span>
+                           </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{act.user?.name || 'System'}</p>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <p className="text-sm text-slate-500">{formatDateTime(act.createdAt)}</p>
+                      </td>
+                    </tr>
+                  ))}
+                  {!data.recentActivities.length && (
+                    <tr>
+                      <td colSpan="3" className="px-6 py-10 text-center text-sm text-slate-400 italic">No recent activity logs available.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+           </div>
+        </CardBody>
+      </Card>
     </div>
   );
 }
 
+function ActivityIcon({ action }) {
+  const base = "h-8 w-8 rounded-lg flex items-center justify-center";
+  if (action.includes('SALE')) return <div className={cn(base, "bg-emerald-50 text-emerald-600")}><TrendingUp className="h-4 w-4" /></div>;
+  if (action.includes('STAFF') || action.includes('USER')) return <div className={cn(base, "bg-blue-50 text-blue-600")}><Users className="h-4 w-4" /></div>;
+  if (action.includes('INVENTORY')) return <div className={cn(base, "bg-orange-50 text-orange-600")}><LayoutGrid className="h-4 w-4" /></div>;
+  if (action.includes('CHECK')) return <div className={cn(base, "bg-purple-50 text-purple-600")}><Clock className="h-4 w-4" /></div>;
+  if (action.includes('LEAVE')) return <div className={cn(base, "bg-rose-50 text-rose-600")}><Calendar className="h-4 w-4" /></div>;
+  return <div className={cn(base, "bg-slate-100 text-slate-600")}><Activity className="h-4 w-4" /></div>;
+}

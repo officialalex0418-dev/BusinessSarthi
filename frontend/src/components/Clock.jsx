@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Clock as ClockIcon, Calendar } from 'lucide-react';
-import { formatDate, formatTime } from '@/lib/utils';
+import { Clock as ClockIcon } from 'lucide-react';
+import { formatDate, formatTime, cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
-export default function LiveClock() {
+export default function LiveClock({ className, showIcon = true }) {
   const { user } = useAuth();
   const [now, setNow] = useState(new Date());
 
@@ -14,16 +14,22 @@ export default function LiveClock() {
 
   const dateFormat = user?.company?.settings?.dateFormat || 'BS';
   const displayDate = formatDate(now, dateFormat);
+  const displayDay = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(now);
 
   return (
-    <div className="flex flex-col items-center gap-1 sm:items-end">
-      <div className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-        <ClockIcon className="h-6 w-6 text-primary-400" />
-        <span>{formatTime(now)}</span>
-      </div>
-      <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
-        <Calendar className="h-4 w-4" />
-        <span>{displayDate}</span>
+    <div className={cn("flex items-center gap-4", className)}>
+      {showIcon && (
+        <div className="rounded-full bg-blue-100 p-2 text-blue-600 dark:bg-blue-900/30">
+          <ClockIcon className="h-6 w-6" />
+        </div>
+      )}
+      <div className="flex flex-col text-center sm:text-left">
+        <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+          {formatTime(now)}
+        </span>
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          {displayDay}, {displayDate}
+        </span>
       </div>
     </div>
   );
