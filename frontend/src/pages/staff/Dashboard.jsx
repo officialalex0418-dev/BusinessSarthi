@@ -148,8 +148,6 @@ export default function StaffDashboard() {
         </CardBody>
       </Card>
 
-      </Card>
-
       {/* Tracking status */}
       <Card className="p-4">
         <div className="flex items-center gap-3 text-sm">
