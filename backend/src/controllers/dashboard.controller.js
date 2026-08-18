@@ -4,11 +4,12 @@ import {
   LocationLog, AuditLog, Leave, Holiday, Target
 } from '../models/index.js';
 import { asyncHandler } from '../utils/ApiError.js';
-import { todayStr } from '../utils/dates.js';
-import { adToBs } from '../utils/nepaliDate.js';
+import { todayStr, monthStr } from '../utils/dates.js';
+import { adToBs, getBsMonthRange } from '../utils/nepaliDate.js';
 import { statsCache } from '../utils/cache.js';
 
 const oid = (id) => new mongoose.Types.ObjectId(id);
+
 
 /** GET /dashboard/super — Super Admin dashboard */
 export const superDashboard = asyncHandler(async (_req, res) => {
@@ -37,15 +38,28 @@ export const companyDashboard = asyncHandler(async (req, res) => {
   const cachedData = statsCache.get(`company_dashboard:${companyId}`);
   if (cachedData) return res.json({ success: true, data: cachedData });
 
+  const company = await Company.findById(companyId).populate('package', 'name').lean();
+  const dateFormat = company?.settings?.dateFormat || 'AD';
+
   const today = todayStr();
   const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
-  const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+
+  let startOfMonth, endOfMonth;
+  if (dateFormat === 'BS') {
+    const bsNow = adToBs(new Date());
+    const bsMonth = `${bsNow.year}-${String(bsNow.month).padStart(2, '0')}`;
+    const range = getBsMonthRange(bsMonth);
+    startOfMonth = range.start;
+    endOfMonth = range.end;
+  } else {
+    startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+    endOfMonth = new Date(); endOfMonth.setMonth(endOfMonth.getMonth() + 1); endOfMonth.setDate(0); endOfMonth.setHours(23, 59, 59, 999);
+  }
 
   const [
-    company, totalStaff, activeStaff, checkedInToday,
+    totalStaff, activeStaff, checkedInToday,
     todaySalesAgg, monthlySalesGraph, productSalesAgg, recentActivities
   ] = await Promise.all([
-    Company.findById(companyId).populate('package', 'name').lean(),
     User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] } }),
     User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] }, isActive: true }),
     Attendance.countDocuments({ company: companyId, date: today, 'checkIn.time': { $exists: true } }),
@@ -54,7 +68,7 @@ export const companyDashboard = asyncHandler(async (req, res) => {
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]),
     Sale.aggregate([
-      { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth } } },
+      { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
       { $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$saleDate' } },
           total: { $sum: '$amount' }
@@ -62,7 +76,7 @@ export const companyDashboard = asyncHandler(async (req, res) => {
       { $sort: { _id: 1 } }
     ]),
     Sale.aggregate([
-      { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth } } },
+      { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
       { $group: { _id: '$productName', total: { $sum: '$amount' }, quantity: { $sum: '$quantity' } } },
       { $sort: { total: -1 } },
       { $limit: 10 }
@@ -84,6 +98,7 @@ export const companyDashboard = asyncHandler(async (req, res) => {
   statsCache.set(`company_dashboard:${companyId}`, dashboardData, 60);
   res.json({ success: true, data: dashboardData });
 });
+
 
 
 /** GET /dashboard/staff — Staff app dashboard */

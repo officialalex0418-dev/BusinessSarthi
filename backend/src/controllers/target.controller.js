@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
-import { Target, User, Sale, SalesInvoice } from '../models/index.js';
+import { Target, User, Sale, SalesInvoice, Company } from '../models/index.js';
 import { asyncHandler, ApiError } from '../utils/ApiError.js';
-import { bsToAd, bsMapping, adToBs } from '../utils/nepaliDate.js';
+import { bsToAd, bsMapping, adToBs, getBsMonthRange } from '../utils/nepaliDate.js';
 import { rangeFromPeriod } from '../utils/dates.js';
+
 
 /** Assign/Update targets in bulk for a specific month */
 export const setTargets = asyncHandler(async (req, res) => {
@@ -61,31 +62,28 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
     from.setHours(0, 0, 0, 0);
     to = new Date(endDate);
     to.setHours(23, 59, 59, 999);
-  } else if (period) {
+  } else if (period && period !== 'monthly') {
     const range = rangeFromPeriod(period);
     from = range.start;
     to = range.end;
-  } else if (month && calendarType) {
-    if (calendarType === 'BS') {
-      const [y, m] = month.split('-').map(Number);
-      if (!bsMapping[y]) throw ApiError.badRequest('Invalid BS year');
-      const days = bsMapping[y][m - 1];
-      from = bsToAd(`${month}-01`);
-      to = bsToAd(`${month}-${String(days).padStart(2, '0')}`);
-      from.setHours(0, 0, 0, 0);
-      to.setHours(23, 59, 59, 999);
+  } else {
+    // Default to "monthly" using Company's calendar type
+    const company = await Company.findById(companyId).select('settings').lean();
+    const effectiveCalendar = calendarType || company?.settings?.dateFormat || 'AD';
+    const effectiveMonth = month || (effectiveCalendar === 'BS' ? (bs => `${bs.year}-${String(bs.month).padStart(2, '0')}`)(adToBs(new Date())) : new Date().toISOString().slice(0, 7));
+
+    if (effectiveCalendar === 'BS') {
+      const range = getBsMonthRange(effectiveMonth);
+      from = range.start;
+      to = range.end;
     } else {
-      const [y, m] = month.split('-').map(Number);
+      const [y, m] = effectiveMonth.split('-').map(Number);
       from = new Date(y, m - 1, 1);
       from.setHours(0, 0, 0, 0);
       to = new Date(y, m, 0, 23, 59, 59, 999);
     }
-  } else {
-    // Default to this month
-    const range = rangeFromPeriod('monthly');
-    from = range.start;
-    to = range.end;
   }
+
 
   const match = { company: companyOid, saleDate: { $gte: from, $lte: to } };
   if (staffId && staffId !== 'all') match.staff = new mongoose.Types.ObjectId(staffId.toString());

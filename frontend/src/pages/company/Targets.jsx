@@ -73,7 +73,26 @@ export default function TargetsPage() {
 
   useEffect(() => {
     load();
-  }, [load]);
+
+    // Auto-refresh when month changes (Requirement: "auto refresh data as month changes")
+    const checkInterval = setInterval(() => {
+      let currentMonth;
+      if (dateFormat === 'BS') {
+        const bs = adToBs(new Date());
+        currentMonth = `${bs.year}-${String(bs.month).padStart(2, '0')}`;
+      } else {
+        currentMonth = new Date().toISOString().slice(0, 7);
+      }
+
+      // If system month has progressed, update state which triggers load()
+      if (currentMonth !== month && period === 'monthly') {
+        setMonth(currentMonth);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(checkInterval);
+  }, [load, month, dateFormat, period]);
+
 
   const periodOptions = [
     { value: 'today', label: 'Today' },

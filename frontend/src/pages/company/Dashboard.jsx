@@ -17,7 +17,45 @@ export default function CompanyDashboard() {
     setData(res.data);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const [currentMonth, setCurrentMonth] = useState('');
+
+  const load = useCallback(async () => {
+    const { data: res } = await api.get('/dashboard/company');
+    setData(res.data);
+
+    const dateFormat = res.data.company?.settings?.dateFormat || 'AD';
+    if (dateFormat === 'BS') {
+       const bs = adToBs(new Date());
+       setCurrentMonth(`${bs.year}-${String(bs.month).padStart(2, '0')}`);
+    } else {
+       setCurrentMonth(new Date().toISOString().slice(0, 7));
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+
+    // Auto-refresh when month changes
+    const checkInterval = setInterval(() => {
+      const dateFormat = data?.company?.settings?.dateFormat || 'AD';
+      const now = new Date();
+      let nowMonth;
+      if (dateFormat === 'BS') {
+        const bs = adToBs(now);
+        nowMonth = `${bs.year}-${String(bs.month).padStart(2, '0')}`;
+      } else {
+        nowMonth = now.toISOString().slice(0, 7);
+      }
+
+      if (currentMonth && nowMonth !== currentMonth) {
+        load();
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(checkInterval);
+  }, [load, data?.company?.settings?.dateFormat, currentMonth]);
+
+
 
   if (!data) return <Spinner />;
 
