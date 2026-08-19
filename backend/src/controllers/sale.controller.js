@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Sale, User, Inventory, Customer } from '../models/index.js';
+import { Sale, User, Inventory, Customer, Company, Target } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
@@ -7,6 +7,8 @@ import { emails } from '../services/email.service.js';
 import { notify } from '../services/notification.service.js';
 import { realtime } from '../sockets/index.js';
 import { rangeFromPeriod } from '../utils/dates.js';
+import { adToBs, getBsMonthRange } from '../utils/nepaliDate.js';
+
 
 const oid = (id) => new mongoose.Types.ObjectId(id);
 
@@ -143,9 +145,23 @@ export const listSales = asyncHandler(async (req, res) => {
   if (startDate && endDate) {
     filter.saleDate = { $gte: new Date(startDate), $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) };
   } else if (period) {
-    const { start, end } = rangeFromPeriod(period);
-    filter.saleDate = { $gte: start, $lte: end };
+    if (period === 'monthly') {
+      const company = await Company.findById(req.companyId).select('settings').lean();
+      const dateFormat = company?.settings?.dateFormat || 'AD';
+      if (dateFormat === 'BS') {
+        const bs = adToBs(new Date());
+        const { start, end } = getBsMonthRange(`${bs.year}-${String(bs.month).padStart(2, '0')}`);
+        filter.saleDate = { $gte: start, $lte: end };
+      } else {
+        const { start, end } = rangeFromPeriod('monthly');
+        filter.saleDate = { $gte: start, $lte: end };
+      }
+    } else {
+      const { start, end } = rangeFromPeriod(period);
+      filter.saleDate = { $gte: start, $lte: end };
+    }
   }
+
 
   if (customerId && customerId !== 'all') filter.customer = customerId;
 
@@ -215,24 +231,47 @@ export const salesAnalytics = asyncHandler(async (req, res) => {
 
 /** GET /sales/me/summary — staff target progress */
 export const mySalesSummary = asyncHandler(async (req, res) => {
-  const { start, end } = rangeFromPeriod('monthly');
-  const result = await Sale.aggregate([
-    { $match: { staff: req.user._id, company: oid(req.companyId), saleDate: { $gte: start, $lte: end } } },
-    { $group: { _id: null, achieved: { $sum: '$amount' }, count: { $sum: 1 } } },
+  const companyId = req.companyId;
+  const company = await Company.findById(companyId).select('settings').lean();
+  const dateFormat = company?.settings?.dateFormat || 'AD';
+
+  let start, end, targetMonth;
+  if (dateFormat === 'BS') {
+    const bs = adToBs(new Date());
+    targetMonth = `${bs.year}-${String(bs.month).padStart(2, '0')}`;
+    const range = getBsMonthRange(targetMonth);
+    start = range.start;
+    end = range.end;
+  } else {
+    targetMonth = new Date().toISOString().slice(0, 7);
+    start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
+    end = new Date(start); end.setMonth(end.getMonth() + 1); end.setDate(0); end.setHours(23, 59, 59, 999);
+  }
+
+  const [salesResult, targetDoc] = await Promise.all([
+    Sale.aggregate([
+      { $match: { staff: req.user._id, company: oid(companyId), saleDate: { $gte: start, $lte: end } } },
+      { $group: { _id: null, achieved: { $sum: '$amount' }, count: { $sum: 1 } } },
+    ]),
+    Target.findOne({ staff: req.user._id, month: targetMonth, calendarType: dateFormat })
   ]);
-  const achieved = result[0]?.achieved || 0;
-  const target = req.user.monthlyTarget || 0;
+
+  const achieved = salesResult[0]?.achieved || 0;
+  const target = targetDoc?.amount || 0;
+
   res.json({
     success: true,
     data: {
       monthlyTarget: target,
       achieved,
       remaining: Math.max(target - achieved, 0),
-      progressPct: target ? Math.min(Math.round((achieved / target) * 100), 100) : 0,
-      salesCount: result[0]?.count || 0,
+      progressPct: target ? Math.round((achieved / target) * 100) : 0,
+      salesCount: salesResult[0]?.count || 0,
+      period: { start, end }
     },
   });
 });
+
 
 /** GET /sales/metadata - fetch products and customers for staff sales entry */
 export const getSalesMetadata = asyncHandler(async (req, res) => {

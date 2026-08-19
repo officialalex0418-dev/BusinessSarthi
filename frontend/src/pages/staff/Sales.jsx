@@ -26,6 +26,13 @@ export default function StaffSales() {
   const [loadError, setLoadError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [featureBlocked, setFeatureBlocked] = useState(false);
+  const [period, setPeriod] = useState('monthly');
+
+  const periodOptions = [
+    { value: 'monthly', label: 'This Month' },
+    { value: '3months', label: 'Last 3 Months' },
+    { value: '6months', label: 'Last 6 Months' },
+  ];
 
   const loadMetadata = useCallback(async () => {
     try {
@@ -37,7 +44,7 @@ export default function StaffSales() {
   const load = useCallback(async () => {
     try {
       const [s, sum] = await Promise.all([
-        api.get('/sales', { params: { period: 'monthly' } }),
+        api.get('/sales', { params: { period } }),
         api.get('/sales/me/summary')
       ]);
       setSales(s.data.data);
@@ -54,9 +61,10 @@ export default function StaffSales() {
         setLoadError('Failed to load sales data');
       }
     }
-  }, [loadMetadata]);
+  }, [loadMetadata, period]);
 
   useEffect(() => { load(); }, [load]);
+
 
   const addRow = () => setItems([...items, { ...emptyRow }]);
 
@@ -184,51 +192,82 @@ export default function StaffSales() {
   if (!sales || !summary) return <Spinner />;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 pb-20">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Sales Entry</h1>
-        <Button onClick={() => { resetForm(); setModal(true); }}><Plus className="h-4 w-4" /> New Sale</Button>
+        <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Sales Entry</h1>
+        <Button onClick={() => { resetForm(); setModal(true); }} className="h-11 px-6 rounded-xl shadow-lg shadow-primary-100">
+           <Plus className="h-5 w-5 mr-2" /> New Sale
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className="p-4 text-center">
-          <p className="text-xl font-bold">{formatMoney(summary.monthlyTarget)}</p>
-          <p className="text-xs text-slate-500 uppercase tracking-wide">Target</p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <Card className="p-6 border-none shadow-sm flex flex-col items-center justify-center text-center space-y-2">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target</p>
+          <p className="text-2xl font-black text-slate-900 dark:text-white">{formatMoney(summary.monthlyTarget)}</p>
+          <p className="text-[10px] font-medium text-slate-400">Monthly goal</p>
         </Card>
-        <Card className="p-4 text-center border-emerald-100 dark:border-emerald-900/30">
-          <p className="text-xl font-bold text-emerald-600">{formatMoney(summary.achieved)}</p>
-          <p className="text-xs text-slate-500 uppercase tracking-wide">Achieved ({summary.progressPct}%)</p>
+
+        <Card className="p-6 border-none shadow-sm flex flex-col items-center justify-center text-center space-y-2 relative overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-1 bg-emerald-500" />
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Achieved</p>
+          <p className="text-2xl font-black text-emerald-600">{formatMoney(summary.achieved)}</p>
+          <p className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">({summary.progressPct}%)</p>
         </Card>
-        <Card className="p-4 text-center">
-          <p className="text-xl font-bold text-orange-500">{formatMoney(summary.remaining)}</p>
-          <p className="text-xs text-slate-500 uppercase tracking-wide">Remaining</p>
+
+        <Card className="p-6 border-none shadow-sm flex flex-col items-center justify-center text-center space-y-2">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Remaining</p>
+          <p className="text-2xl font-black text-orange-500">{formatMoney(summary.remaining)}</p>
+          <p className="text-[10px] font-medium text-slate-400">to meet target</p>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader title="My Sales — Last 30 days" subtitle={`${summary.salesCount} entries this month`} />
+      {/* Main Table Card */}
+      <Card className="border-none shadow-sm overflow-hidden">
+        <div className="flex flex-col sm:flex-row items-center justify-between p-6 gap-4 border-b border-slate-50 dark:border-slate-800">
+           <div>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+                My Sales — {periodOptions.find(o => o.value === period)?.label}
+              </h3>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">{summary.salesCount} total entries in this view</p>
+           </div>
+           <div className="flex items-center gap-3">
+              <span className="text-[10px] font-black uppercase text-slate-400">Filter By:</span>
+              <Select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                options={periodOptions}
+                className="w-40 h-10 rounded-xl"
+              />
+           </div>
+        </div>
+
         <Table
           columns={['Date', 'Product', 'Qty', 'Amount', 'Customer', 'Actions']}
           data={sales.items}
+
           renderRow={(s) => (
-            <tr key={s._id}>
-              <td className="table-td">{formatDate(s.saleDate, dateFormat)}</td>
-              <td className="table-td font-medium">{s.productName}</td>
-              <td className="table-td">{s.quantity}</td>
-              <td className="table-td font-semibold">{formatMoney(s.amount)}</td>
-              <td className="table-td">{s.customerName || '—'}</td>
+            <tr key={s._id} className="hover:bg-slate-50/50 transition-colors">
+              <td className="table-td text-slate-500 font-medium">{formatDate(s.saleDate, dateFormat)}</td>
+              <td className="table-td font-bold text-slate-800 dark:text-slate-200">{s.productName}</td>
+              <td className="table-td">
+                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-tight">{s.quantity}</span>
+              </td>
+              <td className="table-td font-black text-slate-900 dark:text-white">{formatMoney(s.amount)}</td>
+              <td className="table-td text-slate-500 text-xs font-semibold">{s.customerName || '—'}</td>
               <td className="table-td">
                 <div className="flex gap-2">
-                    <button onClick={() => startEdit(s)} className="p-1.5 text-slate-400 hover:text-primary-600 transition-colors rounded-lg hover:bg-primary-50">
+                    <button onClick={() => startEdit(s)} title="Edit Entry" className="p-2 text-slate-400 hover:text-primary-600 transition-all hover:bg-primary-50 rounded-xl">
                         <Edit2 className="h-4 w-4" />
                     </button>
-                    <button onClick={() => handleDelete(s._id)} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50">
+                    <button onClick={() => handleDelete(s._id)} title="Delete Entry" className="p-2 text-slate-400 hover:text-red-600 transition-all hover:bg-red-50 rounded-xl">
                         <Trash2 className="h-4 w-4" />
                     </button>
                 </div>
               </td>
             </tr>
           )}
+
           mobileRender={(s) => (
             <div key={s._id} className="p-4 space-y-2 border-b last:border-0 dark:border-slate-800">
               <div className="flex items-center justify-between">
