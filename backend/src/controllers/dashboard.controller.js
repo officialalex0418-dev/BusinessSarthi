@@ -158,15 +158,22 @@ export const staffDashboard = asyncHandler(async (req, res) => {
   if (cachedData) return res.json({ success: true, data: cachedData });
 
   const companyId = req.user.company?._id;
+  const dateFormat = req.user.company?.settings?.dateFormat || 'AD';
   const today = todayStr();
   const month = today.slice(0, 7);
-  const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
 
-  const dateFormat = req.user.company?.settings?.dateFormat || 'AD';
-  let targetMonth = month;
+  let startOfMonth, endOfMonth, targetMonth;
+
   if (dateFormat === 'BS') {
-    const bs = adToBs(new Date());
-    targetMonth = `${bs.year}-${String(bs.month).padStart(2, '0')}`;
+    const bsNow = adToBs(new Date());
+    targetMonth = `${bsNow.year}-${String(bsNow.month).padStart(2, '0')}`;
+    const range = getBsMonthRange(targetMonth);
+    startOfMonth = range.start;
+    endOfMonth = range.end;
+  } else {
+    targetMonth = month;
+    startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+    endOfMonth = new Date(startOfMonth); endOfMonth.setMonth(endOfMonth.getMonth() + 1); endOfMonth.setDate(0); endOfMonth.setHours(23, 59, 59, 999);
   }
 
   const [
@@ -175,17 +182,27 @@ export const staffDashboard = asyncHandler(async (req, res) => {
     leaveConfigs
   ] = await Promise.all([
     Attendance.findOne({ staff: userId, date: today }).lean(),
-    Attendance.find({ staff: userId, date: { $regex: `^${month}` } }).lean(),
+    // Attendance uses string date (YYYY-MM-DD), range query is safer but regex works too.
+    // However, for consistency with calendar type, let's use range if possible or stay with month regex for AD.
+    Attendance.find({
+      staff: userId,
+      date: { $gte: todayStr(startOfMonth), $lte: todayStr(endOfMonth) }
+    }).lean(),
     Sale.aggregate([
-      { $match: { staff: userId, saleDate: { $gte: startOfMonth } } },
+      { $match: { staff: userId, saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
     Target.findOne({ staff: userId, month: targetMonth, calendarType: dateFormat }).lean(),
     Holiday.find({ company: companyId, startDate: { $gte: new Date() } })
       .sort('startDate').limit(3).lean(),
-    Leave.find({ staff: userId, status: 'APPROVED', fromDate: { $regex: `^${month}` } }).lean(),
+    Leave.find({
+      staff: userId,
+      status: 'APPROVED',
+      fromDate: { $gte: startOfMonth, $lte: endOfMonth }
+    }).lean(),
     LeaveType.find({ company: companyId }).lean()
   ]);
+
 
   const presentDays = monthAttendance.filter((a) => ['PRESENT', 'HALF_DAY'].includes(a.status)).length;
   const leavesTaken = leavesThisMonth.reduce((sum, l) => sum + (l.days || 1), 0);
