@@ -156,22 +156,87 @@ export const staffDashboard = asyncHandler(async (req, res) => {
   const cachedData = statsCache.get(`staff_dashboard:${userId}`);
   if (cachedData) return res.json({ success: true, data: cachedData });
 
+  const companyId = req.user.company?._id;
   const today = todayStr();
-  const attendance = await Attendance.findOne({ staff: userId, date: today }).lean();
+  const month = today.slice(0, 7);
+  const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+
+  const dateFormat = req.user.company?.settings?.dateFormat || 'AD';
+  let targetMonth = month;
+  if (dateFormat === 'BS') {
+    const bs = adToBs(new Date());
+    targetMonth = `${bs.year}-${String(bs.month).padStart(2, '0')}`;
+  }
+
+  const [
+    todayAttendance, monthAttendance, salesAgg,
+    monthlyTarget, upcomingHolidays, leavesThisMonth,
+    leaveConfigs
+  ] = await Promise.all([
+    Attendance.findOne({ staff: userId, date: today }).lean(),
+    Attendance.find({ staff: userId, date: { $regex: `^${month}` } }).lean(),
+    Sale.aggregate([
+      { $match: { staff: userId, saleDate: { $gte: startOfMonth } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
+    Target.findOne({ staff: userId, month: targetMonth, calendarType: dateFormat }).lean(),
+    Holiday.find({ company: companyId, startDate: { $gte: new Date() } })
+      .sort('startDate').limit(3).lean(),
+    Leave.find({ staff: userId, status: 'APPROVED', fromDate: { $regex: `^${month}` } }).lean(),
+    mongoose.model('LeaveConfig').find({ company: companyId }).lean()
+  ]);
+
+  const presentDays = monthAttendance.filter((a) => ['PRESENT', 'HALF_DAY'].includes(a.status)).length;
+  const leavesTaken = leavesThisMonth.reduce((sum, l) => sum + (l.days || 1), 0);
+
+  // Total allowed leaves per month (average)
+  const totalAllowedLeaves = leaveConfigs.reduce((sum, c) => sum + (c.daysPerYear / 12 || 1), 0);
+
+  const achieved = salesAgg[0]?.total || 0;
+  const target = monthlyTarget?.amount || 0;
+
+  // Simple Greeting Logic
+  const hour = new Date().getHours();
+  let greeting = 'Good Evening';
+  if (hour < 12) greeting = 'Good Morning';
+  else if (hour < 17) greeting = 'Good Afternoon';
 
   const dashboardData = {
     profile: {
       name: req.user.name,
-      position: req.user.position,
+      position: req.user.designation?.name || req.user.position || 'Staff',
       company: req.user.company?.name,
+      profilePhoto: req.user.profilePhoto,
     },
-    checkInStatus: !!attendance?.checkIn?.time,
-    checkOutStatus: !!attendance?.checkOut?.time,
-    leaveBalance: req.user.leaveBalance,
+    greeting,
+    checkInStatus: !!todayAttendance?.checkIn?.time,
+    checkOutStatus: !!todayAttendance?.checkOut?.time,
+    checkInTime: todayAttendance?.checkIn?.time || null,
+    checkOutTime: todayAttendance?.checkOut?.time || null,
+    stats: {
+      leaves: {
+        taken: leavesTaken,
+        total: Math.round(totalAllowedLeaves),
+        remaining: Math.max(Math.round(totalAllowedLeaves) - leavesTaken, 0)
+      },
+      attendance: {
+        present: presentDays,
+        totalDays: 26, // Standard working days
+        percent: Math.min(Math.round((presentDays / 26) * 100), 100)
+      },
+      targets: {
+        total: target,
+        achieved: achieved,
+        remaining: Math.max(target - achieved, 0),
+        percent: target ? Math.round((achieved / target) * 10000) / 100 : 0
+      }
+    },
+    upcomingHolidays,
   };
 
   statsCache.set(`staff_dashboard:${userId}`, dashboardData, 60);
   res.json({ success: true, data: dashboardData });
 });
+
 
 
