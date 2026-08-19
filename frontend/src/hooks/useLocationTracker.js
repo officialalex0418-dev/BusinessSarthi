@@ -3,11 +3,12 @@ import { Geolocation } from '@capacitor/geolocation';
 import { Device } from '@capacitor/device';
 import { Network } from '@capacitor/network';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { registerPlugin } from '@capacitor/core';
+import { registerPlugin, Capacitor } from '@capacitor/core';
 import { api } from '@/api/client';
 import { useSocket, useSocketEvent } from '@/context/SocketContext';
 import { localDb } from '@/lib/storage';
 
+// Community plugin often needs manual registration check
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 
 const ALERT_SOUND_BASE64 = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YT1vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT18=';
@@ -30,16 +31,18 @@ export function useLocationTracker(enabled = true) {
   const checkOutTimerRef = useRef(null);
 
   const notifyUser = useCallback(async (title, message) => {
-    await LocalNotifications.schedule({
-      notifications: [{
-        id: Math.floor(Math.random() * 1000),
-        title,
-        body: message,
-        schedule: { at: new Date(Date.now() + 100) },
-        sound: 'beep.wav',
-        channelId: 'bs_alerts',
-      }]
-    }).catch(() => {});
+    try {
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: Math.floor(Math.random() * 1000),
+          title,
+          body: message,
+          schedule: { at: new Date(Date.now() + 100) },
+          sound: 'beep.wav',
+          channelId: 'bs_alerts',
+        }]
+      });
+    } catch (e) {}
   }, []);
 
   const playAlert = useCallback((reason) => {
@@ -52,11 +55,13 @@ export function useLocationTracker(enabled = true) {
       notifyUser('Internet Disconnected', 'Please enable Mobile Data or Wi-Fi to sync your tracking data.');
     }
 
-    if (!audioRef.current) {
-      audioRef.current = new Audio(ALERT_SOUND_BASE64);
-      audioRef.current.loop = true;
-    }
-    audioRef.current.play().catch(() => {});
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(ALERT_SOUND_BASE64);
+        audioRef.current.loop = true;
+      }
+      audioRef.current.play().catch(() => {});
+    } catch (e) {}
 
     if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
     alertTimerRef.current = setTimeout(() => {
@@ -67,27 +72,32 @@ export function useLocationTracker(enabled = true) {
   const stopAlert = useCallback(() => {
     setIsAlerting(false);
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+      try {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      } catch (e) {}
     }
     if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
   }, []);
 
   const updateTrackingNotification = useCallback(async (isActive) => {
-    if (isActive) {
-      await LocalNotifications.schedule({
-        notifications: [{
-          id: 999,
-          title: 'Business Sarthi Tracking',
-          body: 'Your shift is active and location is being tracked.',
-          ongoing: true,
-          sticky: true,
-          channelId: 'bs_alerts',
-        }]
-      }).catch(() => {});
-    } else {
-      await LocalNotifications.cancel({ notifications: [{ id: 999 }] }).catch(() => {});
-    }
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      if (isActive) {
+        await LocalNotifications.schedule({
+          notifications: [{
+            id: 999,
+            title: 'Business Sarthi Tracking',
+            body: 'Your shift is active and location is being tracked.',
+            ongoing: true,
+            sticky: true,
+            channelId: 'bs_alerts',
+          }]
+        });
+      } else {
+        await LocalNotifications.cancel({ notifications: [{ id: 999 }] });
+      }
+    } catch (e) {}
   }, []);
 
   const capture = useCallback(async () => {
@@ -98,10 +108,11 @@ export function useLocationTracker(enabled = true) {
         throw new Error('NO_INTERNET');
       }
 
+      const isNative = Capacitor.isNativePlatform();
+      if (!isNative) return null;
+
       const info = await Device.getInfo();
       const battery = await Device.getBatteryInfo();
-      const isNative = info.platform === 'android' || info.platform === 'ios';
-      if (!isNative) return null;
 
       try {
         const pos = await Geolocation.getCurrentPosition({
@@ -163,9 +174,9 @@ export function useLocationTracker(enabled = true) {
   }, [playAlert, stopAlert, notifyUser]);
 
   const flush = useCallback(async () => {
-    const queue = await localDb.getAllLocations();
-    if (!queue.length) return;
     try {
+      const queue = await localDb.getAllLocations();
+      if (!queue.length) return;
       await api.post('/locations', { pings: queue });
       await localDb.clearLocations();
     } catch { /* keep queued */ }
@@ -226,7 +237,9 @@ export function useLocationTracker(enabled = true) {
     if (!enabled) {
       stopAlert();
       updateTrackingNotification(false);
-      BackgroundGeolocation.removeWatcher({ id: 'bs_watcher' }).catch(() => {});
+      try {
+        BackgroundGeolocation.removeWatcher({ id: 'bs_watcher' }).catch(() => {});
+      } catch (e) {}
       return;
     }
 
@@ -245,40 +258,42 @@ export function useLocationTracker(enabled = true) {
       setIntervalMinutes(minutes);
       setStatus('active');
 
-      try {
-        await BackgroundGeolocation.addWatcher(
-          {
-            id: 'bs_watcher',
-            backgroundTitle: 'Business Sarthi Tracking',
-            backgroundMessage: 'Shift active. Tracking for route and heatmap...',
-            requestPermissions: true,
-            stale: false,
-            distanceFilter: 50,
-          },
-          async (pos, err) => {
-            if (err) return;
-            if (pos) {
-               const info = await Device.getInfo();
-               const battery = await Device.getBatteryInfo();
-               const point = {
-                  latitude: pos.latitude,
-                  longitude: pos.longitude,
-                  accuracy: pos.accuracy,
-                  batteryLevel: Math.round((battery.batteryLevel || 0) * 100),
-                  recordedAt: new Date(pos.time).toISOString(),
-                  deviceInfo: {
-                    platform: info.platform,
-                    model: info.model,
-                    osVersion: info.osVersion,
-                  },
-                  source: 'BACKGROUND',
-               };
-               ping('BACKGROUND', point);
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await BackgroundGeolocation.addWatcher(
+            {
+              id: 'bs_watcher',
+              backgroundTitle: 'Business Sarthi Tracking',
+              backgroundMessage: 'Shift active. Tracking for route and heatmap...',
+              requestPermissions: true,
+              stale: false,
+              distanceFilter: 50,
+            },
+            async (pos, err) => {
+              if (err) return;
+              if (pos) {
+                 const info = await Device.getInfo();
+                 const battery = await Device.getBatteryInfo();
+                 const point = {
+                    latitude: pos.latitude,
+                    longitude: pos.longitude,
+                    accuracy: pos.accuracy,
+                    batteryLevel: Math.round((battery.batteryLevel || 0) * 100),
+                    recordedAt: new Date(pos.time).toISOString(),
+                    deviceInfo: {
+                      platform: info.platform,
+                      model: info.model,
+                      osVersion: info.osVersion,
+                    },
+                    source: 'BACKGROUND',
+                 };
+                 ping('BACKGROUND', point);
+              }
             }
-          }
-        );
-      } catch (e) {
-        console.error('Failed to start native background watcher:', e);
+          );
+        } catch (e) {
+          console.error('BackgroundGeolocation watcher fail:', e);
+        }
       }
 
       ping();

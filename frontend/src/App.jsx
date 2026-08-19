@@ -4,10 +4,10 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import {
   LayoutDashboard, Building2, Users, Package, Wallet, Settings, ShieldCheck,
-
   MapPin, Boxes, Truck, TrendingUp, FileText, CalendarCheck, CalendarOff, User,
   MessageSquare, LayoutGrid
 } from 'lucide-react';
+import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { useAppPermissions } from '@/hooks/useAppPermissions';
 import { Spinner } from '@/components/ui';
@@ -145,7 +145,6 @@ export default function App() {
   });
 
   const filteredCompanyNav = companyNav.filter(item => {
-    // 1. Feature Gates (Apply to everyone including owners)
     if (item.to === '/company/complaints' && !hasFeature('complaintChat')) return false;
     if (item.to === '/company/sales' && !hasFeature('salesTracking')) return false;
     if (item.to === '/company/inventory' && !hasFeature('inventoryManagement')) return false;
@@ -153,7 +152,6 @@ export default function App() {
     if (item.to === '/company/vendors' && !hasFeature('vendorManagement')) return false;
     if (item.to === '/company/payroll' && !hasFeature('payrollManagement')) return false;
 
-    // 2. Role/Permission Gates
     if (user?.role === 'COMPANY_OWNER') return true;
 
     if (user?.designation?.permissions) {
@@ -227,23 +225,30 @@ export default function App() {
   useEffect(() => {
     requestAllPermissions();
 
-    // Initialize Push Notifications (Requirement 1)
+    // Guarded Push Notifications Initialization
     if (Capacitor.isNativePlatform()) {
-       PushNotifications.requestPermissions().then(result => {
-         if (result.receive === 'granted') {
-           PushNotifications.register();
-         }
-       });
+      (async () => {
+        try {
+          const result = await PushNotifications.requestPermissions();
+          if (result.receive === 'granted') {
+            await PushNotifications.register();
+          }
 
-       PushNotifications.addListener('registration', token => {
-         api.patch('/auth/fcm-token', { token: token.value }).catch(() => {});
-       });
+          PushNotifications.addListener('registration', token => {
+            api.patch('/auth/fcm-token', { token: token.value }).catch(() => {});
+          });
 
-       PushNotifications.addListener('pushNotificationReceived', notification => {
-          // If staff is not checked in, we could potentially ignore or clear the notification
-          // but server-side guard is already handling this for most cases.
-          console.log('Push received:', notification);
-       });
+          PushNotifications.addListener('registrationError', err => {
+            console.error('FCM Registration Error:', err);
+          });
+
+          PushNotifications.addListener('pushNotificationReceived', notification => {
+            console.log('Push received:', notification);
+          });
+        } catch (e) {
+          console.warn('Push Notifications init failed (likely missing native config)', e);
+        }
+      })();
     }
   }, [requestAllPermissions]);
 
