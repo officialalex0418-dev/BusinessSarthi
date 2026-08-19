@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
 import {
   Company, User, Package, Attendance, Sale, SalesInvoice,
-  LocationLog, AuditLog, Leave, Holiday, Target
+  LocationLog, AuditLog, Leave, Holiday, Target, LeaveType
 } from '../models/index.js';
+
 import { asyncHandler } from '../utils/ApiError.js';
 import { todayStr, monthStr } from '../utils/dates.js';
 import { adToBs, getBsMonthRange } from '../utils/nepaliDate.js';
@@ -183,14 +184,15 @@ export const staffDashboard = asyncHandler(async (req, res) => {
     Holiday.find({ company: companyId, startDate: { $gte: new Date() } })
       .sort('startDate').limit(3).lean(),
     Leave.find({ staff: userId, status: 'APPROVED', fromDate: { $regex: `^${month}` } }).lean(),
-    mongoose.model('LeaveConfig').find({ company: companyId }).lean()
+    LeaveType.find({ company: companyId }).lean()
   ]);
 
   const presentDays = monthAttendance.filter((a) => ['PRESENT', 'HALF_DAY'].includes(a.status)).length;
   const leavesTaken = leavesThisMonth.reduce((sum, l) => sum + (l.days || 1), 0);
 
   // Total allowed leaves per month (average)
-  const totalAllowedLeaves = leaveConfigs.reduce((sum, c) => sum + (c.daysPerYear / 12 || 1), 0);
+  const totalAllowedLeaves = leaveConfigs.reduce((sum, c) => sum + (c.days / 12 || 1), 0);
+
 
   const achieved = salesAgg[0]?.total || 0;
   const target = monthlyTarget?.amount || 0;
