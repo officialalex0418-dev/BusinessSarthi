@@ -223,12 +223,14 @@ export default function App() {
   });
 
   useEffect(() => {
-    requestAllPermissions();
+    requestAllPermissions().catch(() => {});
 
     // Guarded Push Notifications Initialization
     if (Capacitor.isNativePlatform()) {
       (async () => {
         try {
+          if (!PushNotifications) return;
+
           const result = await PushNotifications.requestPermissions();
           if (result.receive === 'granted') {
             await PushNotifications.register();
@@ -246,7 +248,7 @@ export default function App() {
             console.log('Push received:', notification);
           });
         } catch (e) {
-          console.warn('Push Notifications init failed (likely missing native config)', e);
+          console.warn('Push Notifications init failed', e);
         }
       })();
     }

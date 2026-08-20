@@ -3,6 +3,7 @@
   "appName": "Business Sarthi",
   "webDir": "dist",
   "server": {
-    "androidScheme": "http"
+    "androidScheme": "https"
   }
+
 }

@@ -8,8 +8,13 @@ import { api } from '@/api/client';
 import { useSocket, useSocketEvent } from '@/context/SocketContext';
 import { localDb } from '@/lib/storage';
 
-// Community plugin often needs manual registration check
-const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
+// Community plugin: wrap registration in try-catch to avoid crash if not linked
+let BackgroundGeolocation = null;
+try {
+  BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
+} catch (e) {
+  console.warn('BackgroundGeolocation plugin not available');
+}
 
 const ALERT_SOUND_BASE64 = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YT1vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT18=';
 
@@ -108,8 +113,7 @@ export function useLocationTracker(enabled = true) {
         throw new Error('NO_INTERNET');
       }
 
-      const isNative = Capacitor.isNativePlatform();
-      if (!isNative) return null;
+      if (!Capacitor.isNativePlatform()) return null;
 
       const info = await Device.getInfo();
       const battery = await Device.getBatteryInfo();
@@ -238,7 +242,9 @@ export function useLocationTracker(enabled = true) {
       stopAlert();
       updateTrackingNotification(false);
       try {
-        BackgroundGeolocation.removeWatcher({ id: 'bs_watcher' }).catch(() => {});
+        if (BackgroundGeolocation) {
+          BackgroundGeolocation.removeWatcher({ id: 'bs_watcher' }).catch(() => {});
+        }
       } catch (e) {}
       return;
     }
@@ -258,7 +264,7 @@ export function useLocationTracker(enabled = true) {
       setIntervalMinutes(minutes);
       setStatus('active');
 
-      if (Capacitor.isNativePlatform()) {
+      if (Capacitor.isNativePlatform() && BackgroundGeolocation) {
         try {
           await BackgroundGeolocation.addWatcher(
             {
