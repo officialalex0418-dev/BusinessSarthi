@@ -150,7 +150,7 @@ export const emails = {
         <div style="text-align:center;background:#f8fafc;padding:20px;border-radius:12px;border:1px dashed #cbd5e1;">
           <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#2563eb;">${otp}</span>
         </div><br/>
-        This code is valid for <b>10 minutes</b>. If you did not request a password reset, please secure your account immediately.`,
+        This code is valid for <b>2 minutes</b>. If you did not request a password reset, please secure your account immediately.`,
     }),
 
   passwordReset: (to, { name, resetUrl }) =>

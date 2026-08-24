@@ -35,11 +35,12 @@ export default function ResetPassword() {
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     if (!form.otp) return setError('Please enter the OTP');
+    if (form.otp.length !== 6) return setError('OTP must be exactly 6 digits');
 
     setLoading(true);
     setError('');
     try {
-      console.log('[OTP VERIFY] Sending request for:', form.email);
+      console.log('[OTP VERIFY] Sending request for:', form.email, 'Code:', form.otp);
       const { data } = await api.post('/auth/verify-otp', {
         email: form.email,
         otp: form.otp,
@@ -49,12 +50,17 @@ export default function ResetPassword() {
         setResetToken(data.data.resetToken);
         setStep(2);
         setError('');
+        console.log('[OTP VERIFY SUCCESS] Proceeding to step 2');
       } else {
         setError(data.message || 'Invalid OTP response');
       }
     } catch (err) {
       console.error('[OTP VERIFY ERROR]', err);
-      setError(err.response?.data?.message || 'Verification failed. Please check your OTP and try again.');
+      const msg = err.response?.data?.message || 'Verification failed. Please check your OTP and try again.';
+      setError(msg);
+      // Ensure we stay on step 1
+      setStep(1);
+      setResetToken('');
     } finally {
       setLoading(false);
     }
@@ -122,8 +128,10 @@ export default function ResetPassword() {
               label="Verification Code"
               placeholder="123456"
               required
+              minLength={6}
+              maxLength={6}
               value={form.otp}
-              onChange={(e) => setForm({ ...form, otp: e.target.value })}
+              onChange={(e) => setForm({ ...form, otp: e.target.value.replace(/\D/g, '') })}
             />
             <Button type="submit" loading={loading} className="w-full">Verify & Continue</Button>
             <button
