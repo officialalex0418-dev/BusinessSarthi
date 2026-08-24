@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { api } from '@/api/client';
 import { Button, Input, Card } from '@/components/ui';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
+  const { token: urlToken } = useParams();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(1); // 1: OTP, 2: New Password
+  const [step, setStep] = useState(1); // Force step 1 initially
   const [form, setForm] = useState({
     email: searchParams.get('email') || '',
     otp: '',
@@ -20,26 +21,40 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // If we have a URL token, we need to verify it first or just proceed to step 2 if we trust it
+  // But for the OTP flow, we must verify the OTP.
   useEffect(() => {
-    if (!form.email && step === 1) {
+    if (urlToken) {
+      setResetToken(urlToken);
+      setStep(2);
+    } else if (!form.email) {
       navigate('/forgot-password');
     }
-  }, [form.email, step, navigate]);
+  }, [form.email, urlToken, navigate]);
 
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     if (!form.otp) return setError('Please enter the OTP');
 
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
     try {
+      console.log('[OTP VERIFY] Sending request for:', form.email);
       const { data } = await api.post('/auth/verify-otp', {
         email: form.email,
         otp: form.otp,
       });
-      setResetToken(data.data.resetToken);
-      setStep(2);
+
+      if (data.success && data.data?.resetToken) {
+        setResetToken(data.data.resetToken);
+        setStep(2);
+        setError('');
+      } else {
+        setError(data.message || 'Invalid OTP response');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Verification failed. Check your OTP.');
+      console.error('[OTP VERIFY ERROR]', err);
+      setError(err.response?.data?.message || 'Verification failed. Please check your OTP and try again.');
     } finally {
       setLoading(false);
     }
@@ -67,32 +82,13 @@ export default function ResetPassword() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-700 to-primary-900 p-4">
       <Card className="w-full max-w-md p-8">
         <h1 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">
-          {step === 1 ? 'Verify OTP' : 'Set New Password'}
+          {(step === 2 && resetToken) ? 'Set New Password' : 'Verify OTP'}
         </h1>
 
         {message && <div className="mb-4 rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-600">{message}</div>}
         {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{error}</div>}
 
-        {step === 1 ? (
-          <form onSubmit={handleVerifyOTP} className="space-y-4">
-            <p className="text-sm text-slate-500">We've sent a 6-digit code to <b>{form.email}</b>. It expires in <b>2 minutes</b>.</p>
-            <Input
-              label="Verification Code"
-              placeholder="123456"
-              required
-              value={form.otp}
-              onChange={(e) => setForm({ ...form, otp: e.target.value })}
-            />
-            <Button type="submit" className="w-full">Continue</Button>
-            <button
-              type="button"
-              className="w-full text-xs text-slate-400 hover:text-primary-600"
-              onClick={() => navigate('/forgot-password')}
-            >
-              Change Email
-            </button>
-          </form>
-        ) : (
+        {(step === 2 && resetToken) ? (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <p className="text-sm text-slate-500">Enter your new strong password.</p>
             <Input
@@ -111,6 +107,32 @@ export default function ResetPassword() {
               onChange={(e) => setForm({ ...form, confirm: e.target.value })}
             />
             <Button type="submit" loading={loading} className="w-full">Reset Password</Button>
+            <button
+              type="button"
+              className="w-full text-xs text-slate-400 hover:text-primary-600"
+              onClick={() => { setStep(1); setResetToken(''); }}
+            >
+              Back to OTP
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOTP} className="space-y-4">
+            <p className="text-sm text-slate-500">We've sent a 6-digit code to <b>{form.email}</b>. It expires in <b>2 minutes</b>.</p>
+            <Input
+              label="Verification Code"
+              placeholder="123456"
+              required
+              value={form.otp}
+              onChange={(e) => setForm({ ...form, otp: e.target.value })}
+            />
+            <Button type="submit" loading={loading} className="w-full">Verify & Continue</Button>
+            <button
+              type="button"
+              className="w-full text-xs text-slate-400 hover:text-primary-600"
+              onClick={() => navigate('/forgot-password')}
+            >
+              Change Email
+            </button>
           </form>
         )}
       </Card>

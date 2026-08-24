@@ -208,16 +208,22 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   // Check Rate Limit & Account Status
   await rateLimitEscalation.checkOtpRateLimit(ip, email);
 
-  const tokenHash = crypto.createHash('sha256').update(otp).digest('hex');
-  const user = await User.findOne({
-    email: email.toLowerCase(),
-    passwordResetToken: tokenHash,
-    passwordResetExpires: { $gt: new Date() },
-  }).select('+passwordResetToken +passwordResetExpires');
+  const user = await User.findOne({ email: email.toLowerCase() })
+    .select('+passwordResetToken +passwordResetExpires');
 
   if (!user) {
+    // Even if user not found, we record failure for the IP to prevent enumeration/brute force
     const message = await rateLimitEscalation.recordOtpFailure(ip, email, req);
     throw ApiError.badRequest(message);
+  }
+
+  const tokenHash = crypto.createHash('sha256').update(otp).digest('hex');
+  const isMatch = user.passwordResetToken === tokenHash;
+  const isExpired = !user.passwordResetExpires || user.passwordResetExpires < new Date();
+
+  if (!isMatch || isExpired) {
+    const message = await rateLimitEscalation.recordOtpFailure(ip, email, req);
+    throw ApiError.badRequest(isExpired ? 'OTP has expired' : message);
   }
 
   // Phase 1 Success: Issue a short-lived reset token (5 mins)
