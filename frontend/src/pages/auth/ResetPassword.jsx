@@ -75,7 +75,7 @@ export default function ResetPassword() {
 
         {step === 1 ? (
           <form onSubmit={handleVerifyOTP} className="space-y-4">
-            <p className="text-sm text-slate-500">We've sent a 6-digit code to <b>{form.email}</b>.</p>
+            <p className="text-sm text-slate-500">We've sent a 6-digit code to <b>{form.email}</b>. It expires in <b>2 minutes</b>.</p>
             <Input
               label="Verification Code"
               placeholder="123456"

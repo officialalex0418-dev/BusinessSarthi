@@ -50,10 +50,12 @@ export const recordOtpFailure = async (ip, email, req) => {
       limit.blockExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
       limit.stage = 2;
       message = 'Too many failed attempts. This IP is blocked for 15 minutes.';
+      audit({ req, action: 'IP_BLOCKED_15M', entity: 'RateLimit', meta: { ip } });
     } else if (stage === 2) {
       limit.blockExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
       limit.stage = 3;
       message = 'Too many failed attempts. This IP is blocked for 1 hour.';
+      audit({ req, action: 'IP_BLOCKED_1H', entity: 'RateLimit', meta: { ip } });
     } else if (stage >= 3) {
       // Deactivate account
       const user = await User.findOne({ email: email.toLowerCase() });
