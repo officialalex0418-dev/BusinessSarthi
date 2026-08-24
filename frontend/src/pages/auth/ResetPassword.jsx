@@ -15,6 +15,7 @@ export default function ResetPassword() {
     confirm: '',
   });
 
+  const [resetToken, setResetToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -28,9 +29,20 @@ export default function ResetPassword() {
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     if (!form.otp) return setError('Please enter the OTP');
-    setStep(2); // In this implementation, we'll send everything together at the end or verify here.
-    // The current backend has a combined 'resetPasswordWithOtp' endpoint.
-    setError('');
+
+    setLoading(true); setError('');
+    try {
+      const { data } = await api.post('/auth/verify-otp', {
+        email: form.email,
+        otp: form.otp,
+      });
+      setResetToken(data.data.resetToken);
+      setStep(2);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Verification failed. Check your OTP.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleResetPassword = async (e) => {
@@ -39,15 +51,13 @@ export default function ResetPassword() {
 
     setLoading(true); setError('');
     try {
-      await api.post('/auth/reset-password-with-otp', {
-        email: form.email,
-        otp: form.otp,
+      await api.post(`/auth/reset-password/${resetToken}`, {
         password: form.password,
       });
       setMessage('Password reset successful! Redirecting to login...');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Reset failed. Check your OTP.');
+      setError(err.response?.data?.message || 'Reset failed. Token may have expired.');
     } finally {
       setLoading(false);
     }

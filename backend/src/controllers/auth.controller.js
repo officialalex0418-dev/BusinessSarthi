@@ -200,9 +200,9 @@ export const requestPasswordResetOtp = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'If that email exists, a reset OTP has been sent.' });
 });
 
-/** POST /auth/reset-password-with-otp */
-export const resetPasswordWithOtp = asyncHandler(async (req, res) => {
-  const { email, otp, password } = req.body;
+/** POST /auth/verify-otp — Phase 1: Verify OTP and issue reset token */
+export const verifyOtp = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
   const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
   // Check Rate Limit & Account Status
@@ -213,28 +213,30 @@ export const resetPasswordWithOtp = asyncHandler(async (req, res) => {
     email: email.toLowerCase(),
     passwordResetToken: tokenHash,
     passwordResetExpires: { $gt: new Date() },
-  }).select('+passwordResetToken +passwordResetExpires +refreshTokens');
+  }).select('+passwordResetToken +passwordResetExpires');
 
   if (!user) {
     const message = await rateLimitEscalation.recordOtpFailure(ip, email, req);
     throw ApiError.badRequest(message);
   }
 
-  user.password = password;
-  user.passwordResetToken = undefined;
-  user.passwordResetExpires = undefined;
-  user.refreshTokens = [];
-  await user.save();
+  // Phase 1 Success: Issue a short-lived reset token (5 mins)
+  const resetToken = user.createPasswordResetToken();
+  user.passwordResetExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+  await user.save({ validateBeforeSave: false });
 
   // Reset rate limit on success
   await rateLimitEscalation.resetOtpRateLimit(ip);
 
-  emails.passwordResetSuccess(user.email, { name: user.name });
-  audit({ req, user: user._id, action: 'PASSWORD_RESET_WITH_OTP', entity: 'Auth' });
-  res.json({ success: true, message: 'Password updated. Please login again.' });
+  audit({ req, user: user._id, action: 'OTP_VERIFIED', entity: 'Auth' });
+  res.json({
+    success: true,
+    message: 'OTP verified. You can now reset your password.',
+    data: { resetToken }
+  });
 });
 
-/** POST /auth/reset-password/:token */
+/** POST /auth/reset-password/:token — Phase 2: Use token to reset password */
 export const resetPassword = asyncHandler(async (req, res) => {
   const tokenHash = crypto.createHash('sha256').update(req.params.token).digest('hex');
   const user = await User.findOne({
@@ -242,7 +244,7 @@ export const resetPassword = asyncHandler(async (req, res) => {
     passwordResetExpires: { $gt: new Date() },
   }).select('+passwordResetToken +passwordResetExpires +refreshTokens');
 
-  if (!user) throw ApiError.badRequest('Reset link is invalid or expired');
+  if (!user) throw ApiError.badRequest('Reset token is invalid or expired');
 
   user.password = req.body.password;
   user.passwordResetToken = undefined;
@@ -250,8 +252,9 @@ export const resetPassword = asyncHandler(async (req, res) => {
   user.refreshTokens = []; // kill all sessions
   await user.save();
 
+  emails.passwordResetSuccess(user.email, { name: user.name });
   audit({ req, user: user._id, action: 'PASSWORD_RESET', entity: 'Auth' });
-  res.json({ success: true, message: 'Password updated. Please login.' });
+  res.json({ success: true, message: 'Password updated. Please login again.' });
 });
 
 /** GET /auth/verify-email/:token */

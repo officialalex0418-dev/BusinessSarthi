@@ -46,7 +46,7 @@ r.post('/auth/refresh', auth.refresh);
 r.post('/auth/logout', auth.logout);
 r.post('/auth/forgot-password', authLimiter, validate({ body: schemas.forgotPassword }), auth.forgotPassword);
 r.post('/auth/request-password-reset-otp', authLimiter, validate({ body: schemas.requestPasswordResetOtp }), auth.requestPasswordResetOtp);
-r.post('/auth/reset-password-with-otp', authLimiter, validate({ body: schemas.resetPasswordWithOtp }), auth.resetPasswordWithOtp);
+r.post('/auth/verify-otp', authLimiter, validate({ body: schemas.verifyOtp }), auth.verifyOtp);
 r.post('/auth/reset-password/:token', authLimiter, validate({ body: schemas.resetPassword }), auth.resetPassword);
 r.get('/auth/verify-email/:token', auth.verifyEmail);
 r.get('/auth/me', protect, auth.me);
