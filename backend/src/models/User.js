@@ -99,7 +99,7 @@ userSchema.methods.createPasswordResetToken = function () {
 userSchema.methods.createPasswordResetOtp = function () {
   const otp = crypto.randomInt(100000, 999999).toString();
   this.passwordResetToken = crypto.createHash('sha256').update(otp).digest('hex');
-  this.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+  this.passwordResetExpires = new Date(Date.now() + 2 * 60 * 1000); // 2 min
   return otp;
 };
 

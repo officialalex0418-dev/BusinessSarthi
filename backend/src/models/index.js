@@ -32,3 +32,4 @@ export { default as Holiday } from './Holiday.js';
 export { default as AuditLog } from './AuditLog.js';
 export { default as Setting } from './Setting.js';
 export { default as Target } from './Target.js';
+export { default as RateLimit } from './RateLimit.js';

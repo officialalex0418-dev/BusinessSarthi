@@ -6,6 +6,16 @@ All responses: `{ success, data | message, details? }`. Lists return `{ items, p
 
 Roles legend: **SA**=SUPER_ADMIN, **AE**=ADMIN_EMPLOYEE, **CO**=COMPANY_OWNER, **CM**=COMPANY_MANAGER, **ST**=STAFF.
 
+## Security & OTP Policy
+The system implements strict security measures for password resets and authentication:
+
+- **OTP Expiration:** Issued OTPs expire after **2 minutes**.
+- **Escalated Rate-Limiting (Tracked by IP Address):**
+    - **Stage 1 (Initial Lockout):** 3 consecutive incorrect OTP entries block the requesting IP address for **15 minutes**.
+    - **Stage 2 (Extended Lockout):** After Stage 1 expires, 3 additional failed attempts block the requesting IP for **1 hour**.
+    - **Stage 3 (Account Deactivation):** After Stage 2 expires, 3 final failed attempts result in **permanent account deactivation**.
+- **Account Recovery:** Deactivated accounts must be manually reactivated by a **System Administrator** via the admin panel.
+
 ## Auth
 | Method | Path | Roles | Body / Notes |
 |---|---|---|---|

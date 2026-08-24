@@ -9,6 +9,7 @@ import {
   hashToken, persistRefreshToken,
 } from '../services/token.service.js';
 import { emails } from '../services/email.service.js';
+import * as rateLimitEscalation from '../services/rateLimitEscalation.service.js';
 
 const REFRESH_COOKIE = 'bs_refresh';
 const cookieOpts = {
@@ -201,20 +202,32 @@ export const requestPasswordResetOtp = asyncHandler(async (req, res) => {
 
 /** POST /auth/reset-password-with-otp */
 export const resetPasswordWithOtp = asyncHandler(async (req, res) => {
-  const tokenHash = crypto.createHash('sha256').update(req.body.otp).digest('hex');
+  const { email, otp, password } = req.body;
+  const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+  // Check Rate Limit & Account Status
+  await rateLimitEscalation.checkOtpRateLimit(ip, email);
+
+  const tokenHash = crypto.createHash('sha256').update(otp).digest('hex');
   const user = await User.findOne({
-    email: req.body.email.toLowerCase(),
+    email: email.toLowerCase(),
     passwordResetToken: tokenHash,
     passwordResetExpires: { $gt: new Date() },
   }).select('+passwordResetToken +passwordResetExpires +refreshTokens');
 
-  if (!user) throw ApiError.badRequest('OTP is invalid or expired');
+  if (!user) {
+    const message = await rateLimitEscalation.recordOtpFailure(ip, email, req);
+    throw ApiError.badRequest(message);
+  }
 
-  user.password = req.body.password;
+  user.password = password;
   user.passwordResetToken = undefined;
   user.passwordResetExpires = undefined;
   user.refreshTokens = [];
   await user.save();
+
+  // Reset rate limit on success
+  await rateLimitEscalation.resetOtpRateLimit(ip);
 
   emails.passwordResetSuccess(user.email, { name: user.name });
   audit({ req, user: user._id, action: 'PASSWORD_RESET_WITH_OTP', entity: 'Auth' });
