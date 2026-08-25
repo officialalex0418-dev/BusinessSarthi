@@ -5,6 +5,18 @@
 @layer base {
   body {
     @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+    /* Prevent white flash/spots during keyboard transitions */
+    background-attachment: fixed;
+    overscroll-behavior-y: none;
+  }
+
+  html {
+    background-color: #0f172a; /* Fallback for safe areas and keyboard gaps */
+  }
+
+  /* Fallback for auth pages specifically */
+  .auth-page-root {
+    background-color: #0f172a; /* primary-900 */
   }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-thumb { @apply rounded-full bg-slate-300 dark:bg-slate-700; }

@@ -35,7 +35,9 @@ export default function ChangePassword() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
+    <>
+      <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950" />
+      <div className="auth-page-root relative flex min-h-screen items-center justify-center p-4 overflow-y-auto">
       <Card className="w-full max-w-md p-8">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/30">
@@ -64,5 +66,6 @@ export default function ChangePassword() {
         </form>
       </Card>
     </div>
+    </>
   );
 }

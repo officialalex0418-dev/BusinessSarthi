@@ -8,6 +8,9 @@
   "plugins": {
     "StatusBar": {
       "style": "DEFAULT"
+    },
+    "Keyboard": {
+      "resize": "none"
     }
   }
 

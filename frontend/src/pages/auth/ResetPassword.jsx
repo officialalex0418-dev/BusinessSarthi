@@ -61,16 +61,20 @@ export default function ResetPassword() {
 
   if (verifying) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-700 to-primary-900 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <>
+        <div className="fixed inset-0 bg-gradient-to-br from-primary-700 to-primary-900" />
+        <div className="auth-page-root relative flex min-h-screen items-center justify-center p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] overflow-y-auto">
         <Card className="w-full max-w-md p-8 text-center">
           <p className="text-slate-500">Verifying reset link...</p>
         </Card>
-      </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-700 to-primary-900 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed inset-0 bg-gradient-to-br from-primary-700 to-primary-900" />
+    <div className="auth-page-root relative flex min-h-screen items-center justify-center p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] overflow-y-auto">
       <Card className="w-full max-w-md p-8">
         <h1 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">
           {valid ? 'Set New Password' : 'Invalid Link'}
@@ -107,6 +111,7 @@ export default function ResetPassword() {
           </div>
         )}
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
