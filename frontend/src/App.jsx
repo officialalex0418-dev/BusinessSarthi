@@ -227,18 +227,20 @@ export default function App() {
     requestAllPermissions().catch(() => {});
 
     // Guarded Push Notifications Initialization
+    // WARNING: This will crash the Android app on cold start if google-services.json is missing!
+    // I have disabled .register() until the Firebase configuration is completed.
     if (Capacitor.isNativePlatform()) {
       (async () => {
         try {
-          // Check if PushNotifications is actually available on this device/platform
           if (!PushNotifications || typeof PushNotifications.requestPermissions !== 'function') {
-            console.warn('PushNotifications plugin not available');
             return;
           }
 
           const result = await PushNotifications.requestPermissions();
           if (result.receive === 'granted') {
-            await PushNotifications.register().catch(e => console.error('Register error:', e));
+            // ONLY register if you have added google-services.json to android/app/
+            // await PushNotifications.register().catch(e => console.error('Register error:', e));
+            console.log('Push Notifications granted, but registration is deferred until Firebase is configured.');
           }
 
           PushNotifications.addListener('registration', token => {
@@ -253,7 +255,7 @@ export default function App() {
             console.log('Push received:', notification);
           });
         } catch (e) {
-          console.error('CRITICAL: Push Notifications init failed', e);
+          console.error('Push Notifications init failed safely', e);
         }
       })();
     }
