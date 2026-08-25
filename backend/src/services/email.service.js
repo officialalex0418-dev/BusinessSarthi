@@ -140,19 +140,6 @@ export const emails = {
       ctaUrl: `${env.clientUrl}/login`,
     }),
 
-  passwordResetOtp: (to, { name, otp }) =>
-    sendEmail({
-      to,
-      subject: 'Verify Your Identity – OTP Code',
-      title: `Identity Verification`,
-      bodyHtml: `Hi ${name},<br/><br/>
-        Use the following one-time password (OTP) to reset your account password:<br/><br/>
-        <div style="text-align:center;background:#f8fafc;padding:20px;border-radius:12px;border:1px dashed #cbd5e1;">
-          <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#2563eb;">${otp}</span>
-        </div><br/>
-        This code is valid for <b>2 minutes</b>. If you did not request a password reset, please secure your account immediately.`,
-    }),
-
   passwordReset: (to, { name, resetUrl }) =>
     sendEmail({
       to,
@@ -160,7 +147,7 @@ export const emails = {
       title: `Password Reset Request`,
       bodyHtml: `Hi ${name},<br/><br/>
         We received a request to reset your Business Sarthi password. Click the button below to choose a new one.<br/><br/>
-        This link will expire in <b>30 minutes</b>.`,
+        This link will expire in <b>15 minutes</b>.`,
       ctaText: 'Reset Password',
       ctaUrl: resetUrl,
     }),

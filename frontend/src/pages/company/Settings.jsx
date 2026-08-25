@@ -15,8 +15,8 @@ export default function CompanySettings() {
 
   const handleResetPassword = async () => {
     try {
-      await api.post('/auth/request-password-reset-otp', { email: company.email });
-      navigate(`/reset-password?email=${encodeURIComponent(company.email)}`);
+      await api.post('/auth/forgot-password', { email: company.email });
+      alert('A password reset link has been sent to your email.');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to start password reset');
     }

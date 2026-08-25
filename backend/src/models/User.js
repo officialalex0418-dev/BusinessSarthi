@@ -96,12 +96,6 @@ userSchema.methods.createPasswordResetToken = function () {
   return raw;
 };
 
-userSchema.methods.createPasswordResetOtp = function () {
-  const otp = crypto.randomInt(100000, 999999).toString();
-  this.passwordResetToken = crypto.createHash('sha256').update(otp).digest('hex');
-  this.passwordResetExpires = new Date(Date.now() + 2 * 60 * 1000); // 2 min
-  return otp;
-};
 
 userSchema.methods.createEmailVerifyToken = function () {
   const raw = crypto.randomBytes(32).toString('hex');

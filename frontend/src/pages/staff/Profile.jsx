@@ -67,8 +67,8 @@ export default function StaffProfile() {
 
   const handleResetPassword = async () => {
     try {
-      await api.post('/auth/request-password-reset-otp', { email: user.email });
-      navigate(`/reset-password?email=${encodeURIComponent(user.email)}`);
+      await api.post('/auth/forgot-password', { email: user.email });
+      alert('A password reset link has been sent to your email.');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to start password reset');
     }
