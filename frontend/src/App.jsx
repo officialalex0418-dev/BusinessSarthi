@@ -230,11 +230,15 @@ export default function App() {
     if (Capacitor.isNativePlatform()) {
       (async () => {
         try {
-          if (!PushNotifications) return;
+          // Check if PushNotifications is actually available on this device/platform
+          if (!PushNotifications || typeof PushNotifications.requestPermissions !== 'function') {
+            console.warn('PushNotifications plugin not available');
+            return;
+          }
 
           const result = await PushNotifications.requestPermissions();
           if (result.receive === 'granted') {
-            await PushNotifications.register();
+            await PushNotifications.register().catch(e => console.error('Register error:', e));
           }
 
           PushNotifications.addListener('registration', token => {
@@ -249,7 +253,7 @@ export default function App() {
             console.log('Push received:', notification);
           });
         } catch (e) {
-          console.warn('Push Notifications init failed', e);
+          console.error('CRITICAL: Push Notifications init failed', e);
         }
       })();
     }
