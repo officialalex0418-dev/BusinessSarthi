@@ -4,6 +4,12 @@ import { FileOpener } from '@capacitor-community/file-opener';
 import { Capacitor } from '@capacitor/core';
 
 let rawBaseURL = import.meta.env.VITE_API_URL || 'https://api.bussinesssarthi.com';
+
+// Safety for mobile: If running on native and URL is localhost, force production API
+if (Capacitor.isNativePlatform() && (rawBaseURL.includes('localhost') || rawBaseURL.includes('127.0.0.1'))) {
+  rawBaseURL = 'https://api.bussinesssarthi.com';
+}
+
 if (rawBaseURL && !rawBaseURL.startsWith('http')) {
   rawBaseURL = `https://${rawBaseURL}`;
 }

@@ -38,6 +38,7 @@ app.use(
         env.clientUrl,
         'https://app.bussinesssarthi.com',
         'http://localhost',
+        'https://localhost',
         'capacitor://localhost'
       ];
       if (allowedOrigins.includes(origin) || !env.isProd) {
