@@ -20,12 +20,16 @@ export function AuthProvider({ children }) {
           token ? api.get('/auth/me') : Promise.resolve({ data: { data: { user: null } } })
         ]);
 
-        if (settingsRes.data.success) setSettings(settingsRes.data.data);
-        if (userRes.data.success) setUser(userRes.data.data.user);
+        if (settingsRes?.data?.success) setSettings(settingsRes.data.data);
+        if (userRes?.data?.success) setUser(userRes.data.data.user);
 
       } catch (e) {
-        console.warn('Initialization partially failed', e);
-        if (token) setAccessToken(null);
+        console.warn('Initialization failed', e);
+        // On mobile, a 401 might have already cleared the token via interceptor
+        if (token) {
+          setAccessToken(null);
+          localStorage.removeItem('bs_refresh');
+        }
       } finally {
         setLoading(false);
       }

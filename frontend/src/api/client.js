@@ -77,7 +77,11 @@ api.interceptors.response.use(
         refreshPromise = null;
         setAccessToken(null);
         localStorage.removeItem('bs_refresh');
-        window.location.href = '/login';
+
+        // Safety for mobile: avoid window.location reload if possible
+        if (!Capacitor.isNativePlatform()) {
+           window.location.href = '/login';
+        }
         return Promise.reject(e);
       }
     }

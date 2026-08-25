@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '@/api/client';
+import { fixFileUrl } from '@/lib/utils';
 
 const ThemeContext = createContext(null);
 
@@ -18,16 +19,15 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     api.get('/auth/settings').then(({ data }) => {
-      if (data.data.branding) {
-        const { fixFileUrl } = import('@/lib/utils');
-        import('@/lib/utils').then(({ fixFileUrl }) => {
-            setBranding({
-              ...data.data.branding,
-              logoUrl: fixFileUrl(data.data.branding.logoUrl)
-            });
+      if (data?.data?.branding) {
+        setBranding({
+          ...data.data.branding,
+          logoUrl: fixFileUrl(data.data.branding.logoUrl)
         });
       }
-    }).catch(() => {});
+    }).catch((err) => {
+       console.warn('[THEME] Failed to load platform branding', err.message);
+    });
   }, []);
 
   const updateBranding = (newBranding) => {
