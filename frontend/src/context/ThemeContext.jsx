@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '@/api/client';
 import { fixFileUrl } from '@/lib/utils';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 
 const ThemeContext = createContext(null);
 
@@ -15,6 +17,21 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
     localStorage.setItem('bs_theme', dark ? 'dark' : 'light');
+
+    // Manage Status Bar Appearance on Mobile
+    if (Capacitor.isNativePlatform()) {
+      try {
+        StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
+        StatusBar.setStyle({
+          style: dark ? Style.Dark : Style.Light
+        }).catch(() => {});
+
+        // Ensure background is transparent to allow our header blur to show through
+        StatusBar.setBackgroundColor({
+          color: dark ? '#00000000' : '#ffffffff'
+        }).catch(() => {});
+      } catch (e) {}
+    }
   }, [dark]);
 
   useEffect(() => {

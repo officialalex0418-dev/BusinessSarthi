@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
 import {
   LayoutDashboard, Building2, Users, Package, Wallet, Settings, ShieldCheck,
