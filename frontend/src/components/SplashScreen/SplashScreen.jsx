@@ -56,7 +56,7 @@ export default function SplashScreen({ isAppReady, onFinished }) {
 
         <div className="splash-brand">
           <h1 className="splash-name">{branding.appName || 'BusinessSarthi'}</h1>
-          <p className="splash-tagline">Driving your Business forward</p>
+          <p className="splash-tagline">Driving Business Forward</p>
         </div>
 
         {/* Subtle loading indicator to show something is happening in background */}
