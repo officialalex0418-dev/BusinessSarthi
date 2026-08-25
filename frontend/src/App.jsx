@@ -14,6 +14,8 @@ import { useAppPermissions } from '@/hooks/useAppPermissions';
 import { Spinner } from '@/components/ui';
 import { ROLE_HOME } from '@/lib/utils';
 import DashboardLayout from '@/layouts/DashboardLayout';
+import SplashScreen from '@/components/SplashScreen/SplashScreen';
+import { useState } from 'react';
 
 // Auth
 import Login from '@/pages/auth/Login';
@@ -125,6 +127,7 @@ const staffNavBase = [
 export default function App() {
   const { user, loading } = useAuth();
   const { requestAllPermissions } = useAppPermissions();
+  const [splashFinished, setSplashFinished] = useState(false);
 
   const hasFeature = (feature) => {
     if (['SUPER_ADMIN', 'ADMIN_EMPLOYEE'].includes(user?.role)) return true;
@@ -261,7 +264,17 @@ export default function App() {
     }
   }, [requestAllPermissions]);
 
+  // Handle Parallel Initialization and Splash Animation
+  if (!splashFinished) {
+    return (
+      <SplashScreen
+        isAppReady={!loading}
+        onFinished={() => setSplashFinished(true)}
+      />
+    );
+  }
 
+  // If splash is done but app is still loading (rare safety case)
   if (loading) return <Spinner />;
 
   return (
