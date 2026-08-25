@@ -92,7 +92,7 @@ userSchema.methods.comparePassword = function (candidate) {
 userSchema.methods.createPasswordResetToken = function () {
   const raw = crypto.randomBytes(32).toString('hex');
   this.passwordResetToken = crypto.createHash('sha256').update(raw).digest('hex');
-  this.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+  this.passwordResetExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 min
   return raw;
 };
 

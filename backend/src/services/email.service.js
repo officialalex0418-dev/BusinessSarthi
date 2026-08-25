@@ -147,7 +147,7 @@ export const emails = {
       title: `Password Reset Request`,
       bodyHtml: `Hi ${name},<br/><br/>
         We received a request to reset your Business Sarthi password. Click the button below to choose a new one.<br/><br/>
-        This link will expire in <b>15 minutes</b>.`,
+        This link will expire in <b>5 minutes</b>.`,
       ctaText: 'Reset Password',
       ctaUrl: resetUrl,
     }),
