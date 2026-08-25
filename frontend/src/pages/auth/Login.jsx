@@ -33,7 +33,7 @@ export default function Login() {
       } else if (err.code === 'ERR_NETWORK') {
         setError('Unable to reach the server. Please check your internet connection and try again.');
       } else {
-        setError('Something went wrong during sign-in. Please wait a moment and try again.');
+        setError(`Error: ${err.response?.data?.message || err.message || 'Something went wrong'}`);
       }
     } finally {
       setLoading(false);
