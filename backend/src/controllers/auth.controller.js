@@ -176,15 +176,25 @@ export const logout = asyncHandler(async (req, res) => {
 
 /** POST /auth/forgot-password */
 export const forgotPassword = asyncHandler(async (req, res) => {
-  const user = await User.findOne({ email: req.body.email.toLowerCase() });
+  const email = req.body.email?.toLowerCase();
+  console.log(`[AUTH] Forgot password requested for: ${email}`);
+
+  const user = await User.findOne({ email });
+
   // Always respond 200 to avoid email enumeration
   if (user) {
     const raw = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
+
     const resetUrl = `${env.clientUrl}/reset-password/${raw}`;
-    emails.passwordReset(user.email, { name: user.name, resetUrl });
+    console.log(`[AUTH] Sending reset link to: ${user.email}`);
+
+    await emails.passwordReset(user.email, { name: user.name, resetUrl });
     audit({ req, user: user._id, action: 'PASSWORD_RESET_REQUESTED', entity: 'Auth' });
+  } else {
+    console.warn(`[AUTH] Forgot password: User not found for ${email}`);
   }
+
   res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
 });
 
