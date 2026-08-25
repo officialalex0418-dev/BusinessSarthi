@@ -1,3 +1,4 @@
+// Version: 1.0.1 - Triggering Cloudflare Build
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { PushNotifications } from '@capacitor/push-notifications';
