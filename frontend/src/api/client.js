@@ -3,7 +3,8 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { Capacitor } from '@capacitor/core';
 
-const baseURL = `${import.meta.env.VITE_API_URL || ''}/api/v1`;
+const rawBaseURL = import.meta.env.VITE_API_URL || 'https://api.bussinesssarthi.com';
+const baseURL = `${rawBaseURL.replace(/\/$/, '')}/api/v1`;
 
 export const api = axios.create({
   baseURL,
