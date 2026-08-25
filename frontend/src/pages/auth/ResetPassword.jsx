@@ -73,8 +73,9 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-primary-700 to-primary-900" />
-    <div className="auth-page-root relative flex min-h-screen items-center justify-center p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] overflow-y-auto">
+    <>
+      <div className="fixed inset-0 bg-gradient-to-br from-primary-700 to-primary-900" />
+      <div className="auth-page-root relative flex min-h-screen items-center justify-center p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] overflow-y-auto">
       <Card className="w-full max-w-md p-8">
         <h1 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">
           {valid ? 'Set New Password' : 'Invalid Link'}
