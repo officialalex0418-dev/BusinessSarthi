@@ -14,31 +14,22 @@ export function useAppPermissions() {
     if (!isNative) return true;
 
     try {
+      // Small helper for sequential requests
+      const delay = () => new Promise(r => setTimeout(r, 500));
+
       // 1. Notifications (High priority for WhatsApp-style)
       await LocalNotifications.requestPermissions();
+      await delay();
 
       // 2. Geolocation (Fine/Coarse)
-      const geo = await Geolocation.requestPermissions();
+      await Geolocation.requestPermissions();
+      await delay();
 
-      // 3. Background Location (Android 11+ requirements)
-      if (isNative) {
-        try {
-          // Native background-geolocation plugin might handle this,
-          // but we can also trigger a standard background request.
-          // Note: Android 11+ requires users to select 'Allow all the time' in settings.
-          await Geolocation.requestPermissions();
-          console.log('Requesting background location permissions...');
-        } catch (e) {
-          console.warn('Background permission request failed', e);
-        }
-      }
-
-
-      // 4. Camera
+      // 3. Camera
       await Camera.requestPermissions();
+      await delay();
 
-
-      // 5. Storage
+      // 4. Storage
       await Filesystem.requestPermissions();
 
       // Note: Battery optimization and background activity are best managed
