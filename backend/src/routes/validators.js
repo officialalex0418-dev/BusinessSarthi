@@ -13,11 +13,6 @@ export const schemas = {
     deviceId: Joi.string().allow('', null),
   }),
   forgotPassword: Joi.object({ email: Joi.string().email().required() }),
-  requestPasswordResetOtp: Joi.object({ email: Joi.string().email().required() }),
-  verifyOtp: Joi.object({
-    email: Joi.string().email().required(),
-    otp: Joi.string().pattern(/^\d{6}$/).required(),
-  }),
   resetPassword: Joi.object({ password: password.required() }),
   changePassword: Joi.object({
     currentPassword: Joi.string().required(),

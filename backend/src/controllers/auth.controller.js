@@ -188,58 +188,17 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
 });
 
-/** POST /auth/request-password-reset-otp */
-export const requestPasswordResetOtp = asyncHandler(async (req, res) => {
-  const user = await User.findOne({ email: req.body.email.toLowerCase() });
-  if (!user) return res.json({ success: true, message: 'If that email exists, a reset OTP has been sent.' });
+/** GET /auth/verify-reset-token/:token */
+export const verifyResetToken = asyncHandler(async (req, res) => {
+  const tokenHash = crypto.createHash('sha256').update(req.params.token).digest('hex');
+  const user = await User.findOne({
+    passwordResetToken: tokenHash,
+    passwordResetExpires: { $gt: new Date() },
+  }).select('_id');
 
-  const otp = user.createPasswordResetOtp();
-  await user.save({ validateBeforeSave: false });
-  emails.passwordResetOtp(user.email, { name: user.name, otp });
-  audit({ req, user: user._id, action: 'PASSWORD_RESET_OTP_REQUESTED', entity: 'Auth' });
-  res.json({ success: true, message: 'If that email exists, a reset OTP has been sent.' });
-});
+  if (!user) throw ApiError.badRequest('Reset link is invalid or expired');
 
-/** POST /auth/verify-otp — Phase 1: Verify OTP and issue reset token */
-export const verifyOtp = asyncHandler(async (req, res) => {
-  const { email, otp } = req.body;
-  const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-
-  // Check Rate Limit & Account Status
-  await rateLimitEscalation.checkOtpRateLimit(ip, email);
-
-  const user = await User.findOne({ email: email.toLowerCase() })
-    .select('+passwordResetToken +passwordResetExpires');
-
-  if (!user) {
-    // Even if user not found, we record failure for the IP to prevent enumeration/brute force
-    const message = await rateLimitEscalation.recordOtpFailure(ip, email, req);
-    throw ApiError.badRequest(message);
-  }
-
-  const tokenHash = crypto.createHash('sha256').update(otp).digest('hex');
-  const isMatch = user.passwordResetToken === tokenHash;
-  const isExpired = !user.passwordResetExpires || user.passwordResetExpires < new Date();
-
-  if (!isMatch || isExpired) {
-    const message = await rateLimitEscalation.recordOtpFailure(ip, email, req);
-    throw ApiError.badRequest(isExpired ? 'OTP has expired' : message);
-  }
-
-  // Phase 1 Success: Issue a short-lived reset token (5 mins)
-  const resetToken = user.createPasswordResetToken();
-  user.passwordResetExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
-  await user.save({ validateBeforeSave: false });
-
-  // Reset rate limit on success
-  await rateLimitEscalation.resetOtpRateLimit(ip);
-
-  audit({ req, user: user._id, action: 'OTP_VERIFIED', entity: 'Auth' });
-  res.json({
-    success: true,
-    message: 'OTP verified. You can now reset your password.',
-    data: { resetToken }
-  });
+  res.json({ success: true, message: 'Token is valid' });
 });
 
 /** POST /auth/reset-password/:token — Phase 2: Use token to reset password */

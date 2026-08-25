@@ -1,70 +1,43 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { api } from '@/api/client';
 import { Button, Input, Card } from '@/components/ui';
 
 export default function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const { token: urlToken } = useParams();
+  const { token } = useParams();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(1); // Force step 1 initially
   const [form, setForm] = useState({
-    email: searchParams.get('email') || '',
-    otp: '',
     password: '',
     confirm: '',
   });
 
-  const [resetToken, setResetToken] = useState('');
+  const [verifying, setVerifying] = useState(true);
+  const [valid, setValid] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // If we have a URL token, we need to verify it first or just proceed to step 2 if we trust it
-  // But for the OTP flow, we must verify the OTP.
   useEffect(() => {
-    if (urlToken) {
-      setResetToken(urlToken);
-      setStep(2);
-    } else if (!form.email) {
+    if (!token) {
       navigate('/forgot-password');
+      return;
     }
-  }, [form.email, urlToken, navigate]);
 
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    if (!form.otp) return setError('Please enter the OTP');
-    if (form.otp.length !== 6) return setError('OTP must be exactly 6 digits');
-
-    setLoading(true);
-    setError('');
-    try {
-      console.log('[OTP VERIFY] Sending request for:', form.email, 'Code:', form.otp);
-      const { data } = await api.post('/auth/verify-otp', {
-        email: form.email,
-        otp: form.otp,
-      });
-
-      if (data.success && data.data?.resetToken) {
-        setResetToken(data.data.resetToken);
-        setStep(2);
-        setError('');
-        console.log('[OTP VERIFY SUCCESS] Proceeding to step 2');
-      } else {
-        setError(data.message || 'Invalid OTP response');
+    const verifyToken = async () => {
+      try {
+        await api.get(`/auth/verify-reset-token/${token}`);
+        setValid(true);
+      } catch (err) {
+        setError(err.response?.data?.message || 'The reset link is invalid or has expired.');
+        setValid(false);
+      } finally {
+        setVerifying(false);
       }
-    } catch (err) {
-      console.error('[OTP VERIFY ERROR]', err);
-      const msg = err.response?.data?.message || 'Verification failed. Please check your OTP and try again.';
-      setError(msg);
-      // Ensure we stay on step 1
-      setStep(1);
-      setResetToken('');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    verifyToken();
+  }, [token, navigate]);
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
@@ -72,29 +45,39 @@ export default function ResetPassword() {
 
     setLoading(true); setError('');
     try {
-      await api.post(`/auth/reset-password/${resetToken}`, {
+      await api.post(`/auth/reset-password/${token}`, {
         password: form.password,
       });
       setMessage('Password reset successful! Redirecting to login...');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Reset failed. Token may have expired.');
+      setError(err.response?.data?.message || 'Reset failed. Link may have expired.');
     } finally {
       setLoading(false);
     }
   };
 
+  if (verifying) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-700 to-primary-900 p-4">
+        <Card className="w-full max-w-md p-8 text-center">
+          <p className="text-slate-500">Verifying reset link...</p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-700 to-primary-900 p-4">
       <Card className="w-full max-w-md p-8">
         <h1 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">
-          {(step === 2 && resetToken) ? 'Set New Password' : 'Verify OTP'}
+          {valid ? 'Set New Password' : 'Invalid Link'}
         </h1>
 
         {message && <div className="mb-4 rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-600">{message}</div>}
         {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{error}</div>}
 
-        {(step === 2 && resetToken) ? (
+        {valid ? (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <p className="text-sm text-slate-500">Enter your new strong password.</p>
             <Input
@@ -113,35 +96,13 @@ export default function ResetPassword() {
               onChange={(e) => setForm({ ...form, confirm: e.target.value })}
             />
             <Button type="submit" loading={loading} className="w-full">Reset Password</Button>
-            <button
-              type="button"
-              className="w-full text-xs text-slate-400 hover:text-primary-600"
-              onClick={() => { setStep(1); setResetToken(''); }}
-            >
-              Back to OTP
-            </button>
           </form>
         ) : (
-          <form onSubmit={handleVerifyOTP} className="space-y-4">
-            <p className="text-sm text-slate-500">We've sent a 6-digit code to <b>{form.email}</b>. It expires in <b>2 minutes</b>.</p>
-            <Input
-              label="Verification Code"
-              placeholder="123456"
-              required
-              minLength={6}
-              maxLength={6}
-              value={form.otp}
-              onChange={(e) => setForm({ ...form, otp: e.target.value.replace(/\D/g, '') })}
-            />
-            <Button type="submit" loading={loading} className="w-full">Verify & Continue</Button>
-            <button
-              type="button"
-              className="w-full text-xs text-slate-400 hover:text-primary-600"
-              onClick={() => navigate('/forgot-password')}
-            >
-              Change Email
-            </button>
-          </form>
+          <div className="mt-4 text-center">
+            <Link to="/forgot-password" size="sm" className="text-primary-600 hover:underline">
+              Request a new reset link
+            </Link>
+          </div>
         )}
       </Card>
     </div>
