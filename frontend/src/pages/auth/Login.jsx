@@ -41,7 +41,7 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-emerald-900 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-emerald-900 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <Card className="w-full max-w-md p-8">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white p-1 shadow-sm">

@@ -157,6 +157,7 @@ export default function DashboardLayout({ title, nav }) {
       {/* Sidebar */}
       <aside className={cn(
         'fixed inset-y-0 left-0 z-[9999] w-64 transform flex flex-col border-r border-slate-200 bg-white transition-transform dark:border-slate-800 dark:bg-slate-900 lg:translate-x-0',
+        'pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5 dark:border-slate-800">
@@ -213,7 +214,7 @@ export default function DashboardLayout({ title, nav }) {
             </div>
           )}
           {/* Topbar */}
-          <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-2 sm:px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+          <header className="flex h-auto min-h-[4rem] pt-[env(safe-area-inset-top)] items-center justify-between border-b border-slate-200 bg-white/80 px-2 sm:px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
             <div className="flex items-center gap-1 sm:gap-3">
               <button className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(true)}>
                 <Menu className="h-5 w-5" />

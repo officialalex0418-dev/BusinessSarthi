@@ -22,7 +22,7 @@ export default function ForgotPassword() {
 
   if (sent) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-700 to-primary-900 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-700 to-primary-900 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <Card className="w-full max-w-md p-8 text-center">
           <h1 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">Check your email</h1>
           <p className="mb-6 text-sm text-slate-500">
@@ -36,7 +36,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-700 to-primary-900 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-700 to-primary-900 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <Card className="w-full max-w-md p-8">
         <h1 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">Forgot password</h1>
         <form onSubmit={submit} className="space-y-4">
