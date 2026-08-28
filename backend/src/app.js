@@ -36,8 +36,11 @@ app.use(
       if (!origin) return callback(null, true);
       const allowedOrigins = [
         env.clientUrl,
-        'https://app.bussinesssarthi.com',
+        'https://app.businesssarthi.com',
+        'https://businesssarthi.com',
         'http://localhost',
+        'http://localhost:5173',
+        'http://localhost:5174',
         'https://localhost',
         'capacitor://localhost'
       ];

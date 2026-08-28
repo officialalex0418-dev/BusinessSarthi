@@ -7,7 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import {
   LayoutDashboard, Building2, Users, Package, Wallet, Settings, ShieldCheck,
   MapPin, Boxes, Truck, TrendingUp, FileText, CalendarCheck, CalendarOff, User,
-  MessageSquare, LayoutGrid
+  MessageSquare, LayoutGrid, Inbox, LifeBuoy
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
@@ -33,6 +33,10 @@ import Configuration from '@/pages/superadmin/Configuration';
 import Designations from '@/pages/superadmin/Designations';
 import AuditLogs from '@/pages/superadmin/AuditLogs';
 import AdminSettings from '@/pages/superadmin/AdminSettings';
+import InquiryList from '@/pages/superadmin/inquiry/InquiryList';
+import InquiryDetail from '@/pages/superadmin/inquiry/InquiryDetail';
+import SupportManagement from '@/pages/superadmin/support/SupportManagement';
+import AdminTicketDetail from '@/pages/superadmin/support/AdminTicketDetail';
 
 // Company
 import CompanyDashboard from '@/pages/company/Dashboard';
@@ -71,6 +75,8 @@ import StaffPayroll from '@/pages/staff/Payroll';
 import StaffProfile from '@/pages/staff/Profile';
 import EditProfile from '@/pages/staff/EditProfile';
 import ChangePassword from '@/pages/auth/ChangePassword';
+import TicketList from '@/pages/support/TicketList';
+import TicketDetail from '@/pages/support/TicketDetail';
 
 function Protected({ roles, children }) {
   const { user, loading } = useAuth();
@@ -91,6 +97,8 @@ const adminNav = [
   { to: '/admin/packages', label: 'Packages', icon: Package },
   { to: '/admin/employees', label: 'System Employees', icon: Users },
   { to: '/admin/company-staff', label: 'Company Staff', icon: Users },
+  { to: '/admin/inquiries', label: 'Inquiries', icon: Inbox },
+  { to: '/admin/support', label: 'Support Tickets', icon: LifeBuoy },
   { to: '/admin/configuration', label: 'Configuration', icon: Settings },
   { to: '/admin/audit-logs', label: 'Audit Logs', icon: ShieldCheck },
   { to: '/admin/settings', label: 'Settings', icon: Settings },
@@ -109,6 +117,7 @@ const companyNav = [
   { to: '/company/vendors', label: 'Vendors', icon: Building2 },
   { to: '/company/payroll', label: 'Payroll Management', icon: Wallet },
   { to: '/company/complaints', label: 'Chat', icon: MessageSquare },
+  { to: '/company/support', label: 'Support', icon: LifeBuoy },
   { to: '/company/reports', label: 'Reports', icon: FileText },
   { to: '/company/configuration', label: 'Configuration', icon: Settings },
   { to: '/company/settings', label: 'Settings', icon: Settings },
@@ -122,6 +131,7 @@ const staffNavBase = [
   { to: '/staff/sales', label: 'Sales Entry', icon: TrendingUp },
   { to: '/staff/payroll', label: 'My Payroll', icon: Wallet },
   { to: '/staff/complaints', label: 'Chat', icon: MessageSquare },
+  { to: '/staff/support', label: 'Support', icon: LifeBuoy },
   { to: '/staff/profile', label: 'Profile', icon: User },
 ];
 
@@ -305,6 +315,10 @@ export default function App() {
         </Route>
         <Route path="audit-logs" element={<AuditLogs />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="inquiries" element={<InquiryList />} />
+        <Route path="inquiries/:id" element={<InquiryDetail />} />
+        <Route path="support" element={<SupportManagement />} />
+        <Route path="support/:id" element={<AdminTicketDetail />} />
       </Route>
 
       <Route
@@ -329,6 +343,8 @@ export default function App() {
         <Route path="vendors/:id" element={<VendorDetails />} />
         <Route path="payroll" element={<CompanyPayroll />} />
         <Route path="complaints" element={hasFeature('complaintChat') ? <Chat /> : <Navigate to="/company" />} />
+        <Route path="support" element={<TicketList />} />
+        <Route path="support/:id" element={<TicketDetail />} />
         <Route path="reports" element={<Reports />} />
         <Route path="configuration">
           <Route index element={<CompanyConfiguration />} />
@@ -359,6 +375,8 @@ export default function App() {
         <Route path="sales" element={<StaffSales />} />
         <Route path="payroll" element={<StaffPayroll />} />
         <Route path="complaints" element={hasFeature('complaintChat') ? <Chat /> : <Navigate to="/staff" />} />
+        <Route path="support" element={<TicketList />} />
+        <Route path="support/:id" element={<TicketDetail />} />
         <Route path="profile" element={<StaffProfile />} />
         <Route path="profile/edit" element={<EditProfile />} />
 

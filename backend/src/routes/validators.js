@@ -375,4 +375,52 @@ export const schemas = {
     discountPct: Joi.number().min(0).max(100),
     vatPct: Joi.number().min(0).max(100),
   }),
+
+  // ---- Inquiry ----
+  createInquiry: Joi.object({
+    name: Joi.string().max(120).required(),
+    email: Joi.string().email().required(),
+    phone: Joi.string().max(20).allow(''),
+    companyName: Joi.string().max(200).allow(''),
+    subject: Joi.string().max(200).required(),
+    message: Joi.string().max(5000).required(),
+  }),
+  updateInquiry: Joi.object({
+    status: Joi.string().valid('NEW', 'IN_PROGRESS', 'PROPOSAL_SENT', 'NEGOTIATION', 'PENDING_SIGN', 'ONBOARDED', 'ARCHIVED'),
+    priority: Joi.string().valid('LOW', 'MEDIUM', 'HIGH', 'URGENT'),
+    assignedTo: objectId.allow(null, ''),
+  }),
+
+  // ---- Support ----
+  createTicket: Joi.object({
+    subject: Joi.string().max(200).required(),
+    category: Joi.string().valid(
+      'TECHNICAL_ISSUE', 'ACCOUNT', 'BILLING', 'ATTENDANCE', 'GPS_LOCATION',
+      'SALES', 'INVENTORY', 'PAYROLL', 'FEATURE_REQUEST', 'OTHER'
+    ).required(),
+    priority: Joi.string().valid('LOW', 'MEDIUM', 'HIGH', 'URGENT').required(),
+    description: Joi.string().max(5000).required(),
+    attachments: Joi.array().items(Joi.object({
+      name: Joi.string().required(),
+      url: Joi.string().uri().required(),
+      mimeType: Joi.string().allow(''),
+      size: Joi.number().integer().min(0),
+    })),
+  }),
+  updateTicket: Joi.object({
+    status: Joi.string().valid('OPEN', 'IN_PROGRESS', 'WAITING_FOR_USER', 'RESOLVED', 'CLOSED'),
+    priority: Joi.string().valid('LOW', 'MEDIUM', 'HIGH', 'URGENT'),
+    assignedTo: objectId.allow(null, ''),
+  }),
+  ticketMessage: Joi.object({
+    message: Joi.string().max(2000).required(),
+    attachments: Joi.array().items(Joi.object({
+      name: Joi.string().required(),
+      url: Joi.string().uri().required(),
+      mimeType: Joi.string().allow(''),
+      size: Joi.number().integer().min(0),
+    })),
+  }),
+  inquiryReply: Joi.object({ message: Joi.string().required() }),
+  internalNote: Joi.object({ note: Joi.string().required() }),
 };

@@ -33,3 +33,5 @@ export { default as AuditLog } from './AuditLog.js';
 export { default as Setting } from './Setting.js';
 export { default as Target } from './Target.js';
 export { default as RateLimit } from './RateLimit.js';
+export { default as Inquiry } from './Inquiry.js';
+export { default as SupportTicket } from './SupportTicket.js';

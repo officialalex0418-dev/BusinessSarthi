@@ -240,4 +240,65 @@ export const emails = {
       ctaText: 'Open Employee Management',
       ctaUrl: `${env.clientUrl}/login`,
     }),
+
+  newInquiryNotification: (to, { name, email, phone, companyName, subject, message }) =>
+    sendEmail({
+      to,
+      subject: `New Website Inquiry: ${subject}`,
+      title: 'New Website Inquiry Received',
+      bodyHtml: `A new inquiry has been submitted through the website contact form.<br/><br/>
+        <b>Name:</b> ${name}<br/>
+        <b>Email:</b> ${email}<br/>
+        <b>Phone:</b> ${phone || 'N/A'}<br/>
+        <b>Company:</b> ${companyName || 'N/A'}<br/>
+        <b>Subject:</b> ${subject}<br/>
+        <b>Message:</b><br/>${message}<br/><br/>
+        Please login to the Super Admin panel to manage this inquiry.`,
+      ctaText: 'View Inquiry',
+      ctaUrl: `${env.clientUrl}/login`, // Ideally deep link to inquiry
+    }),
+
+  inquiryConfirmation: (to, { name }) =>
+    sendEmail({
+      to,
+      subject: 'Thank you for contacting Business Sarthi',
+      title: `Hello ${name},`,
+      bodyHtml: `Thank you for your interest in Business Sarthi. We have received your inquiry and our team will review it shortly.`,
+    }),
+
+  inquiryReply: (to, { name, subject, message }) =>
+    sendEmail({
+      to,
+      subject: `Re: ${subject} - Business Sarthi Support`,
+      title: `Update on your inquiry`,
+      bodyHtml: `Hi ${name},<br/><br/>Our team has responded to your inquiry:<br/><br/>
+        <div style="background:#f1f5f9;padding:16px;border-radius:8px;">${message}</div>`,
+    }),
+
+  newTicketNotification: (to, { ticketNumber, subject, category, priority, companyName }) =>
+    sendEmail({
+      to,
+      subject: `New Support Ticket: ${ticketNumber}`,
+      title: 'New Support Ticket Created',
+      bodyHtml: `A new support ticket has been created.<br/><br/>
+        <b>Ticket #:</b> ${ticketNumber}<br/>
+        <b>Company:</b> ${companyName}<br/>
+        <b>Category:</b> ${category}<br/>
+        <b>Priority:</b> ${priority}<br/>
+        <b>Subject:</b> ${subject}<br/><br/>
+        Please login to the Super Admin panel to manage this ticket.`,
+      ctaText: 'View Ticket',
+      ctaUrl: `${env.clientUrl}/login`,
+    }),
+
+  ticketReplyNotification: (to, { ticketNumber, subject, message }) =>
+    sendEmail({
+      to,
+      subject: `Update on Ticket ${ticketNumber}: ${subject}`,
+      title: 'New Support Response',
+      bodyHtml: `Hi there,<br/><br/>There is a new response to your support ticket <b>${ticketNumber}</b>:<br/><br/>
+        <div style="background:#f1f5f9;padding:16px;border-radius:8px;">${message}</div>`,
+      ctaText: 'View Full Conversation',
+      ctaUrl: `${env.clientUrl}/login`,
+    }),
 };

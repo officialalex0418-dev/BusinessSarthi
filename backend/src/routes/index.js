@@ -29,6 +29,8 @@ import * as designation from '../controllers/designation.controller.js';
 import * as companyConfig from '../controllers/companyConfig.controller.js';
 import * as target from '../controllers/target.controller.js';
 import * as report from '../controllers/report.controller.js';
+import * as inquiry from '../controllers/inquiry.controller.js';
+import * as support from '../controllers/support.controller.js';
 import * as misc from '../controllers/misc.controller.js';
 
 const r = Router();
@@ -54,7 +56,8 @@ r.patch('/auth/change-password', protect, validate({ body: schemas.changePasswor
 r.post('/auth/request-device-reset', auth.requestDeviceReset);
 r.patch('/auth/fcm-token', protect, auth.updateFcmToken);
 
-// ============ PUBLIC FILES ============
+// ============ PUBLIC / WEBSITE ============
+r.post('/public/inquiries', authLimiter, validate({ body: schemas.createInquiry }), inquiry.createInquiry);
 r.get('/files/*', misc.getFile);
 
 // ============ DASHBOARDS ============
@@ -256,6 +259,27 @@ r.delete('/company-config/holidays/:id', protect, authorize(...MANAGERS), scopeC
 r.get('/targets', protect, authorize(...MANAGERS), scopeCompany, target.getTargets);
 r.post('/targets/bulk', protect, authorize(...MANAGERS), scopeCompany, target.setTargets);
 r.get('/targets/achievement', protect, authorize(...MANAGERS), scopeCompany, target.getAchievementReport);
+
+// ============ INQUIRIES (Admin) ============
+r.get('/admin/inquiries', protect, authorize(...PLATFORM), inquiry.listInquiries);
+r.get('/admin/inquiries/:id', protect, authorize(...PLATFORM), inquiry.getInquiry);
+r.patch('/admin/inquiries/:id', protect, authorize(...PLATFORM), validate({ body: schemas.updateInquiry }), inquiry.updateInquiry);
+r.post('/admin/inquiries/:id/replies', protect, authorize(...PLATFORM), validate({ body: schemas.inquiryReply }), inquiry.addReply);
+r.post('/admin/inquiries/:id/notes', protect, authorize(...PLATFORM), validate({ body: schemas.internalNote }), inquiry.addNote);
+
+// ============ SUPPORT TICKETS ============
+// Admin Management
+r.get('/admin/support', protect, authorize(...PLATFORM), support.listTickets);
+r.get('/admin/support/:id', protect, authorize(...PLATFORM), support.getTicket);
+r.patch('/admin/support/:id', protect, authorize(...PLATFORM), validate({ body: schemas.updateTicket }), support.updateTicket);
+r.post('/admin/support/:id/replies', protect, authorize(...PLATFORM), validate({ body: schemas.ticketMessage }), support.addMessage);
+r.post('/admin/support/:id/notes', protect, authorize(...PLATFORM), validate({ body: schemas.internalNote }), support.addNote);
+
+// User Access (Company/Staff)
+r.get('/support/tickets', protect, authorize(...ALL_STAFF), scopeCompany, support.listTickets);
+r.post('/support/tickets', protect, authorize(...ALL_STAFF), scopeCompany, validate({ body: schemas.createTicket }), support.createTicket);
+r.get('/support/tickets/:id', protect, authorize(...ALL_STAFF), scopeCompany, support.getTicket);
+r.post('/support/tickets/:id/replies', protect, authorize(...ALL_STAFF), scopeCompany, validate({ body: schemas.ticketMessage }), support.addMessage);
 
 // ============ REPORTS ============
 r.get('/reports/tracking/excel', protect, authorize(...MANAGERS), scopeCompany, report.trackingExcel);

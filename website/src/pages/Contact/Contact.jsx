@@ -10,11 +10,31 @@ export default function Contact() {
     e.preventDefault();
     setStatus('loading');
 
-    // Simulate API call
-    setTimeout(() => {
-      setStatus('success');
-      setForm({ name: '', email: '', phone: '', company: '', subject: '', message: '' });
-    }, 1500);
+    try {
+      const res = await fetch(`${siteConfig.apiUrl}/public/inquiries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          companyName: form.company,
+          subject: form.subject,
+          message: form.message
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setStatus('success');
+        setForm({ name: '', email: '', phone: '', company: '', subject: '', message: '' });
+      } else {
+        throw new Error(data.message || 'Submission failed');
+      }
+    } catch (err) {
+      console.error('Inquiry error:', err);
+      setStatus('error');
+    }
   };
 
   return (
@@ -152,6 +172,11 @@ export default function Contact() {
                     <button type="submit" disabled={status === 'loading'} className="btn btn-primary w-full py-4 gap-3 text-lg">
                       {status === 'loading' ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send Message'}
                     </button>
+                    {status === 'error' && (
+                      <p className="text-center text-red-600 text-sm font-medium">
+                        Unable to send message. Please check your connection and try again.
+                      </p>
+                    )}
                   </form>
                 )}
               </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import {
-  Menu, X, Moon, Sun, Bell, LogOut, ChevronDown, MapPin,
+  Menu, X, Moon, Sun, Bell, LogOut, ChevronDown, MapPin, LifeBuoy
 } from 'lucide-react';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { useAuth } from '@/context/AuthContext';
@@ -286,6 +286,17 @@ export default function DashboardLayout({ title, nav }) {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating Support Button for Users */}
+      {user?.role !== 'SUPER_ADMIN' && (
+        <Link
+          to={user?.role === 'COMPANY_OWNER' ? '/company/support' : '/staff/support'}
+          className="fixed bottom-6 right-6 z-[1000] flex items-center gap-2 bg-primary-600 text-white px-5 py-3 rounded-full shadow-2xl hover:bg-primary-700 hover:scale-105 transition-all group"
+        >
+          <LifeBuoy className="h-5 w-5 group-hover:rotate-12 transition-transform" />
+          <span className="font-bold text-sm">Support</span>
+        </Link>
+      )}
     </div>
   );
 }
