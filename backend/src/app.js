@@ -38,6 +38,8 @@ app.use(
         env.clientUrl,
         'https://app.businesssarthi.com',
         'https://businesssarthi.com',
+        'https://app.bussinesssarthi.com',
+        'https://bussinesssarthi.com',
         'http://localhost',
         'http://localhost:5173',
         'http://localhost:5174',
