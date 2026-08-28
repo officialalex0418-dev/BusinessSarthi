@@ -37,7 +37,7 @@ export default function AdminTicketDetail() {
   const loadAdmins = useCallback(async () => {
     try {
       const { data: res } = await api.get('/staff', { params: { scope: 'system', role: 'ADMIN_EMPLOYEE' } });
-      setAdmins(res.data.items);
+      setAdmins(res.data?.items || []);
     } catch (e) {}
   }, []);
 
@@ -92,7 +92,7 @@ export default function AdminTicketDetail() {
         </div>
         <div className="ml-auto flex items-center gap-2">
             <Badge color="orange">{item.priority}</Badge>
-            <Badge color="blue">{item.status.replace('_', ' ')}</Badge>
+            <Badge color="blue">{item.status?.replace('_', ' ')}</Badge>
         </div>
       </div>
 
@@ -112,7 +112,7 @@ export default function AdminTicketDetail() {
                </div>
 
                <div ref={scrollRef} className="space-y-6 max-h-[600px] overflow-y-auto pr-2 mb-6 scrollbar-thin">
-                  {item.messages.map((msg, i) => (
+                  {item?.messages?.map((msg, i) => (
                     <div key={i} className={`flex gap-4 ${msg.senderType === 'ADMIN' ? 'flex-row-reverse' : ''}`}>
                        <div className={`h-8 w-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ${
                          msg.senderType === 'ADMIN' ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-600'
@@ -157,7 +157,7 @@ export default function AdminTicketDetail() {
              <CardHeader title="Ticket Activity History" icon={<History className="h-4 w-4" />} />
              <CardBody>
                 <div className="space-y-4">
-                  {item.activity.map((a, i) => (
+                  {item?.activity?.map((a, i) => (
                     <div key={i} className="flex gap-3">
                        <div className="mt-1 h-2 w-2 rounded-full bg-slate-300" />
                        <div>
@@ -241,9 +241,9 @@ export default function AdminTicketDetail() {
             <CardHeader title="Internal Team Notes" icon={<ShieldAlert className="h-4 w-4" />} />
             <CardBody className="p-4 space-y-4">
                <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-                 {item.internalNotes.length === 0 ? (
+                 {item?.internalNotes?.length === 0 ? (
                    <p className="text-xs text-slate-400 text-center py-4 italic">No internal discussion yet.</p>
-                 ) : item.internalNotes.map((n, i) => (
+                 ) : item?.internalNotes?.map((n, i) => (
                    <div key={i} className="p-3 rounded-xl bg-yellow-50 border border-yellow-100 shadow-sm">
                       <p className="text-xs text-slate-700 leading-relaxed font-medium">{n.note}</p>
                       <div className="flex justify-between items-center mt-2 pt-2 border-t border-yellow-100">
@@ -280,7 +280,7 @@ export default function AdminTicketDetail() {
                </div>
                <div className="text-sm">
                   <p className="text-slate-400 text-[10px] uppercase font-bold mb-1">Role</p>
-                  <p className="font-semibold text-slate-700">{item.createdByType.replace('_', ' ')}</p>
+                  <p className="font-semibold text-slate-700">{item.createdByType?.replace('_', ' ')}</p>
                </div>
             </CardBody>
           </Card>

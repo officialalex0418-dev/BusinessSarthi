@@ -35,7 +35,7 @@ export default function InquiryDetail() {
   const loadAdmins = useCallback(async () => {
     try {
       const { data: res } = await api.get('/staff', { params: { scope: 'system', role: 'ADMIN_EMPLOYEE' } });
-      setAdmins(res.data.items);
+      setAdmins(res.data?.items || []);
     } catch (e) {}
   }, []);
 
@@ -83,7 +83,7 @@ export default function InquiryDetail() {
         </Link>
         <h1 className="text-xl font-bold">Inquiry Details</h1>
         <div className="ml-auto flex items-center gap-2">
-            <Badge color="blue">{item.status.replace('_', ' ')}</Badge>
+            <Badge color="blue">{item.status?.replace('_', ' ')}</Badge>
             <Badge color="orange">{item.priority}</Badge>
         </div>
       </div>

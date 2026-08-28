@@ -75,7 +75,7 @@ export default function TicketDetail() {
         </div>
         <div className="ml-auto flex items-center gap-2">
             <Badge color="orange">{item.priority}</Badge>
-            <Badge color="blue">{item.status.replace('_', ' ')}</Badge>
+            <Badge color="blue">{item.status?.replace('_', ' ')}</Badge>
         </div>
       </div>
 

@@ -334,8 +334,10 @@ export const Badge = ({ color = 'blue', children }) => {
     red: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
     yellow: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
     gray: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    orange: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+    purple: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
   };
-  return <span className={cn('badge', colors[color])}>{children}</span>;
+  return <span className={cn('badge px-2 py-0.5 rounded text-[10px] font-bold uppercase', colors[color] || colors.blue)}>{children}</span>;
 };
 
 export const Modal = ({ open, onClose, title, children, wide }) => {

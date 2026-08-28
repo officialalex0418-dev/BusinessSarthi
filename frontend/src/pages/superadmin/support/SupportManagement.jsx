@@ -132,7 +132,7 @@ export default function SupportManagement() {
                         </td>
                         <td className="px-4 py-4 max-w-[200px] truncate font-medium text-slate-700">{ticket.subject}</td>
                         <td className="px-4 py-4">
-                           <Badge color={STATUS_COLORS[ticket.status]}>{ticket.status.replace('_', ' ')}</Badge>
+                           <Badge color={STATUS_COLORS[ticket.status]}>{ticket.status?.replace('_', ' ')}</Badge>
                         </td>
                         <td className="px-4 py-4">
                            <Badge color={PRIORITY_COLORS[ticket.priority]}>{ticket.priority}</Badge>
