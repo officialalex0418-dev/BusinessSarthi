@@ -25,11 +25,12 @@ export default function Contact() {
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setStatus('success');
         setForm({ name: '', email: '', phone: '', company: '', subject: '', message: '' });
       } else {
-        throw new Error(data.message || 'Submission failed');
+        setStatus('error');
+        console.error('Submission failed:', data.message);
       }
     } catch (err) {
       console.error('Inquiry error:', err);
