@@ -10,7 +10,10 @@ import { logger } from './utils/logger.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { notFoundHandler, errorHandler } from './middleware/error.js';
 import routes from './routes/index.js';
+import * as inquiry from './controllers/inquiry.controller.js';
 import mongoose from 'mongoose';
+import { schemas } from './routes/validators.js';
+import { validate } from './middleware/validate.js';
 
 const app = express();
 
@@ -96,6 +99,10 @@ app.get('/ready', async (_req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Resilient mount for public inquiries (works with or without /api/v1 prefix)
+app.post(['/public/inquiries', '/api/v1/public/inquiries'], apiLimiter, validate({ body: schemas.createInquiry }), inquiry.createInquiry);
+
 app.use('/api/v1', routes);
 
 // ---------- Errors ----------
