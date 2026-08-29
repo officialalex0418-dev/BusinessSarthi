@@ -3,7 +3,7 @@ import multer from 'multer';
 import { protect } from '../middleware/auth.js';
 import { authorize, scopeCompany, requireFeature } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
-import { authLimiter } from '../middleware/rateLimit.js';
+import { authLimiter, apiLimiter } from '../middleware/rateLimit.js';
 import { schemas } from './validators.js';
 
 import * as auth from '../controllers/auth.controller.js';
@@ -57,7 +57,7 @@ r.post('/auth/request-device-reset', auth.requestDeviceReset);
 r.patch('/auth/fcm-token', protect, auth.updateFcmToken);
 
 // ============ PUBLIC / WEBSITE ============
-r.post('/public/inquiries', authLimiter, validate({ body: schemas.createInquiry }), inquiry.createInquiry);
+r.post('/public/inquiries', apiLimiter, validate({ body: schemas.createInquiry }), inquiry.createInquiry);
 r.get('/files/*', misc.getFile);
 
 // ============ DASHBOARDS ============
