@@ -3,37 +3,27 @@ import { siteConfig } from '../../config/site';
 
 const footerLinks = [
   {
-    title: 'Product',
+    title: 'Platform',
     links: [
       { name: 'Features', to: '/features' },
-      { name: 'People Management', to: '/features#people' },
-      { name: 'Sales & Targets', to: '/features#sales' },
-      { name: 'Inventory Mgmt', to: '/features#inventory' },
+      { name: 'Solutions', to: '/solutions' },
+      { name: 'Pricing', to: '/pricing' },
       { name: 'Security', to: '/security' },
-    ],
-  },
-  {
-    title: 'Solutions',
-    links: [
-      { name: 'For Businesses', to: '/#solutions' },
-      { name: 'For Sales Teams', to: '/#solutions' },
-      { name: 'Field Operations', to: '/#solutions' },
-      { name: 'Distributors', to: '/#solutions' },
     ],
   },
   {
     title: 'Company',
     links: [
       { name: 'About Us', to: '/about' },
-      { name: 'Contact', to: '/contact' },
       { name: 'FAQ', to: '/faq' },
+      { name: 'Contact', to: '/contact' },
     ],
   },
   {
     title: 'Legal',
     links: [
       { name: 'Privacy Policy', to: '/privacy-policy' },
-      { name: 'Terms & Conditions', to: '/terms-and-conditions' },
+      { name: 'Terms & Conditions', to: '/terms-conditions' },
       { name: 'Refund Policy', to: '/refund-policy' },
       { name: 'Cookie Policy', to: '/cookie-policy' },
     ],

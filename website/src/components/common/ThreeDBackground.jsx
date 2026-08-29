@@ -28,9 +28,10 @@ export default function ThreeDBackground() {
 
        {/* Floating 3D Shapes (Perspective) */}
        <div className="absolute inset-0 perspective">
-          <div className="absolute top-[15%] right-[5%] w-32 h-32 border border-primary-500/20 rounded-[2rem] rotate-45 animate-float preserve-3d" />
-          <div className="absolute bottom-[25%] left-[5%] w-24 h-24 border border-emerald-500/20 rounded-full animate-float [animation-delay:1s] preserve-3d" />
-          <div className="absolute top-1/2 right-[15%] w-16 h-16 bg-gradient-to-br from-primary-500/10 to-transparent rounded-lg rotate-12 animate-float [animation-delay:0.5s] preserve-3d shadow-xl" />
+          <div className="absolute top-[15%] right-[2%] w-64 h-64 border-2 border-primary-500/5 rounded-[4rem] rotate-12 animate-float preserve-3d" />
+          <div className="absolute bottom-[10%] left-[2%] w-80 h-80 border-2 border-emerald-500/5 rounded-full animate-float [animation-delay:2s] preserve-3d" />
+          <div className="absolute top-[40%] left-[5%] w-32 h-32 bg-gradient-to-br from-primary-500/5 to-transparent rounded-[2rem] -rotate-12 animate-float [animation-delay:1s] preserve-3d" />
+          <div className="absolute bottom-[40%] right-[5%] w-48 h-48 bg-gradient-to-tl from-emerald-500/5 to-transparent rounded-full animate-float [animation-delay:3s] preserve-3d" />
        </div>
     </div>
   );

@@ -33,8 +33,6 @@ const values = [
 export default function About() {
   return (
     <div className="pt-32 relative overflow-hidden">
-      <ThreeDBackground />
-
       {/* Header */}
       <section className="py-40 relative z-10">
         <div className="section-container text-center max-w-6xl relative">

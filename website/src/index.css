@@ -3,38 +3,51 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --brand-primary: #2563eb;
+    --brand-primary-dark: #1e3a8a;
+    --brand-primary-light: #eff6ff;
+  }
+
   body {
-    @apply bg-white text-slate-900 antialiased font-sans;
+    @apply bg-white text-slate-900 antialiased font-sans selection:bg-primary-100 selection:text-primary-700;
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-200 px-5 py-2.5 text-sm;
+    @apply inline-flex items-center justify-center rounded-2xl font-black uppercase tracking-widest transition-all duration-300 px-8 py-4 text-xs;
   }
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 shadow-sm hover:shadow-md active:scale-95;
+    @apply bg-primary-600 text-white hover:bg-primary-700 shadow-xl shadow-primary-200 hover:shadow-2xl hover:shadow-primary-300 hover:scale-[1.02] active:scale-95;
   }
   .btn-outline {
-    @apply border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:scale-95;
+    @apply border-2 border-slate-100 bg-white/50 backdrop-blur text-slate-900 hover:border-primary-600 hover:text-primary-600 active:scale-95;
   }
+
   .section-container {
-    @apply max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16;
+    @apply max-w-[1600px] mx-auto px-6 sm:px-12 lg:px-24;
+  }
+
+  .h1 {
+    @apply text-5xl sm:text-7xl lg:text-9xl font-black text-slate-900 tracking-tighter leading-[0.85];
   }
   .h2 {
-    @apply text-4xl font-black text-slate-900 sm:text-5xl lg:text-7xl tracking-tighter leading-tight;
+    @apply text-4xl sm:text-6xl lg:text-8xl font-black text-slate-900 tracking-tighter leading-[0.9];
   }
   .lead {
-    @apply mt-6 text-lg lg:text-2xl text-slate-500 leading-relaxed font-medium;
+    @apply mt-8 text-xl lg:text-2xl text-slate-500 leading-relaxed font-medium;
   }
+
   .glass {
-    @apply bg-white/40 backdrop-blur-2xl border border-white/40 shadow-glass;
+    @apply bg-white/40 backdrop-blur-3xl border border-white/60 shadow-glass;
   }
   .glass-dark {
-    @apply bg-slate-900/60 backdrop-blur-2xl border border-white/10 shadow-2xl;
+    @apply bg-slate-900/60 backdrop-blur-3xl border border-white/10 shadow-2xl;
   }
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-br from-primary-600 via-primary-500 to-primary-400;
+
+  .badge-premium {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-50 border border-slate-100 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400;
   }
 }
 
@@ -46,11 +59,11 @@
     perspective: 2000px;
   }
   .bg-grid {
-    background-size: 40px 40px;
-    background-image: radial-gradient(circle, #e2e8f0 1px, transparent 1px);
+    background-size: 64px 64px;
+    background-image: radial-gradient(circle, #e2e8f0 1.5px, transparent 1.5px);
   }
   .bg-dots {
-    background-size: 20px 20px;
+    background-size: 24px 24px;
     background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
   }
 }

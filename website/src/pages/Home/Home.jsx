@@ -4,8 +4,9 @@ import Ecosystem from '../../components/common/Ecosystem';
 import TrustSection from '../../components/common/TrustSection';
 import CTASection from '../../components/cta/CTASection';
 import ThreeDCard from '../../components/common/ThreeDCard';
+import ThreeDBackground from '../../components/common/ThreeDBackground';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Users, TrendingUp, Boxes } from 'lucide-react';
+import { ArrowRight, Users, TrendingUp, Boxes, ShieldCheck, Zap } from 'lucide-react';
 
 const solutions = [
   {
@@ -33,7 +34,7 @@ const solutions = [
 
 export default function Home() {
   return (
-    <div className="animate-fade-in overflow-hidden">
+    <div className="animate-fade-in overflow-hidden relative">
       <Hero />
 
       <TrustSection />

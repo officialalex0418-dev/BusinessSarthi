@@ -8,8 +8,6 @@ import ThreeDBackground from '../../components/common/ThreeDBackground';
 export default function Features() {
   return (
     <div className="pt-32 bg-white relative overflow-hidden">
-      <ThreeDBackground />
-
       {/* Modern Header */}
       <section className="py-40 relative z-10">
         <div className="section-container text-center max-w-6xl relative">

@@ -3,6 +3,7 @@ import PublicLayout from './layouts/PublicLayout';
 import Home from './pages/Home/Home';
 import About from './pages/About/About';
 import Features from './pages/Features/Features';
+import Solutions from './pages/Solutions/Solutions';
 import Pricing from './pages/Pricing/Pricing';
 import Contact from './pages/Contact/Contact';
 import Security from './pages/Security/Security';
@@ -20,12 +21,13 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="about" element={<About />} />
         <Route path="features" element={<Features />} />
+        <Route path="solutions" element={<Solutions />} />
         <Route path="pricing" element={<Pricing />} />
         <Route path="contact" element={<Contact />} />
         <Route path="security" element={<Security />} />
         <Route path="faq" element={<FAQ />} />
         <Route path="privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="terms-and-conditions" element={<Terms />} />
+        <Route path="terms-conditions" element={<Terms />} />
         <Route path="refund-policy" element={<RefundPolicy />} />
         <Route path="cookie-policy" element={<CookiePolicy />} />
         <Route path="*" element={<NotFound />} />

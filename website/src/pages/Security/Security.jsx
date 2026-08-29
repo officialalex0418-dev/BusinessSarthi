@@ -44,8 +44,6 @@ const securityLayers = [
 export default function Security() {
   return (
     <div className="pt-32 pb-24 relative overflow-hidden">
-      <ThreeDBackground />
-
       <section className="py-32 relative z-10">
         <div className="section-container text-center max-w-5xl relative">
           <div className="h-20 w-20 rounded-[2.5rem] bg-slate-900 shadow-2xl flex items-center justify-center text-white mx-auto mb-10 animate-float border-4 border-white/10">
