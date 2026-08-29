@@ -6,16 +6,27 @@ const footerLinks = [
     title: 'Product',
     links: [
       { name: 'Features', to: '/features' },
-      { name: 'Pricing', to: '/pricing' },
+      { name: 'People Management', to: '/features#people' },
+      { name: 'Sales & Targets', to: '/features#sales' },
+      { name: 'Inventory Mgmt', to: '/features#inventory' },
       { name: 'Security', to: '/security' },
+    ],
+  },
+  {
+    title: 'Solutions',
+    links: [
+      { name: 'For Businesses', to: '/#solutions' },
+      { name: 'For Sales Teams', to: '/#solutions' },
+      { name: 'Field Operations', to: '/#solutions' },
+      { name: 'Distributors', to: '/#solutions' },
     ],
   },
   {
     title: 'Company',
     links: [
-      { name: 'About', to: '/about' },
+      { name: 'About Us', to: '/about' },
       { name: 'Contact', to: '/contact' },
-      { name: 'Careers', to: '/careers' },
+      { name: 'FAQ', to: '/faq' },
     ],
   },
   {
@@ -31,31 +42,43 @@ const footerLinks = [
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-50 border-t border-slate-200 pt-16 pb-8">
+    <footer className="bg-slate-900 pt-32 pb-12 overflow-hidden relative">
+      {/* Background radial glow */}
+      <div className="absolute bottom-0 left-0 w-full h-[500px] bg-primary-600/10 blur-[150px] -z-10" />
+
       <div className="section-container">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
-          <div className="col-span-2 lg:col-span-2">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <img src="/logo.png" alt="Logo" className="h-7 w-auto" />
-              <span className="text-xl font-bold tracking-tight text-slate-900">
-                {siteConfig.name}
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-12 mb-20">
+          <div className="col-span-2 space-y-8">
+            <Link to="/" className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary-600 flex items-center justify-center p-2">
+                 <img src="/logo.png" alt="Logo" className="h-full w-auto brightness-0 invert" />
+              </div>
+              <span className="text-2xl font-black tracking-tight text-white uppercase italic">
+                Business<span className="text-primary-400">Sarthi</span>
               </span>
             </Link>
-            <p className="text-slate-500 max-w-xs mb-6">
-              Empowering modern businesses with powerful, cloud-based tools for management and growth.
-              {siteConfig.tagline}
+            <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-xs">
+              Complete business management and workforce intelligence platform.
             </p>
+            <div className="flex gap-4">
+               {/* Social placeholders */}
+               {[1, 2, 3].map(i => (
+                 <div key={i} className="h-10 w-10 rounded-full border border-white/10 flex items-center justify-center text-slate-500 hover:text-white hover:border-primary-500 transition-all cursor-pointer">
+                    <div className="h-1 w-4 bg-current rounded-full" />
+                 </div>
+               ))}
+            </div>
           </div>
 
           {footerLinks.map((section) => (
-            <div key={section.title}>
-              <h3 className="font-bold text-slate-900 mb-4">{section.title}</h3>
-              <ul className="space-y-2">
+            <div key={section.title} className="space-y-6">
+              <h3 className="font-bold text-white text-xs uppercase tracking-widest">{section.title}</h3>
+              <ul className="space-y-4">
                 {section.links.map((link) => (
                   <li key={link.name}>
                     <Link
                       to={link.to}
-                      className="text-sm text-slate-500 hover:text-primary-600 transition-colors"
+                      className="text-sm font-medium text-slate-500 hover:text-primary-400 transition-colors"
                     >
                       {link.name}
                     </Link>
@@ -66,13 +89,12 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-slate-400">
-            © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
+        <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
+          <p className="text-sm text-slate-600 font-medium">
+            © {new Date().getFullYear()} {siteConfig.name}. Build with ♥ in Nepal.
           </p>
-          <div className="flex gap-6">
-            {/* Social icons placeholder */}
-            <span className="text-xs text-slate-400 uppercase tracking-widest">
+          <div className="flex items-center gap-10">
+            <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.4em]">
               Driving Business Forward
             </span>
           </div>

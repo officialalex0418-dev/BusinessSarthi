@@ -5,6 +5,9 @@ import About from './pages/About/About';
 import Features from './pages/Features/Features';
 import Pricing from './pages/Pricing/Pricing';
 import Contact from './pages/Contact/Contact';
+import Security from './pages/Security/Security';
+import Security from './pages/Security/Security';
+import FAQ from './pages/FAQ/FAQ';
 import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
 import Terms from './pages/Terms/Terms';
 import RefundPolicy from './pages/RefundPolicy/RefundPolicy';
@@ -20,6 +23,8 @@ export default function App() {
         <Route path="features" element={<Features />} />
         <Route path="pricing" element={<Pricing />} />
         <Route path="contact" element={<Contact />} />
+        <Route path="security" element={<Security />} />
+        <Route path="faq" element={<FAQ />} />
         <Route path="privacy-policy" element={<PrivacyPolicy />} />
         <Route path="terms-and-conditions" element={<Terms />} />
         <Route path="refund-policy" element={<RefundPolicy />} />

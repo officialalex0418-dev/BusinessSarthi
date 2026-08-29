@@ -1,4 +1,5 @@
-import { XCircle } from 'lucide-react';
+import { XCircle, ArrowRight } from 'lucide-react';
+import ThreeDCard from './ThreeDCard';
 
 const problems = [
   'Manual attendance tracking errors',
@@ -7,42 +8,56 @@ const problems = [
   'Poor visibility into performance',
   'Inventory management challenges',
   'Complex manual reporting',
-  'Communication gaps between teams',
 ];
 
 export default function ProblemSection() {
   return (
-    <section className="py-24">
-      <div className="section-container">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <h2 className="h2 mb-6">
-              Running a business shouldn't mean managing endless spreadsheets.
+    <section className="py-40 bg-white relative overflow-hidden">
+      <div className="section-container relative z-10">
+        <div className="grid lg:grid-cols-2 gap-24 items-center">
+          <div className="animate-slide-up">
+            <p className="text-primary-600 font-bold uppercase tracking-widest text-xs mb-4">The Challenge</p>
+            <h2 className="text-4xl font-black text-slate-900 sm:text-6xl mb-8 tracking-tight leading-[1.1]">
+              Running a business shouldn't be a <span className="text-primary-600">spreadsheet</span> battle.
             </h2>
-            <p className="lead mb-8">
-              Legacy systems and manual processes slow down your growth. Business Sarthi eliminates
-              operational friction so you can focus on what matters most — growing your business.
+            <p className="lead mb-10">
+              Legacy systems and disconnected tools create operational blind spots.
+              Business Sarthi provides the clarity you need to move from management to leadership.
             </p>
-            <div className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4">
               {problems.map((problem) => (
-                <div key={problem} className="flex items-center gap-3">
-                  <XCircle className="h-5 w-5 text-red-500" />
-                  <span className="text-slate-700 font-medium">{problem}</span>
+                <div key={problem} className="flex items-center gap-3 group">
+                  <div className="h-2 w-2 rounded-full bg-red-400 group-hover:scale-150 transition-transform" />
+                  <span className="text-slate-700 font-bold text-sm tracking-tight">{problem}</span>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="relative">
-             <div className="bg-primary-600 rounded-2xl aspect-square lg:aspect-auto lg:h-[500px] shadow-2xl flex items-center justify-center p-8 text-white overflow-hidden">
-                <div className="text-center z-10">
-                   <h3 className="text-3xl font-bold mb-4">The Solution is Sarthi</h3>
-                   <p className="text-primary-100 text-lg">Your intelligent partner in business management.</p>
+             <div className="absolute inset-0 bg-primary-600/10 blur-[120px] rounded-full" />
+             <ThreeDCard intensity={10}>
+                <div className="bg-slate-900 rounded-[3rem] p-10 lg:p-16 shadow-3d border border-white/5 relative overflow-hidden group">
+                   {/* Background pulse */}
+                   <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/20 rounded-full blur-3xl -mr-32 -mt-32" />
+
+                   <div className="relative z-10 space-y-8">
+                      <div className="h-16 w-16 rounded-2xl bg-primary-600 shadow-xl shadow-primary-500/30 flex items-center justify-center text-white">
+                         <ArrowRight className="h-8 w-8" />
+                      </div>
+                      <h3 className="text-3xl font-black text-white leading-tight italic">
+                         Upgrade to <br /><span className="text-primary-400">Total Business Intelligence.</span>
+                      </h3>
+                      <p className="text-slate-400 font-medium">
+                         Replace manual friction with automated growth.
+                         Business Sarthi scales with your ambition.
+                      </p>
+                      <button className="text-sm font-black uppercase tracking-widest text-primary-400 border-b-2 border-primary-400/20 pb-1 hover:border-primary-400 transition-all">
+                         See the solution →
+                      </button>
+                   </div>
                 </div>
-                {/* Abstract background shapes */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl -ml-32 -mb-32" />
-             </div>
+             </ThreeDCard>
           </div>
         </div>
       </div>

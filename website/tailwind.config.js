@@ -30,8 +30,48 @@ export default {
           '0%': { transform: 'translateY(20px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+        'pulse-soft': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.7' },
+        }
+      },
+      boxShadow: {
+        '3d': '0 20px 50px -12px rgba(0, 0, 0, 0.15)',
+        '3d-hover': '0 30px 60px -12px rgba(37, 99, 235, 0.2)',
+        'glass': 'inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 32px 0 rgba(31, 38, 135, 0.07)',
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.perspective-1000': {
+          perspective: '1000px',
+        },
+        '.preserve-3d': {
+          'transform-style': 'preserve-3d',
+        },
+        '.backface-hidden': {
+          'backface-visibility': 'hidden',
+        },
+        '.rotate-y-10': {
+          transform: 'rotateY(10deg)',
+        },
+        '.rotate-y-20': {
+          transform: 'rotateY(20deg)',
+        },
+        '.rotate-x-10': {
+          transform: 'rotateX(10deg)',
+        },
+        '.-rotate-x-10': {
+          transform: 'rotateX(-10deg)',
+        },
+      }
+      addUtilities(newUtilities)
+    }
+  ],
 };

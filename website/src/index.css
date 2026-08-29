@@ -22,9 +22,27 @@
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
   .h2 {
-    @apply text-3xl font-extrabold text-slate-900 sm:text-4xl;
+    @apply text-3xl font-extrabold text-slate-900 sm:text-4xl lg:text-5xl tracking-tight leading-tight;
   }
   .lead {
-    @apply mt-4 text-xl text-slate-500;
+    @apply mt-4 text-lg lg:text-xl text-slate-500 leading-relaxed font-medium;
+  }
+  .glass {
+    @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-glass;
+  }
+  .glass-dark {
+    @apply bg-slate-900/40 backdrop-blur-lg border border-white/5 shadow-xl;
+  }
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-400;
+  }
+}
+
+@layer utilities {
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .perspective {
+    perspective: 1000px;
   }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, Loader2, MessageSquare } from 'lucide-react';
 import { siteConfig } from '../../config/site';
+import ThreeDCard from '../../components/common/ThreeDCard';
 
 export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', subject: '', message: '' });
@@ -42,149 +43,159 @@ export default function Contact() {
   };
 
   return (
-    <div className="pt-20">
-      <section className="bg-slate-50 py-24">
-        <div className="section-container text-center max-w-3xl">
-          <h1 className="text-4xl font-extrabold text-slate-900 sm:text-5xl mb-6">
-            Get in <span className="text-primary-600">Touch</span>
+    <div className="pt-32 pb-24">
+      <section className="bg-slate-50 py-32 overflow-hidden relative">
+        <div className="section-container text-center max-w-4xl relative z-10">
+          <div className="h-16 w-16 rounded-2xl bg-primary-600 shadow-xl flex items-center justify-center text-white mx-auto mb-8 animate-float">
+             <MessageSquare className="h-8 w-8" />
+          </div>
+          <h1 className="text-4xl font-black text-slate-900 sm:text-7xl mb-8 tracking-tight leading-tight">
+            Let's Start a <span className="text-primary-600 italic">Conversation.</span>
           </h1>
-          <p className="lead text-lg">
-            Have questions about Business Sarthi? Our team is here to help you find the right solution
-            for your business.
+          <p className="lead max-w-2xl mx-auto">
+            Have questions about digitalizing your operations? Our team is here to
+            help you find the right solution for your unique business needs.
           </p>
         </div>
       </section>
 
-      <section className="py-24">
+      <section className="py-32">
         <div className="section-container">
-          <div className="grid lg:grid-cols-3 gap-12">
+          <div className="grid lg:grid-cols-12 gap-20">
             {/* Info */}
-            <div className="lg:col-span-1 space-y-8">
+            <div className="lg:col-span-5 space-y-10">
               <div>
-                <h3 className="text-xl font-bold mb-6">Contact Information</h3>
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-xl bg-primary-50 text-primary-600">
+                <h3 className="text-2xl font-black text-slate-900 mb-8 uppercase tracking-tight">Contact Information</h3>
+                <div className="space-y-8">
+                  <div className="flex items-start gap-6 group">
+                    <div className="p-4 rounded-2xl bg-primary-50 text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-all duration-300">
                       <Mail className="h-6 w-6" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">Email Us</p>
-                      <a href={`mailto:${siteConfig.contact.email}`} className="text-slate-500 hover:text-primary-600">{siteConfig.contact.email}</a>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Email Us</p>
+                      <a href={`mailto:${siteConfig.contact.email}`} className="text-lg font-bold text-slate-700 hover:text-primary-600 transition-colors">{siteConfig.contact.email}</a>
                     </div>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-xl bg-primary-50 text-primary-600">
+                  <div className="flex items-start gap-6 group">
+                    <div className="p-4 rounded-2xl bg-primary-50 text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-all duration-300">
                       <Phone className="h-6 w-6" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">Call Us</p>
-                      <a href={`tel:${siteConfig.contact.phone}`} className="text-slate-500 hover:text-primary-600">{siteConfig.contact.phone}</a>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Call Us</p>
+                      <a href={`tel:${siteConfig.contact.phone}`} className="text-lg font-bold text-slate-700 hover:text-primary-600 transition-colors">{siteConfig.contact.phone}</a>
                     </div>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-xl bg-primary-50 text-primary-600">
+                  <div className="flex items-start gap-6 group">
+                    <div className="p-4 rounded-2xl bg-primary-50 text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-all duration-300">
                       <MapPin className="h-6 w-6" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">Our Office</p>
-                      <p className="text-slate-500">{siteConfig.contact.address}</p>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Our Office</p>
+                      <p className="text-lg font-bold text-slate-700">{siteConfig.contact.address}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-8 rounded-2xl bg-slate-900 text-white">
-                 <h4 className="font-bold mb-2">Request a Demo</h4>
-                 <p className="text-slate-400 text-sm mb-6">Want to see Business Sarthi in action? Our experts can provide a personalized walkthrough.</p>
-                 <a href={siteConfig.links.register} className="text-primary-400 font-bold hover:underline">Schedule Now →</a>
-              </div>
+              <ThreeDCard intensity={5}>
+                <div className="p-10 rounded-[3rem] bg-slate-900 text-white relative overflow-hidden group">
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary-600/20 rounded-full blur-3xl" />
+                   <h4 className="text-xl font-black mb-4 italic text-primary-400">Request a Product Demo</h4>
+                   <p className="text-slate-400 font-medium mb-8 leading-relaxed">Want to see Business Sarthi in action? Our experts can provide a personalized walkthrough of the dashboard and field tools.</p>
+                   <a href={siteConfig.links.register} className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-widest text-white border-b-2 border-primary-500 pb-1 hover:gap-4 transition-all">Schedule Now →</a>
+                </div>
+              </ThreeDCard>
             </div>
 
             {/* Form */}
-            <div className="lg:col-span-2">
-              <div className="bg-white p-8 md:p-10 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50">
-                {status === 'success' ? (
-                  <div className="text-center py-12">
-                    <div className="h-20 w-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-6">
-                      <Send className="h-10 w-10" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-slate-900 mb-2">Message Sent Successfully!</h3>
-                    <p className="text-slate-500 mb-8">Thank you for reaching out. Our team will get back to you within 24 hours.</p>
-                    <button onClick={() => setStatus('idle')} className="btn btn-primary px-8">Send Another Message</button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Full Name</label>
-                        <input
-                          type="text" required value={form.name}
-                          onChange={e => setForm({...form, name: e.target.value})}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all bg-slate-50/50"
-                          placeholder="John Doe"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Work Email</label>
-                        <input
-                          type="email" required value={form.email}
-                          onChange={e => setForm({...form, email: e.target.value})}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all bg-slate-50/50"
-                          placeholder="john@company.com"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Phone Number</label>
-                        <input
-                          type="tel" value={form.phone}
-                          onChange={e => setForm({...form, phone: e.target.value})}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all bg-slate-50/50"
-                          placeholder="+977-9800000000"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Company Name</label>
-                        <input
-                          type="text" value={form.company}
-                          onChange={e => setForm({...form, company: e.target.value})}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all bg-slate-50/50"
-                          placeholder="Acme Inc."
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700">Subject</label>
-                      <input
-                        type="text" required value={form.subject}
-                        onChange={e => setForm({...form, subject: e.target.value})}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all bg-slate-50/50"
-                        placeholder="How can we help?"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700">Message</label>
-                      <textarea
-                        required value={form.message}
-                        onChange={e => setForm({...form, message: e.target.value})}
-                        rows={5}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all bg-slate-50/50"
-                        placeholder="Tell us more about your requirements..."
-                      />
-                    </div>
-                    <button type="submit" disabled={status === 'loading'} className="btn btn-primary w-full py-4 gap-3 text-lg">
-                      {status === 'loading' ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send Message'}
-                    </button>
-                    {status === 'error' && (
-                      <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-center">
-                        <p className="text-red-600 text-sm font-bold">Error Details:</p>
-                        <p className="text-red-500 text-xs mt-1">{errorMsg}</p>
-                      </div>
-                    )}
-                  </form>
-                )}
-              </div>
+            <div className="lg:col-span-7">
+              <ThreeDCard intensity={2}>
+                 <div className="bg-white p-10 md:p-16 rounded-[3rem] border border-slate-100 shadow-3d relative overflow-hidden">
+                   {status === 'success' ? (
+                     <div className="text-center py-20 animate-fade-in">
+                       <div className="h-24 w-24 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-8 shadow-inner">
+                         <Send className="h-10 w-10" />
+                       </div>
+                       <h3 className="text-3xl font-black text-slate-900 mb-4">Message Sent!</h3>
+                       <p className="text-slate-500 font-medium mb-10 max-w-sm mx-auto">Thank you for reaching out. Our team will review your inquiry and get back to you within 24 hours.</p>
+                       <button onClick={() => setStatus('idle')} className="btn btn-primary px-10 py-4 rounded-full font-black">Send Another Message</button>
+                     </div>
+                   ) : (
+                     <form onSubmit={handleSubmit} className="space-y-8">
+                       <div className="grid md:grid-cols-2 gap-8">
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Full Name</label>
+                           <input
+                             type="text" required value={form.name}
+                             onChange={e => setForm({...form, name: e.target.value})}
+                             className="w-full px-6 py-4 rounded-2xl border border-slate-100 focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all bg-slate-50/50 font-bold"
+                             placeholder="Laxmi Sah"
+                           />
+                         </div>
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Work Email</label>
+                           <input
+                             type="email" required value={form.email}
+                             onChange={e => setForm({...form, email: e.target.value})}
+                             className="w-full px-6 py-4 rounded-2xl border border-slate-100 focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all bg-slate-50/50 font-bold"
+                             placeholder="laxmi@company.com"
+                           />
+                         </div>
+                       </div>
+                       <div className="grid md:grid-cols-2 gap-8">
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Phone Number</label>
+                           <input
+                             type="tel" value={form.phone}
+                             onChange={e => setForm({...form, phone: e.target.value})}
+                             className="w-full px-6 py-4 rounded-2xl border border-slate-100 focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all bg-slate-50/50 font-bold"
+                             placeholder="+977-..."
+                           />
+                         </div>
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Company Name</label>
+                           <input
+                             type="text" value={form.company}
+                             onChange={e => setForm({...form, company: e.target.value})}
+                             className="w-full px-6 py-4 rounded-2xl border border-slate-100 focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all bg-slate-50/50 font-bold"
+                             placeholder="Your Enterprise Inc."
+                           />
+                         </div>
+                       </div>
+                       <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Subject</label>
+                         <input
+                           type="text" required value={form.subject}
+                           onChange={e => setForm({...form, subject: e.target.value})}
+                           className="w-full px-6 py-4 rounded-2xl border border-slate-100 focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all bg-slate-50/50 font-bold"
+                           placeholder="How can we assist you?"
+                         />
+                       </div>
+                       <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Message</label>
+                         <textarea
+                           required value={form.message}
+                           onChange={e => setForm({...form, message: e.target.value})}
+                           rows={5}
+                           className="w-full px-6 py-4 rounded-2xl border border-slate-100 focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all bg-slate-50/50 font-bold resize-none"
+                           placeholder="Describe your requirements..."
+                         />
+                       </div>
+
+                       <button type="submit" disabled={status === 'loading'} className="btn btn-primary w-full py-5 rounded-2xl gap-3 text-lg font-black shadow-2xl shadow-primary-200 hover:scale-[1.02]">
+                         {status === 'loading' ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send Your Inquiry'}
+                       </button>
+
+                       {status === 'error' && (
+                         <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-center animate-shake">
+                           <p className="text-red-600 text-sm font-bold">Inquiry Failed</p>
+                           <p className="text-red-500 text-xs mt-1 font-medium">{errorMsg}</p>
+                         </div>
+                       )}
+                     </form>
+                   )}
+                 </div>
+              </ThreeDCard>
             </div>
           </div>
         </div>
