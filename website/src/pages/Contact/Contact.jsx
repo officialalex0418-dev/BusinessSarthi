@@ -5,10 +5,12 @@ import { siteConfig } from '../../config/site';
 export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', subject: '', message: '' });
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus('loading');
+    setErrorMsg('');
 
     try {
       const res = await fetch(`${siteConfig.apiUrl}/public/inquiries`, {
@@ -30,11 +32,12 @@ export default function Contact() {
         setForm({ name: '', email: '', phone: '', company: '', subject: '', message: '' });
       } else {
         setStatus('error');
-        console.error('Submission failed:', data.message);
+        setErrorMsg(data.message || `Server responded with ${res.status}`);
       }
     } catch (err) {
       console.error('Inquiry error:', err);
       setStatus('error');
+      setErrorMsg('Network error. Is the backend server running?');
     }
   };
 
@@ -174,9 +177,10 @@ export default function Contact() {
                       {status === 'loading' ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send Message'}
                     </button>
                     {status === 'error' && (
-                      <p className="text-center text-red-600 text-sm font-medium">
-                        Unable to send message. Please check your connection and try again.
-                      </p>
+                      <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-center">
+                        <p className="text-red-600 text-sm font-bold">Error Details:</p>
+                        <p className="text-red-500 text-xs mt-1">{errorMsg}</p>
+                      </div>
                     )}
                   </form>
                 )}
