@@ -6,7 +6,6 @@ import Features from './pages/Features/Features';
 import Pricing from './pages/Pricing/Pricing';
 import Contact from './pages/Contact/Contact';
 import Security from './pages/Security/Security';
-import Security from './pages/Security/Security';
 import FAQ from './pages/FAQ/FAQ';
 import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
 import Terms from './pages/Terms/Terms';
