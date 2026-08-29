@@ -214,6 +214,8 @@ r.get('/chats/:id/messages', protect, chat.getChatMessages);
 r.post('/chats/:id/messages', protect, chat.addChatMessage);
 
 // ============ DESIGNATIONS ============
+r.get('/designations', protect, authorize(...PLATFORM), designation.listDesignations);
+r.post('/designations', protect, authorize('SUPER_ADMIN'), designation.createDesignation);
 r.patch('/designations/:id', protect, authorize('SUPER_ADMIN'), designation.updateDesignation);
 r.delete('/designations/:id', protect, authorize('SUPER_ADMIN'), designation.deleteDesignation);
 

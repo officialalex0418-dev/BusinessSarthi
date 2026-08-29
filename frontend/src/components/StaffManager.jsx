@@ -50,7 +50,8 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
       api.get('/company-config/shifts').then(({ data }) => setShifts(data.data)).catch(() => {});
     }
     if (mode === 'system') {
-      api.get('/designations').then(res => setDesignations(res.data.data));
+      api.get('/designations').then(res => setDesignations(res.data?.data || [])).catch(() => setDesignations([]));
+      api.get('/shifts').then(res => setShifts(res.data?.data || [])).catch(() => setShifts([]));
     }
     if (!allowCompanySelection) return;
     (async () => {

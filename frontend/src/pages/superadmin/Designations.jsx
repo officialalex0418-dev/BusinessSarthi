@@ -33,9 +33,11 @@ export default function Designations() {
   const load = useCallback(async () => {
     try {
       const { data } = await api.get('/designations');
-      setItems(data.data);
+      setItems(data.data || []);
     } catch (err) {
       console.error(err);
+      setItems([]);
+      setError('Failed to load designations. Please ensure your backend is updated.');
     }
   }, []);
 
