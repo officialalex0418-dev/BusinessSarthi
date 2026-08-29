@@ -31,6 +31,7 @@ import SystemEmployees from '@/pages/superadmin/SystemEmployees';
 import CompanyStaff from '@/pages/superadmin/CompanyStaff';
 import Configuration from '@/pages/superadmin/Configuration';
 import Designations from '@/pages/superadmin/Designations';
+import Shifts from '@/pages/superadmin/Shifts';
 import AuditLogs from '@/pages/superadmin/AuditLogs';
 import AdminSettings from '@/pages/superadmin/AdminSettings';
 import InquiryList from '@/pages/superadmin/inquiry/InquiryList';
@@ -312,6 +313,7 @@ export default function App() {
         <Route path="configuration">
           <Route index element={<Configuration />} />
           <Route path="designations" element={<Designations />} />
+          <Route path="shifts" element={<Shifts />} />
         </Route>
         <Route path="audit-logs" element={<AuditLogs />} />
         <Route path="settings" element={<AdminSettings />} />

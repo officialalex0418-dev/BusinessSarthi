@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const shiftSchema = new mongoose.Schema(
   {
-    company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
+    company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null, index: true },
     name: { type: String, required: true, trim: true },
     workingDays: [{ type: String, enum: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] }],
     startTime: { type: String, required: true }, // HH:mm

@@ -26,6 +26,7 @@ import * as dashboard from '../controllers/dashboard.controller.js';
 import * as complaint from '../controllers/complaint.controller.js';
 import * as chat from '../controllers/chat.controller.js';
 import * as designation from '../controllers/designation.controller.js';
+import * as shift from '../controllers/shift.controller.js';
 import * as companyConfig from '../controllers/companyConfig.controller.js';
 import * as target from '../controllers/target.controller.js';
 import * as report from '../controllers/report.controller.js';
@@ -213,10 +214,14 @@ r.get('/chats/:id/messages', protect, chat.getChatMessages);
 r.post('/chats/:id/messages', protect, chat.addChatMessage);
 
 // ============ DESIGNATIONS ============
-r.get('/designations', protect, authorize(...PLATFORM), designation.listDesignations);
-r.post('/designations', protect, authorize('SUPER_ADMIN'), designation.createDesignation);
 r.patch('/designations/:id', protect, authorize('SUPER_ADMIN'), designation.updateDesignation);
 r.delete('/designations/:id', protect, authorize('SUPER_ADMIN'), designation.deleteDesignation);
+
+// ============ SHIFTS (System) ============
+r.get('/shifts', protect, authorize(...PLATFORM), shift.listShifts);
+r.post('/shifts', protect, authorize('SUPER_ADMIN'), shift.createShift);
+r.patch('/shifts/:id', protect, authorize('SUPER_ADMIN'), shift.updateShift);
+r.delete('/shifts/:id', protect, authorize('SUPER_ADMIN'), shift.deleteShift);
 
 // ============ COMPANY CONFIGURATION ============
 // Company Designations

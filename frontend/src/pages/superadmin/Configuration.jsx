@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { UserCog, ChevronRight } from 'lucide-react';
+import { UserCog, ChevronRight, Clock } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui';
 
 export default function Configuration() {
@@ -10,6 +10,13 @@ export default function Configuration() {
       icon: UserCog,
       to: 'designations',
       color: 'text-blue-600 bg-blue-50',
+    },
+    {
+      title: 'Work Shifts',
+      desc: 'Define work hours and late buffers for system staff',
+      icon: Clock,
+      to: 'shifts',
+      color: 'text-emerald-600 bg-emerald-50',
     },
   ];
 
