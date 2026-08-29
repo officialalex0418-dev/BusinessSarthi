@@ -1,38 +1,21 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Menu, X, ArrowRight, ChevronDown } from 'lucide-react';
+import { Menu, X, ArrowRight } from 'lucide-react';
 import { siteConfig } from '../../config/site';
 import { cn } from '../../utils/cn';
 
 const navItems = [
-  {
-    name: 'Product',
-    dropdown: [
-      { name: 'People Management', to: '/features#people' },
-      { name: 'Sales & Targets', to: '/features#sales' },
-      { name: 'Operations & Inventory', to: '/features#ops' },
-      { name: 'Analytics & Reports', to: '/features#analytics' },
-    ]
-  },
-  {
-    name: 'Pricing',
-    to: '/pricing'
-  },
-  {
-    name: 'Resources',
-    dropdown: [
-      { name: 'About Us', to: '/about' },
-      { name: 'Contact', to: '/contact' },
-      { name: 'Security', to: '/security' },
-      { name: 'FAQ', to: '/faq' },
-    ]
-  },
+  { name: 'Features', to: '/features' },
+  { name: 'Pricing', to: '/pricing' },
+  { name: 'Security', to: '/security' },
+  { name: 'FAQ', to: '/faq' },
+  { name: 'About', to: '/about' },
+  { name: 'Contact', to: '/contact' },
 ];
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -45,120 +28,84 @@ export default function Navbar() {
       className={cn(
         'fixed top-0 z-[100] w-full transition-all duration-500',
         scrolled
-          ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200/50 py-3 shadow-sm'
-          : 'bg-transparent border-b border-transparent py-6'
+          ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200/50 py-4 shadow-sm'
+          : 'bg-transparent py-8'
       )}
     >
       <div className="section-container flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group relative">
-          <div className="absolute -inset-2 bg-primary-100 rounded-lg opacity-0 group-hover:opacity-100 blur transition-all duration-300" />
-          <img src="/logo.png" alt="Logo" className="h-9 w-auto relative transition-transform duration-500 group-hover:rotate-12" />
-          <span className="text-2xl font-black tracking-tight text-slate-900 relative">
+          <img src="/logo.png" alt="Logo" className="h-10 w-auto transition-transform duration-500 group-hover:scale-110" />
+          <span className="text-2xl font-black tracking-tight text-slate-900">
             Business<span className="text-primary-600">Sarthi</span>
           </span>
         </Link>
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-10">
+        {/* Desktop Nav - Direct visible links */}
+        <div className="hidden xl:flex items-center gap-8">
           {navItems.map((item) => (
-            <div
+            <NavLink
               key={item.name}
-              className="relative group"
-              onMouseEnter={() => setActiveDropdown(item.name)}
-              onMouseLeave={() => setActiveDropdown(null)}
+              to={item.to}
+              className={({ isActive }) =>
+                cn(
+                  'text-xs font-black uppercase tracking-[0.2em] transition-all hover:text-primary-600',
+                  isActive ? 'text-primary-600 border-b-2 border-primary-600 pb-1' : 'text-slate-500'
+                )
+              }
             >
-              {item.to ? (
-                <NavLink
-                  to={item.to}
-                  className={({ isActive }) =>
-                    cn(
-                      'text-sm font-semibold transition-all hover:text-primary-600 flex items-center gap-1',
-                      isActive ? 'text-primary-600' : 'text-slate-600'
-                    )
-                  }
-                >
-                  {item.name}
-                </NavLink>
-              ) : (
-                <button className="text-sm font-semibold text-slate-600 hover:text-primary-600 flex items-center gap-1 transition-all">
-                  {item.name}
-                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-300', activeDropdown === item.name && 'rotate-180')} />
-                </button>
-              )}
-
-              {item.dropdown && (
-                <div className={cn(
-                  'absolute top-full left-1/2 -translate-x-1/2 pt-4 transition-all duration-300 invisible opacity-0 translate-y-2',
-                  activeDropdown === item.name && 'visible opacity-100 translate-y-0'
-                )}>
-                  <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 min-w-[200px] preserve-3d">
-                    {item.dropdown.map(sub => (
-                      <Link
-                        key={sub.name}
-                        to={sub.to}
-                        className="block px-4 py-3 text-sm font-medium text-slate-600 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
-                      >
-                        {sub.name}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+              {item.name}
+            </NavLink>
           ))}
         </div>
 
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-4">
           <a
             href={siteConfig.links.login}
-            className="text-sm font-bold text-slate-700 hover:text-primary-600 transition-all px-4"
+            className="text-xs font-black uppercase tracking-widest text-slate-700 hover:text-primary-600 transition-all px-4"
           >
             Login
           </a>
           <a
             href={siteConfig.links.register}
-            className="btn btn-primary px-7 py-3 rounded-full gap-2 shadow-lg shadow-primary-200"
+            className="bg-slate-900 text-white hover:bg-primary-600 px-8 py-3.5 rounded-full text-xs font-black uppercase tracking-widest shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
           >
             Get Started
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </a>
         </div>
 
         {/* Mobile Menu Button */}
         <button
-          className="md:hidden p-2 text-slate-600 bg-slate-50 rounded-xl"
+          className="lg:hidden p-2 text-slate-600 bg-slate-50 rounded-2xl border border-slate-100"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
-      {/* Mobile Menu (Updated) */}
+      {/* Mobile Menu */}
       <div className={cn(
-        'md:hidden fixed inset-x-0 top-full bg-white border-b border-slate-200 p-6 flex flex-col gap-6 transition-all duration-500 ease-in-out origin-top',
-        isOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 invisible'
+        'lg:hidden fixed inset-0 z-[-1] bg-white pt-24 px-6 flex flex-col gap-6 transition-all duration-500 ease-in-out',
+        isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-full'
       )}>
-        {navItems.map((item) => (
-          <div key={item.name} className="space-y-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{item.name}</p>
-            {item.dropdown ? (
-              <div className="grid grid-cols-1 gap-2">
-                {item.dropdown.map(sub => (
-                  <Link key={sub.name} to={sub.to} onClick={() => setIsOpen(false)} className="text-lg font-bold text-slate-700">
-                    {sub.name}
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <Link to={item.to} onClick={() => setIsOpen(false)} className="text-lg font-bold text-slate-700">
-                {item.name}
-              </Link>
-            )}
-          </div>
-        ))}
-        <div className="pt-6 border-t border-slate-100 flex flex-col gap-4">
-          <a href={siteConfig.links.login} className="btn btn-outline w-full py-4 rounded-2xl">Login</a>
-          <a href={siteConfig.links.register} className="btn btn-primary w-full py-4 rounded-2xl shadow-xl shadow-primary-100">Get Started</a>
+        <div className="flex flex-col gap-2">
+           {navItems.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.to}
+              onClick={() => setIsOpen(false)}
+              className={({ isActive }) => cn(
+                "text-4xl font-black tracking-tighter transition-all",
+                isActive ? "text-primary-600 translate-x-2" : "text-slate-900 hover:translate-x-2"
+              )}
+            >
+              {item.name}
+            </NavLink>
+          ))}
+        </div>
+        <div className="mt-auto pb-12 border-t border-slate-100 pt-8 flex flex-col gap-4">
+          <a href={siteConfig.links.login} className="w-full py-5 rounded-3xl bg-slate-50 text-center font-black uppercase tracking-widest text-slate-900">Login</a>
+          <a href={siteConfig.links.register} className="w-full py-5 rounded-3xl bg-primary-600 text-center font-black uppercase tracking-widest text-white shadow-2xl shadow-primary-200">Get Started</a>
         </div>
       </div>
     </nav>

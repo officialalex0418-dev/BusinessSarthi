@@ -1,55 +1,83 @@
 import Hero from '../../components/hero/Hero';
 import FeatureGrid from '../../components/features/FeatureGrid';
-import PremiumFeature from '../../components/features/PremiumFeature';
 import Ecosystem from '../../components/common/Ecosystem';
 import TrustSection from '../../components/common/TrustSection';
-import ProblemSection from '../../components/common/ProblemSection';
-import HowItWorks from '../../components/common/HowItWorks';
 import CTASection from '../../components/cta/CTASection';
+import ThreeDCard from '../../components/common/ThreeDCard';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Users, TrendingUp, Boxes } from 'lucide-react';
+
+const solutions = [
+  {
+    title: 'Workforce Intelligence',
+    desc: 'GPS-verified attendance and real-time movement analysis.',
+    icon: Users,
+    to: '/features#people',
+    color: 'bg-blue-600'
+  },
+  {
+    title: 'Sales Performance',
+    desc: 'Target tracking and achievement analytics for field teams.',
+    icon: TrendingUp,
+    to: '/features#sales',
+    color: 'bg-emerald-600'
+  },
+  {
+    title: 'Operations & Stock',
+    desc: 'Synchronized inventory, vendor ledgers, and purchase orders.',
+    icon: Boxes,
+    to: '/features#ops',
+    color: 'bg-orange-600'
+  }
+];
 
 export default function Home() {
   return (
     <div className="animate-fade-in overflow-hidden">
       <Hero />
+
       <TrustSection />
 
-      {/* Workforce Module */}
-      <PremiumFeature
-        subtitle="Workforce Intelligence"
-        title="People management. Simplified for growth."
-        desc="Connect your team from office to field. Business Sarthi provides the visibility you need to manage attendance, track live locations, and automate payroll with absolute precision."
-        points={['GPS Verified Attendance', 'Live Staff Tracking', 'Automated Payslips', 'Leave Workflows']}
-        image="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=2070"
-        reverse={false}
-      />
+      {/* Solutions Hub */}
+      <section className="py-40 bg-white relative">
+        <div className="section-container">
+           <div className="text-center max-w-3xl mx-auto mb-24">
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary-600 mb-4">Enterprise Solutions</p>
+              <h2 className="text-4xl font-black text-slate-900 sm:text-6xl tracking-tighter mb-8 leading-tight">
+                 Built for the way your <br />business <span className="italic text-primary-600">actually</span> works.
+              </h2>
+           </div>
+
+           <div className="grid lg:grid-cols-3 gap-8">
+              {solutions.map((s, i) => (
+                <ThreeDCard key={s.title} intensity={10}>
+                   <Link to={s.to} className="block group">
+                      <div className="p-10 rounded-[3rem] bg-slate-50 border border-slate-100/50 hover:bg-white hover:shadow-3d-hover transition-all duration-500 h-full relative overflow-hidden">
+                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary-600/5 rounded-full blur-3xl group-hover:bg-primary-600/10 transition-colors" />
+
+                         <div className={`h-16 w-16 rounded-2xl ${s.color} text-white flex items-center justify-center mb-10 shadow-xl group-hover:scale-110 transition-transform duration-500`}>
+                            <s.icon className="h-8 w-8" />
+                         </div>
+
+                         <h3 className="text-2xl font-black text-slate-900 mb-4 tracking-tight uppercase">{s.title}</h3>
+                         <p className="text-slate-500 font-medium leading-relaxed mb-10">{s.desc}</p>
+
+                         <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-primary-600 group-hover:gap-4 transition-all">
+                            Learn More
+                            <ArrowRight className="h-4 w-4" />
+                         </div>
+                      </div>
+                   </Link>
+                </ThreeDCard>
+              ))}
+           </div>
+        </div>
+      </section>
 
       <Ecosystem />
 
-      {/* Sales Module */}
-      <PremiumFeature
-        subtitle="Sales & Performance"
-        title="Turn every sale into actionable insight."
-        desc="Empower your sales team and monitor real-time performance. Set monthly targets, track individual achievements, and understand product-wise performance across your entire distributor network."
-        points={['Individual Target Tracking', 'Achievement Analytics', 'Product Performance', 'Sales Force Monitoring']}
-        image="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2426"
-        reverse={true}
-      />
-
-      <ProblemSection />
-
       <FeatureGrid />
 
-      {/* Operations Module */}
-      <PremiumFeature
-        subtitle="Operations & Inventory"
-        title="From purchase to profit. All connected."
-        desc="Maintain total control over your stock, vendors, and purchases. Business Sarthi bridges the gap between procurement and sales, ensuring you never run low on what matters."
-        points={['Inventory SKU Tracking', 'Vendor Ledger Mgmt', 'Purchase Records', 'Low Stock Alerts']}
-        image="https://images.unsplash.com/photo-1553413766-41f9d287af3c?auto=format&fit=crop&q=80&w=2089"
-        reverse={false}
-      />
-
-      <HowItWorks />
       <CTASection />
     </div>
   );
