@@ -19,22 +19,22 @@
     @apply border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:scale-95;
   }
   .section-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    @apply max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16;
   }
   .h2 {
-    @apply text-3xl font-extrabold text-slate-900 sm:text-4xl lg:text-5xl tracking-tight leading-tight;
+    @apply text-4xl font-black text-slate-900 sm:text-5xl lg:text-7xl tracking-tighter leading-tight;
   }
   .lead {
-    @apply mt-4 text-lg lg:text-xl text-slate-500 leading-relaxed font-medium;
+    @apply mt-6 text-lg lg:text-2xl text-slate-500 leading-relaxed font-medium;
   }
   .glass {
-    @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-glass;
+    @apply bg-white/40 backdrop-blur-2xl border border-white/40 shadow-glass;
   }
   .glass-dark {
-    @apply bg-slate-900/40 backdrop-blur-lg border border-white/5 shadow-xl;
+    @apply bg-slate-900/60 backdrop-blur-2xl border border-white/10 shadow-2xl;
   }
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-400;
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-primary-600 via-primary-500 to-primary-400;
   }
 }
 
@@ -43,6 +43,14 @@
     transform-style: preserve-3d;
   }
   .perspective {
-    perspective: 1000px;
+    perspective: 2000px;
+  }
+  .bg-grid {
+    background-size: 40px 40px;
+    background-image: radial-gradient(circle, #e2e8f0 1px, transparent 1px);
+  }
+  .bg-dots {
+    background-size: 20px 20px;
+    background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
   }
 }

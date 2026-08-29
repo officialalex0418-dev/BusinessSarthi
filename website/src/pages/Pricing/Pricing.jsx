@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Check, X, Zap } from 'lucide-react';
+import { Check, X, Zap, Crown } from 'lucide-react';
 import { siteConfig } from '../../config/site';
 import ThreeDCard from '../../components/common/ThreeDCard';
+import ThreeDBackground from '../../components/common/ThreeDBackground';
 import { cn } from '../../utils/cn';
 
 const tiers = [
@@ -56,26 +57,28 @@ export default function Pricing() {
   const [isYearly, setIsYearly] = useState(false);
 
   return (
-    <div className="pt-32 pb-24">
-      <section className="bg-slate-50 py-32 overflow-hidden relative">
-        <div className="section-container text-center max-w-3xl relative z-10">
-          <div className="h-16 w-16 rounded-2xl bg-primary-600 shadow-xl flex items-center justify-center text-white mx-auto mb-8 animate-float">
-             <Zap className="h-8 w-8" />
+    <div className="pt-32 pb-24 relative overflow-hidden">
+      <ThreeDBackground />
+
+      <section className="py-40 relative z-10">
+        <div className="section-container text-center max-w-5xl relative">
+          <div className="h-20 w-20 rounded-[2rem] bg-primary-600 shadow-2xl flex items-center justify-center text-white mx-auto mb-10 animate-float border-4 border-white/10">
+             <Crown className="h-10 w-10" />
           </div>
-          <h1 className="text-4xl font-black text-slate-900 sm:text-6xl mb-8 tracking-tight leading-tight">
-            Simple, Transparent <span className="text-primary-600 italic">Pricing</span>
+          <h1 className="text-5xl font-black text-slate-900 sm:text-8xl mb-8 tracking-tighter leading-[0.9]">
+            Simple, Transparent <br /><span className="text-primary-600 italic">Pricing.</span>
           </h1>
-          <p className="lead mb-12">
+          <p className="lead max-w-2xl mx-auto font-medium">
             Choose the plan that fits your business stage. No hidden fees.
             No implementation costs.
           </p>
 
-          <div className="inline-flex items-center gap-4 p-2 rounded-2xl bg-white shadow-sm border border-slate-100">
+          <div className="mt-16 inline-flex items-center gap-4 p-3 rounded-[2rem] bg-white shadow-2xl border border-slate-100">
             <button
               onClick={() => setIsYearly(false)}
               className={cn(
-                "px-6 py-2 rounded-xl text-sm font-bold transition-all",
-                !isYearly ? "bg-primary-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-700"
+                "px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all",
+                !isYearly ? "bg-primary-600 text-white shadow-xl" : "text-slate-500 hover:text-slate-700"
               )}
             >
               Monthly
@@ -83,75 +86,74 @@ export default function Pricing() {
             <button
               onClick={() => setIsYearly(true)}
               className={cn(
-                "px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
-                isYearly ? "bg-primary-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-700"
+                "px-10 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-3",
+                isYearly ? "bg-primary-600 text-white shadow-xl" : "text-slate-500 hover:text-slate-700"
               )}
             >
               Yearly
-              <span className="text-[10px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-black">-15%</span>
+              <span className="text-[10px] bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full font-black animate-pulse">-15% OFF</span>
             </button>
           </div>
         </div>
       </section>
 
-      <section className="py-32">
+      <section className="py-32 relative z-10">
         <div className="section-container">
-          <div className="grid lg:grid-cols-3 gap-8 items-start">
+          <div className="grid lg:grid-cols-3 gap-10 items-start">
             {tiers.map((tier) => (
-              <ThreeDCard key={tier.name} intensity={tier.featured ? 10 : 5}>
+              <ThreeDCard key={tier.name} intensity={tier.featured ? 15 : 5}>
                 <div
                   className={cn(
-                    "relative p-10 rounded-[3rem] border transition-all duration-500 h-full flex flex-col",
+                    "relative p-12 lg:p-16 rounded-[4rem] border transition-all duration-700 h-full flex flex-col group overflow-hidden",
                     tier.featured
                       ? 'border-primary-600 shadow-3d-hover bg-white z-10'
-                      : 'border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-200'
+                      : 'border-slate-100 bg-white/60 backdrop-blur-xl hover:bg-white hover:border-slate-200 shadow-sm'
                   )}
                 >
                   {tier.featured && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-1.5 bg-primary-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-xl">
-                      Recommended
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-8 py-2.5 bg-primary-600 text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-full shadow-2xl whitespace-nowrap">
+                      Best Value
                     </div>
                   )}
 
-                  <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tight">{tier.name}</h3>
-                  <p className="text-slate-400 text-sm font-medium mb-10 min-h-[40px] leading-relaxed">{tier.desc}</p>
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-primary-600/5 rounded-full blur-3xl group-hover:bg-primary-600/10 transition-colors" />
 
-                  <div className="flex items-baseline gap-2 mb-10">
-                    <span className="text-sm font-bold text-slate-400 uppercase">NPR</span>
-                    <span className="text-5xl font-black text-slate-900 tracking-tighter">
+                  <h3 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tighter">{tier.name}</h3>
+                  <p className="text-slate-400 text-base font-medium mb-12 min-h-[40px] leading-relaxed">{tier.desc}</p>
+
+                  <div className="flex items-baseline gap-3 mb-12">
+                    <span className="text-sm font-black text-slate-400 uppercase tracking-widest">NPR</span>
+                    <span className="text-6xl font-black text-slate-900 tracking-tighter">
                        {isYearly ? tier.price.yearly : tier.price.monthly}
                     </span>
-                    <span className="text-slate-400 text-sm font-bold lowercase">/mo</span>
+                    <span className="text-slate-400 text-base font-bold lowercase tracking-tight">/month</span>
                   </div>
 
                   <a
                     href={siteConfig.links.register}
                     className={cn(
-                      "btn w-full py-5 rounded-2xl mb-10 text-lg font-black transition-all shadow-lg",
+                      "w-full py-6 rounded-3xl mb-12 text-sm font-black uppercase tracking-[0.2em] transition-all shadow-2xl",
                       tier.featured
-                        ? 'btn-primary shadow-primary-200 hover:scale-[1.02]'
-                        : 'bg-slate-900 text-white hover:bg-slate-800'
+                        ? 'bg-primary-600 text-white shadow-primary-200 hover:scale-[1.03] active:scale-95'
+                        : 'bg-slate-900 text-white hover:bg-primary-600'
                     )}
                   >
                     {tier.cta}
                   </a>
 
-                  <div className="space-y-5 flex-1">
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4">What's Included</p>
+                  <div className="space-y-6 flex-1">
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] mb-6">Standard Features</p>
                     {tier.features.map((f) => (
-                      <div key={f.name} className="flex items-center gap-3">
-                        {f.included ? (
-                          <div className="h-5 w-5 rounded-full bg-emerald-50 flex items-center justify-center">
-                             <Check className="h-3.5 w-3.5 text-emerald-600" />
-                          </div>
-                        ) : (
-                          <div className="h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center">
-                             <X className="h-3 w-3 text-slate-300" />
-                          </div>
-                        )}
+                      <div key={f.name} className="flex items-center gap-4 group/item">
+                        <div className={cn(
+                          "h-6 w-6 rounded-xl flex items-center justify-center transition-transform group-hover/item:scale-110",
+                          f.included ? 'bg-emerald-50 text-emerald-600 shadow-sm' : 'bg-slate-50 text-slate-300'
+                        )}>
+                           {f.included ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                        </div>
                         <span className={cn(
-                          "text-sm font-semibold tracking-tight",
-                          f.included ? 'text-slate-700' : 'text-slate-300'
+                          "text-base font-bold tracking-tight",
+                          f.included ? 'text-slate-700' : 'text-slate-300 line-through decoration-2'
                         )}>{f.name}</span>
                       </div>
                     ))}
