@@ -412,45 +412,6 @@ export default function Home() {
         <div className="absolute top-1/2 right-0 -translate-y-1/2 w-64 h-64 border-2 border-brand-accent/10 rounded-full -mr-32 blur-2xl" />
       </section>
 
-      {/* Simple Professional Footer */}
-      <footer className="py-20 bg-brand-bg border-t border-slate-100">
-        <div className="section-container">
-           <div className="grid lg:grid-cols-12 gap-20 mb-24">
-              <div className="lg:col-span-4 space-y-10">
-                 <div className="flex flex-col -gap-1">
-                    <span className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic leading-none">Business<span className="text-brand-accent">Sarthi</span></span>
-                    <span className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-300 mt-2">The Operations Brain</span>
-                 </div>
-                 <p className="text-slate-400 font-medium leading-relaxed">Modern SaaS infrastructure for field operations management, attendance, and payroll automation.</p>
-              </div>
-              <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-12">
-                 {[
-                   { t: 'Platform', l: ['Features', 'Solutions', 'Security', 'FAQ'] },
-                   { t: 'Operations', l: ['GPS Tracking', 'Attendance', 'Payroll', 'Inventory'] },
-                   { t: 'Company', l: ['About Us', 'Contact', 'Terms', 'Privacy'] },
-                   { t: 'Deploy', l: ['Login', 'Register', 'Partner', 'Book Demo'] },
-                 ].map((col, i) => (
-                   <div key={i} className="space-y-6">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">{col.t}</h4>
-                      <ul className="space-y-4">
-                         {col.l.map(link => (
-                           <li key={link}><a href="#" className="text-sm font-bold text-slate-600 hover:text-brand-accent transition-colors">{link}</a></li>
-                         ))}
-                      </ul>
-                   </div>
-                 ))}
-              </div>
-           </div>
-           <div className="pt-12 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
-              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400">© 2026 Business Sarthi. Deployment Successful.</span>
-              <div className="flex gap-12">
-                 <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300 cursor-pointer hover:text-brand-dark transition-colors italic decoration-brand-accent decoration-2 underline-offset-4 underline">NEP</span>
-                 <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300 cursor-pointer hover:text-brand-dark transition-colors italic">ENG</span>
-              </div>
-           </div>
-        </div>
-      </footer>
-
     </div>
   );
 }
