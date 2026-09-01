@@ -423,4 +423,15 @@ export const schemas = {
   }),
   inquiryReply: Joi.object({ message: Joi.string().required() }),
   internalNote: Joi.object({ note: Joi.string().required() }),
+
+  // ---- Product ----
+  productManagement: Joi.object({
+    name: Joi.string().max(100).required(),
+    description: Joi.string().max(300).required(),
+    mediaType: Joi.string().valid('image', 'video').required(),
+    media: Joi.string().required(),
+    url: Joi.string().uri().required(),
+    isActive: Joi.boolean(),
+    displayOrder: Joi.number().integer(),
+  }),
 };

@@ -31,6 +31,7 @@ import * as companyConfig from '../controllers/companyConfig.controller.js';
 import * as target from '../controllers/target.controller.js';
 import * as report from '../controllers/report.controller.js';
 import * as inquiry from '../controllers/inquiry.controller.js';
+import * as product from '../controllers/product.controller.js';
 import * as support from '../controllers/support.controller.js';
 import * as misc from '../controllers/misc.controller.js';
 
@@ -59,6 +60,7 @@ r.patch('/auth/fcm-token', protect, auth.updateFcmToken);
 
 // ============ PUBLIC / WEBSITE ============
 r.post('/public/inquiries', apiLimiter, validate({ body: schemas.createInquiry }), inquiry.createInquiry);
+r.get('/public/products', apiLimiter, product.listPublicProducts);
 r.get('/files/*', misc.getFile);
 
 // ============ DASHBOARDS ============
@@ -212,6 +214,13 @@ r.get('/chats', protect, chat.getChats);
 r.post('/chats', protect, chat.createChat);
 r.get('/chats/:id/messages', protect, chat.getChatMessages);
 r.post('/chats/:id/messages', protect, chat.addChatMessage);
+
+// ============ PRODUCTS (Super Admin) ============
+r.get('/admin/products', protect, authorize(...PLATFORM), product.listAdminProducts);
+r.post('/admin/products', protect, authorize('SUPER_ADMIN'), validate({ body: schemas.productManagement }), product.createProduct);
+r.get('/admin/products/:id', protect, authorize(...PLATFORM), product.getProduct);
+r.patch('/admin/products/:id', protect, authorize('SUPER_ADMIN'), validate({ body: schemas.productManagement.fork(['name', 'description', 'mediaType', 'media', 'url'], (schema) => schema.optional()) }), product.updateProduct);
+r.delete('/admin/products/:id', protect, authorize('SUPER_ADMIN'), product.deleteProduct);
 
 // ============ DESIGNATIONS ============
 r.get('/designations', protect, authorize(...PLATFORM), designation.listDesignations);

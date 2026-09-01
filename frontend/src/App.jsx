@@ -29,6 +29,7 @@ import Companies from '@/pages/superadmin/Companies';
 import Packages from '@/pages/superadmin/Packages';
 import SystemEmployees from '@/pages/superadmin/SystemEmployees';
 import CompanyStaff from '@/pages/superadmin/CompanyStaff';
+import Products from '@/pages/superadmin/Products';
 import Configuration from '@/pages/superadmin/Configuration';
 import Designations from '@/pages/superadmin/Designations';
 import Shifts from '@/pages/superadmin/Shifts';
@@ -98,6 +99,7 @@ const adminNav = [
   { to: '/admin/packages', label: 'Packages', icon: Package },
   { to: '/admin/employees', label: 'System Employees', icon: Users },
   { to: '/admin/company-staff', label: 'Company Staff', icon: Users },
+  { to: '/admin/products', label: 'RCS Products', icon: LayoutGrid },
   { to: '/admin/inquiries', label: 'Inquiries', icon: Inbox },
   { to: '/admin/support', label: 'Support Tickets', icon: LifeBuoy },
   { to: '/admin/configuration', label: 'Configuration', icon: Settings },
@@ -310,6 +312,7 @@ export default function App() {
         <Route path="packages" element={<Packages />} />
         <Route path="employees" element={<SystemEmployees />} />
         <Route path="company-staff" element={<CompanyStaff />} />
+        <Route path="products" element={<Products />} />
         <Route path="configuration">
           <Route index element={<Configuration />} />
           <Route path="designations" element={<Designations />} />
