@@ -34,7 +34,7 @@ export default function Navbar() {
           : 'bg-transparent py-12'
       )}
     >
-      <div className="section-container !max-w-full flex items-center justify-between">
+      <div className="w-full px-6 sm:px-12 lg:px-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-4 group relative">
           <div className="h-14 w-14 rounded-2xl bg-white shadow-2xl flex items-center justify-center p-2.5 group-hover:scale-110 transition-transform duration-700 border border-slate-100/50">
              <img src="/logo.png" alt="Logo" className="h-full w-auto" />

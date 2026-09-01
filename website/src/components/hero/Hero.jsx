@@ -15,7 +15,7 @@ export default function Hero() {
          <div className="absolute inset-0 opacity-[0.04] bg-grid" />
       </div>
 
-      <div className="section-container relative">
+      <div className="section-container !max-w-full relative">
         <div className="flex flex-col items-center text-center">
           <div className="animate-slide-up">
             <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-white shadow-2xl border border-primary-100 text-primary-700 text-[10px] font-black uppercase tracking-[0.4em] mb-12">
