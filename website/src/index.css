@@ -47,4 +47,14 @@
   .mask-radial {
     mask-image: radial-gradient(circle at center, black, transparent);
   }
+
+  @keyframes dash {
+    to {
+      stroke-dashoffset: -20;
+    }
+  }
+
+  .animate-dash {
+    animation: dash 2s linear infinite;
+  }
 }
