@@ -25,8 +25,10 @@ export function AuthProvider({ children }) {
 
       } catch (e) {
         console.warn('Initialization failed', e);
-        // On mobile, a 401 might have already cleared the token via interceptor
-        if (token) {
+        // Only clear tokens if the server explicitly rejects them (401/403)
+        // Do NOT clear on network errors or 5xx server errors, as that causes accidental logouts
+        const status = e.response?.status;
+        if (token && (status === 401 || status === 403)) {
           setAccessToken(null);
           localStorage.removeItem('bs_refresh');
         }

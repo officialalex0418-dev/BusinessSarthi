@@ -18,7 +18,7 @@ const baseURL = `${rawBaseURL.replace(/\/$/, '')}/api/v1`;
 export const api = axios.create({
   baseURL,
   withCredentials: true,
-  timeout: 60000 // Increased to 60s for large uploads (like profile photos)
+  timeout: 120000 // Increased to 120s for slow connections and large payloads
 });
 
 // ---------- automatic retry logic ----------

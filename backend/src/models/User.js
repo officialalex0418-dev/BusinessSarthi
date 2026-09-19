@@ -11,6 +11,7 @@ const refreshTokenSchema = new mongoose.Schema(
     ip: String,
     expiresAt: { type: Date, required: true },
     createdAt: { type: Date, default: Date.now },
+    rotatedAt: { type: Date }, // Grace period for rotation
   },
   { _id: false }
 );

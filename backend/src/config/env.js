@@ -61,8 +61,8 @@ export const env = {
   },
   rateLimit: {
     windowMinutes: parseInt(process.env.RATE_LIMIT_WINDOW_MINUTES || '15', 10),
-    max: parseInt(process.env.RATE_LIMIT_MAX || '300', 10),
-    authMax: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '20', 10),
+    max: parseInt(process.env.RATE_LIMIT_MAX || '1000', 10),
+    authMax: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '50', 10),
   },
   bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
 };

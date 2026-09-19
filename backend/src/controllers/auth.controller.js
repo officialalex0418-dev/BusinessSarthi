@@ -138,16 +138,29 @@ export const refresh = asyncHandler(async (req, res) => {
 
   const tokenHash = hashToken(token);
   const stored = user.refreshTokens?.find((t) => t.tokenHash === tokenHash);
+
   if (!stored) {
-    // Possible token reuse → revoke all sessions
     user.refreshTokens = [];
     await user.save({ validateBeforeSave: false });
     audit({ req, user: user._id, action: 'REFRESH_TOKEN_REUSE_DETECTED', entity: 'Auth', success: false });
     throw ApiError.unauthorized('Session invalidated, please login again');
   }
 
+  // Grace period for rotation (Fix for "intermittent logout" on flaky network)
+  if (stored.rotatedAt) {
+    const GRACE_PERIOD_MS = 60 * 1000;
+    if (Date.now() - new Date(stored.rotatedAt).getTime() > GRACE_PERIOD_MS) {
+        user.refreshTokens = [];
+        await user.save({ validateBeforeSave: false });
+        audit({ req, user: user._id, action: 'REFRESH_TOKEN_GRACE_EXPIRED', entity: 'Auth', success: false });
+        throw ApiError.unauthorized('Session expired (grace period exceeded)');
+    }
+    // Return a new access token but don't rotate again yet, or return last issued?
+    // To keep it simple, we just allow the refresh to continue but use the same logic below.
+  }
+
   // rotate
-  user.refreshTokens = user.refreshTokens.filter((t) => t.tokenHash !== tokenHash);
+  stored.rotatedAt = new Date();
   const newRefresh = signRefreshToken(user, payload.isMobile);
   await persistRefreshToken(user, newRefresh, req);
   const accessToken = signAccessToken(user);

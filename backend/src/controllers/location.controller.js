@@ -57,11 +57,20 @@ export const pushLocation = asyncHandler(async (req, res) => {
   }
 
   if (shouldStore) {
+    let address = undefined;
+    if (isSpecial) {
+      try {
+        address = await reverseGeocode(latitude, longitude);
+      } catch (e) {
+        console.error('Geocoding error in pushLocation:', e.message);
+      }
+    }
+
     const point = {
       staff: staffId,
       company: companyId,
       location: { type: 'Point', coordinates: [longitude, latitude] },
-      address: isSpecial ? await reverseGeocode(latitude, longitude) : undefined,
+      address,
       accuracy,
       batteryLevel,
       recordedAt: pTime,
