@@ -16,6 +16,7 @@ export default function TicketDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const [item, setItem] = useState(null);
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -25,9 +26,14 @@ export default function TicketDetail() {
     setLoading(true);
     try {
       const { data: res } = await api.get(`/support/tickets/${id}`);
-      setItem(res.data);
+      if (res.success) {
+        setItem(res.data);
+      } else {
+        setError(res.message || 'Failed to load ticket details');
+      }
     } catch (err) {
       console.error('Failed to load ticket', err);
+      setError(err.response?.data?.message || err.message || 'Network error');
     } finally {
       setLoading(false);
     }
@@ -49,17 +55,29 @@ export default function TicketDetail() {
       await api.post(`/support/tickets/${id}/replies`, { message });
       setMessage('');
       loadData();
-    } catch (e) { alert('Reply failed'); }
+    } catch (e) { alert(e.response?.data?.message || 'Reply failed'); }
     finally { setSubmitting(false); }
   };
 
   if (loading) return <Spinner />;
-  if (!item) return <div className="text-center py-24 text-slate-500">Ticket not found</div>;
+
+  if (error || !item) return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+      <h2 className="text-xl font-bold mb-2">{error || 'Ticket not found'}</h2>
+      <p className="text-slate-500 mb-6 max-w-sm mx-auto">
+        We couldn't retrieve the information for this ticket. It might have been deleted or you may not have permission to view it.
+      </p>
+      <Link to=".." relative="path">
+        <Button variant="outline">Back to Support Center</Button>
+      </Link>
+    </div>
+  );
 
   const isAdmin = user.role === 'SUPER_ADMIN';
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="max-w-5xl mx-auto space-y-6 pb-12 animate-in fade-in duration-500">
       <div className="flex items-center gap-4">
         <Link to={isAdmin ? '/admin/support' : '..'} relative="path">
           <Button variant="outline" size="sm">
@@ -82,7 +100,7 @@ export default function TicketDetail() {
       <div className="grid lg:grid-cols-4 gap-6">
         {/* Main Conversation */}
         <div className="lg:col-span-3 space-y-6">
-          <Card>
+          <Card className="border-none shadow-sm">
             <CardBody className="p-6">
                <div className="flex items-start gap-4 mb-6 pb-6 border-b border-slate-100">
                   <div className="h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
@@ -150,7 +168,7 @@ export default function TicketDetail() {
 
         {/* Sidebar Info */}
         <div className="space-y-6">
-          <Card>
+          <Card className="border-none shadow-sm">
             <CardHeader title="Ticket Details" />
             <CardBody className="p-4 space-y-4">
                <div>

@@ -121,9 +121,9 @@ export default function StaffDashboard() {
                <div className="flex-1">
                   <p className="text-xs font-bold text-slate-400 uppercase">Shift Status</p>
                   <div className="mt-1">
-                     <Badge color={data.checkInStatus ? "green" : "gray"} className="rounded-full py-1 px-3">
-                        <div className={cn("h-2 w-2 rounded-full mr-2", data.checkInStatus ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
-                        {data.checkInStatus ? "Shift Active" : "Off Duty"}
+                     <Badge color={(data.checkInStatus && !data.checkOutStatus) ? "green" : "gray"} className="rounded-full py-1 px-3">
+                        <div className={cn("h-2 w-2 rounded-full mr-2", (data.checkInStatus && !data.checkOutStatus) ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
+                        {(data.checkInStatus && !data.checkOutStatus) ? "Shift Active" : "Off Duty"}
                      </Badge>
                   </div>
                   <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-tighter">All systems operational</p>
