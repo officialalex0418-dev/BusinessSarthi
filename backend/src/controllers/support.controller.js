@@ -99,7 +99,8 @@ export const getTicket = asyncHandler(async (req, res) => {
   if (!ticket) throw ApiError.notFound('Ticket not found');
 
   // Authorization check
-  if (req.user.role !== 'SUPER_ADMIN' && ticket.company.toString() !== req.companyId) {
+  const ticketCompanyId = ticket.company._id ? ticket.company._id.toString() : ticket.company.toString();
+  if (req.user.role !== 'SUPER_ADMIN' && ticketCompanyId !== req.companyId) {
     throw ApiError.forbidden('Access denied');
   }
 
@@ -113,7 +114,8 @@ export const addMessage = asyncHandler(async (req, res) => {
 
   // Authorization check
   const isAdmin = req.user.role === 'SUPER_ADMIN';
-  if (!isAdmin && ticket.company.toString() !== req.companyId) {
+  const ticketCompanyId = ticket.company._id ? ticket.company._id.toString() : ticket.company.toString();
+  if (!isAdmin && ticketCompanyId !== req.companyId) {
     throw ApiError.forbidden('Access denied');
   }
 
