@@ -137,7 +137,7 @@ export default function StaffDashboard() {
                   <p className="text-xs text-slate-400 uppercase mb-2">Today's Schedule</p>
                   <div className="flex justify-between items-center mb-1">
                      <span className="text-slate-500 font-medium">Check In</span>
-                     <span className="text-slate-900">{data.checkInTime ? formatTime(data.checkInTime) : "09:15 AM"}</span>
+                     <span className="text-slate-900">{data.checkInTime ? formatTime(data.checkInTime) : "--:-- --"}</span>
                   </div>
                   <div className="flex justify-between items-center">
                      <span className="text-slate-500 font-medium">Check Out</span>

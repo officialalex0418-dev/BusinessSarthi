@@ -119,7 +119,7 @@ export default function TicketList() {
               <p className="text-slate-500 max-w-xs">You haven't created any support tickets yet.</p>
             </Card>
           ) : data.items.map((ticket) => (
-            <Link key={ticket._id} to={`/support/${ticket._id}`}>
+            <Link key={ticket._id} to={ticket._id}>
               <Card className="hover:border-primary-200 hover:shadow-md transition-all group">
                 <CardBody className="p-5 flex items-center justify-between">
                   <div className="flex-1 min-w-0">

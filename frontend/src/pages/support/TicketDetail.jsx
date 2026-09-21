@@ -61,7 +61,7 @@ export default function TicketDetail() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
       <div className="flex items-center gap-4">
-        <Link to={isAdmin ? '/admin/support' : '/support'}>
+        <Link to={isAdmin ? '/admin/support' : '..'} relative="path">
           <Button variant="outline" size="sm">
             <ChevronLeft className="h-4 w-4" />
           </Button>
