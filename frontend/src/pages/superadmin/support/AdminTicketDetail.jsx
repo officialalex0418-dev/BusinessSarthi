@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   ChevronLeft, Send, Clock, User, AlertCircle,
   LifeBuoy, CheckCircle2, MessageSquare, ShieldAlert,
-  History, Info
+  History, Info, Settings
 } from 'lucide-react';
 import { api } from '@/api/client';
 import {
@@ -12,9 +12,25 @@ import {
 } from '@/components/ui';
 import { formatDate, formatDateTime } from '@/lib/utils';
 
+const STATUS_COLORS = {
+  OPEN: 'blue',
+  IN_PROGRESS: 'yellow',
+  WAITING_FOR_USER: 'orange',
+  RESOLVED: 'green',
+  CLOSED: 'gray',
+};
+
+const PRIORITY_COLORS = {
+  LOW: 'gray',
+  MEDIUM: 'blue',
+  HIGH: 'orange',
+  URGENT: 'red',
+};
+
 export default function AdminTicketDetail() {
   const { id } = useParams();
   const [item, setItem] = useState(null);
+  const [error, setError] = useState(null);
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reply, setReply] = useState('');
@@ -24,11 +40,13 @@ export default function AdminTicketDetail() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data: res } = await api.get(`/admin/support/${id}`);
       setItem(res.data);
     } catch (err) {
       console.error('Failed to load ticket', err);
+      setError(err.response?.data?.message || err.message || 'Failed to load ticket');
     } finally {
       setLoading(false);
     }
@@ -43,11 +61,17 @@ export default function AdminTicketDetail() {
 
   useEffect(() => { loadData(); loadAdmins(); }, [loadData, loadAdmins]);
 
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [item?.messages]);
+
   const updateTicket = async (fields) => {
     try {
-        await api.patch(`/admin/support/${id}`, fields);
-        loadData();
-    } catch (e) { alert('Update failed'); }
+      await api.patch(`/admin/support/${id}`, fields);
+      await loadData();
+    } catch (e) { alert(e.response?.data?.message || 'Update failed'); }
   };
 
   const handleReply = async (e) => {
@@ -57,8 +81,8 @@ export default function AdminTicketDetail() {
     try {
       await api.post(`/admin/support/${id}/replies`, { message: reply });
       setReply('');
-      loadData();
-    } catch (e) { alert('Reply failed'); }
+      await loadData();
+    } catch (e) { alert(e.response?.data?.message || 'Reply failed'); }
     finally { setSubmitting(false); }
   };
 
@@ -68,12 +92,26 @@ export default function AdminTicketDetail() {
     try {
       await api.post(`/admin/support/${id}/notes`, { note });
       setNote('');
-      loadData();
-    } catch (e) { alert('Note failed'); }
+      await loadData();
+    } catch (e) { alert(e.response?.data?.message || 'Note failed'); }
   };
 
   if (loading) return <Spinner />;
-  if (!item) return <div className="text-center py-24 text-slate-500">Ticket not found</div>;
+
+  if (error || !item) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">{error || 'Ticket not found'}</h2>
+        <p className="text-slate-500 mb-6 max-w-sm mx-auto">
+          We couldn't retrieve the information for this support ticket.
+        </p>
+        <Link to="/admin/support">
+          <Button variant="outline">Back to Support Management</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
@@ -91,8 +129,8 @@ export default function AdminTicketDetail() {
            <p className="text-xs text-slate-400">Company: {item.company?.name} • Created by {item.createdBy?.name}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-            <Badge color="orange">{item.priority}</Badge>
-            <Badge color="blue">{item.status?.replace('_', ' ')}</Badge>
+            <Badge color={PRIORITY_COLORS[item.priority] || 'blue'}>{item.priority}</Badge>
+            <Badge color={STATUS_COLORS[item.status] || 'blue'}>{item.status?.replace('_', ' ')}</Badge>
         </div>
       </div>
 
@@ -163,7 +201,7 @@ export default function AdminTicketDetail() {
                        <div>
                           <p className="text-sm font-medium">
                             {a.action.replace('_', ' ')}
-                            {a.newStatus && <span> to <Badge color="blue" size="xs">{a.newStatus}</Badge></span>}
+                            {a.newStatus && <span> to <Badge color={STATUS_COLORS[a.newStatus] || 'blue'} size="xs">{a.newStatus.replace('_', ' ')}</Badge></span>}
                           </p>
                           <p className="text-[10px] text-slate-400">{formatDateTime(a.at)}</p>
                        </div>
@@ -224,7 +262,7 @@ export default function AdminTicketDetail() {
                     ]}
                   />
                </div>
-               <div className="pt-4 border-t border-slate-100">
+               <div className="pt-4 border-t border-slate-100 space-y-2">
                   <Button
                     variant="outline" color="green" className="w-full gap-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50"
                     onClick={() => updateTicket({ status: 'RESOLVED' })}
