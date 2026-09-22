@@ -6,6 +6,7 @@ import {
   History, Info, Settings
 } from 'lucide-react';
 import { api } from '@/api/client';
+import { useSocket, useSocketEvent } from '@/context/SocketContext';
 import {
   Card, CardHeader, CardBody, Badge, Button,
   Spinner, Textarea, Select, Input
@@ -29,6 +30,7 @@ const PRIORITY_COLORS = {
 
 export default function AdminTicketDetail() {
   const { id } = useParams();
+  const { socket } = useSocket() || {};
   const [item, setItem] = useState(null);
   const [error, setError] = useState(null);
   const [admins, setAdmins] = useState([]);
@@ -61,6 +63,65 @@ export default function AdminTicketDetail() {
 
   useEffect(() => { loadData(); loadAdmins(); }, [loadData, loadAdmins]);
 
+  // Realtime Socket Room Subscription
+  useEffect(() => {
+    if (!socket || !id) return;
+    socket.emit('ticket:join', id);
+    return () => {
+      socket.emit('ticket:leave', id);
+    };
+  }, [socket, id]);
+
+  // Handle incoming real-time messages
+  useSocketEvent('ticket:message', useCallback((payload) => {
+    if (payload?.ticketId === id && payload?.message) {
+      setItem(prev => {
+        if (!prev) return prev;
+        const exists = prev.messages?.some(m =>
+          (m._id && payload.message._id && m._id === payload.message._id) ||
+          (m.message === payload.message.message && new Date(m.createdAt).getTime() === new Date(payload.message.createdAt).getTime())
+        );
+        if (exists) {
+          return { ...prev, status: payload.status || prev.status };
+        }
+        return {
+          ...prev,
+          status: payload.status || prev.status,
+          messages: [...(prev.messages || []), payload.message]
+        };
+      });
+    }
+  }, [id]));
+
+  // Handle real-time ticket field updates
+  useSocketEvent('ticket:update', useCallback((payload) => {
+    if (payload?.ticketId === id) {
+      setItem(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          status: payload.status || prev.status,
+          priority: payload.priority || prev.priority,
+          assignedTo: payload.assignedTo !== undefined ? payload.assignedTo : prev.assignedTo,
+          activity: payload.activity || prev.activity
+        };
+      });
+    }
+  }, [id]));
+
+  // Handle real-time internal notes
+  useSocketEvent('ticket:note', useCallback((payload) => {
+    if (payload?.ticketId === id) {
+      setItem(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          internalNotes: payload.internalNotes || prev.internalNotes
+        };
+      });
+    }
+  }, [id]));
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -70,7 +131,6 @@ export default function AdminTicketDetail() {
   const updateTicket = async (fields) => {
     try {
       await api.patch(`/admin/support/${id}`, fields);
-      await loadData();
     } catch (e) { alert(e.response?.data?.message || 'Update failed'); }
   };
 
@@ -81,7 +141,6 @@ export default function AdminTicketDetail() {
     try {
       await api.post(`/admin/support/${id}/replies`, { message: reply });
       setReply('');
-      await loadData();
     } catch (e) { alert(e.response?.data?.message || 'Reply failed'); }
     finally { setSubmitting(false); }
   };
@@ -92,7 +151,6 @@ export default function AdminTicketDetail() {
     try {
       await api.post(`/admin/support/${id}/notes`, { note });
       setNote('');
-      await loadData();
     } catch (e) { alert(e.response?.data?.message || 'Note failed'); }
   };
 

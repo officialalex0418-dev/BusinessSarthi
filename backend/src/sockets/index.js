@@ -67,6 +67,15 @@ export function initSocket(server) {
       socket.join(`company:${company}`);
     }
 
+    // Room subscription for live ticket updates
+    socket.on('ticket:join', (ticketId) => {
+      if (ticketId) socket.join(`ticket:${ticketId}`);
+    });
+
+    socket.on('ticket:leave', (ticketId) => {
+      if (ticketId) socket.leave(`ticket:${ticketId}`);
+    });
+
     // Direct Live Refresh Response (Staff -> Server -> Manager)
     socket.on('staff:location:live', async (payload) => {
        const { lat, lng, accuracy, batteryLevel, recordedAt } = payload;
@@ -147,6 +156,21 @@ export const realtime = {
     if (!io) return;
     if (companyId) io.to(`company:${companyId}`).emit('activity:new', activity);
     io.to('platform').emit('activity:new', { companyId, ...activity });
+  },
+  /** Support ticket live messages */
+  ticketMessage(ticketId, payload) {
+    if (!io) return;
+    io.to(`ticket:${ticketId}`).to('platform').emit('ticket:message', payload);
+  },
+  /** Support ticket status/assignment changes */
+  ticketUpdate(ticketId, payload) {
+    if (!io) return;
+    io.to(`ticket:${ticketId}`).to('platform').emit('ticket:update', payload);
+  },
+  /** Internal team note updates */
+  ticketNote(ticketId, payload) {
+    if (!io) return;
+    io.to(`ticket:${ticketId}`).emit('ticket:note', payload);
   },
   /** Force specific user device to send a fresh location ping */
   requestRefresh(userId) {

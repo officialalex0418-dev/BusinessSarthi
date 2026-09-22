@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
+import { useSocket, useSocketEvent } from '@/context/SocketContext';
 import {
   Card, CardHeader, CardBody, Badge, Button,
   Spinner, Textarea
@@ -15,6 +16,7 @@ import { formatDate, formatDateTime } from '@/lib/utils';
 export default function TicketDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { socket } = useSocket() || {};
   const [item, setItem] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,50 @@ export default function TicketDetail() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Join realtime room
+  useEffect(() => {
+    if (!socket || !id) return;
+    socket.emit('ticket:join', id);
+    return () => {
+      socket.emit('ticket:leave', id);
+    };
+  }, [socket, id]);
+
+  // Listen for real-time messages
+  useSocketEvent('ticket:message', useCallback((payload) => {
+    if (payload?.ticketId === id && payload?.message) {
+      setItem(prev => {
+        if (!prev) return prev;
+        const exists = prev.messages?.some(m =>
+          (m._id && payload.message._id && m._id === payload.message._id) ||
+          (m.message === payload.message.message && new Date(m.createdAt).getTime() === new Date(payload.message.createdAt).getTime())
+        );
+        if (exists) {
+          return { ...prev, status: payload.status || prev.status };
+        }
+        return {
+          ...prev,
+          status: payload.status || prev.status,
+          messages: [...(prev.messages || []), payload.message]
+        };
+      });
+    }
+  }, [id]));
+
+  // Listen for status/priority updates
+  useSocketEvent('ticket:update', useCallback((payload) => {
+    if (payload?.ticketId === id) {
+      setItem(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          status: payload.status || prev.status,
+          priority: payload.priority || prev.priority
+        };
+      });
+    }
+  }, [id]));
+
   useEffect(() => {
     if (scrollRef.current) {
         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -54,7 +100,6 @@ export default function TicketDetail() {
     try {
       await api.post(`/support/tickets/${id}/replies`, { message });
       setMessage('');
-      loadData();
     } catch (e) { alert(e.response?.data?.message || 'Reply failed'); }
     finally { setSubmitting(false); }
   };
@@ -125,7 +170,7 @@ export default function TicketDetail() {
                        <div className={`h-8 w-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ${
                          msg.senderType === 'ADMIN' ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-600'
                        }`}>
-                          {msg.sender?.name?.[0].toUpperCase()}
+                          {msg.sender?.name?.[0]?.toUpperCase() || (msg.senderType === 'ADMIN' ? 'A' : 'U')}
                        </div>
                        <div className={`flex-1 min-w-0 flex flex-col ${msg.senderType === 'ADMIN' ? 'items-end' : 'items-start'}`}>
                           <div className={`rounded-2xl p-4 max-w-[90%] shadow-sm ${

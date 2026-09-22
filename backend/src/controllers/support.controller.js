@@ -120,14 +120,15 @@ export const addMessage = asyncHandler(async (req, res) => {
   }
 
   const { message, attachments } = req.body;
-  ticket.messages.push({
+  const newMsg = {
     senderType: isAdmin ? 'ADMIN' : 'USER',
     sender: req.user._id,
     message,
     attachments: attachments || [],
     createdAt: new Date()
-  });
+  };
 
+  ticket.messages.push(newMsg);
   ticket.lastActivityAt = new Date();
 
   // Status management
@@ -139,16 +140,43 @@ export const addMessage = asyncHandler(async (req, res) => {
       if (ticket.status === 'RESOLVED') {
           ticket.status = 'OPEN'; // Reopen if user replies to resolved
       } else if (ticket.status === 'IN_PROGRESS') {
-          ticket.status = 'OPEN'; // Back to open if user replies while in progress? Or keep in progress.
+          ticket.status = 'OPEN';
       }
   }
 
   await ticket.save();
 
+  // Construct message object with sender name for real-time broadcast
+  const savedMsg = ticket.messages[ticket.messages.length - 1];
+  const socketPayload = {
+    ticketId: ticket._id.toString(),
+    message: {
+      _id: savedMsg._id,
+      senderType: savedMsg.senderType,
+      sender: {
+        _id: req.user._id,
+        name: req.user.name,
+        role: req.user.role
+      },
+      message: savedMsg.message,
+      attachments: savedMsg.attachments || [],
+      createdAt: savedMsg.createdAt
+    },
+    status: ticket.status,
+    lastActivityAt: ticket.lastActivityAt
+  };
+
+  realtime.ticketMessage(ticket._id.toString(), socketPayload);
+
   // Notify counterpart
   if (isAdmin) {
-      // Notify user who created the ticket
-      // In a real system, we'd send a push notification or email
+      if (ticket.createdBy) {
+         realtime.notify(ticket.createdBy.toString(), {
+            title: `New reply on ticket ${ticket.ticketNumber}`,
+            message: `${req.user.name}: ${message.slice(0, 100)}`,
+            link: `/staff/support/${ticket._id}`
+         });
+      }
       try {
           await emails.ticketReplyNotification(ticket.createdBy.email, {
               ticketNumber: ticket.ticketNumber,
@@ -206,6 +234,16 @@ export const updateTicket = asyncHandler(async (req, res) => {
   }
 
   await ticket.save();
+
+  // Broadcast real-time status update
+  realtime.ticketUpdate(ticket._id.toString(), {
+    ticketId: ticket._id.toString(),
+    status: ticket.status,
+    priority: ticket.priority,
+    assignedTo: ticket.assignedTo,
+    activity: ticket.activity
+  });
+
   audit({ req, action: 'UPDATE_TICKET', entity: 'SupportTicket', entityId: ticket._id });
   res.json({ success: true, data: ticket });
 });
@@ -222,5 +260,12 @@ export const addNote = asyncHandler(async (req, res) => {
   });
 
   await ticket.save();
+
+  // Broadcast note update to ticket room
+  realtime.ticketNote(ticket._id.toString(), {
+    ticketId: ticket._id.toString(),
+    internalNotes: ticket.internalNotes
+  });
+
   res.json({ success: true, data: ticket });
 });
