@@ -124,6 +124,23 @@ export const addMessage = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('This support ticket is resolved or closed. Messaging is disabled.');
   }
 
+  // Role & Ticket Creator Permission Checks:
+  // 1. Employee-created ticket (createdByType === 'STAFF'): Respective company can view, but ONLY the employee creator can send replies.
+  // 2. Owner-created ticket (createdByType === 'COMPANY_OWNER' or 'COMPANY_MANAGER'): Company owner/manager can send replies.
+  if (!isAdmin) {
+    if (ticket.createdByType === 'STAFF') {
+      if (ticket.createdBy.toString() !== req.user._id.toString()) {
+        throw ApiError.forbidden('This ticket was created by an employee. Your company can view this request, but only the employee who created it or support can send replies.');
+      }
+    } else {
+      const isOwnerOrManager = ['COMPANY_OWNER', 'COMPANY_MANAGER'].includes(req.user.role);
+      const isCreator = ticket.createdBy.toString() === req.user._id.toString();
+      if (!isOwnerOrManager && !isCreator) {
+        throw ApiError.forbidden('Only company owners or managers can reply to company support tickets.');
+      }
+    }
+  }
+
   const { message, attachments } = req.body;
   const newMsg = {
     senderType: isAdmin ? 'ADMIN' : 'USER',

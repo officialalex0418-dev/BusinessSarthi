@@ -119,7 +119,34 @@ export default function TicketDetail() {
     </div>
   );
 
-  const isAdmin = user.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role === 'SUPER_ADMIN';
+  const isTicketCreator = (item?.createdBy?._id || item?.createdBy) === user?._id;
+  const isCompanyOwnerOrManager = user?.role === 'COMPANY_OWNER' || user?.role === 'COMPANY_MANAGER';
+  const isEmployeeTicket = item?.createdByType === 'STAFF';
+
+  let canReply = false;
+  let disabledReason = '';
+
+  if (item?.status === 'RESOLVED' || item?.status === 'CLOSED') {
+    canReply = false;
+    disabledReason = `This ticket is ${item?.status === 'RESOLVED' ? 'Resolved' : 'Closed'}. Messaging is turned off.`;
+  } else if (isAdmin) {
+    canReply = true;
+  } else if (isEmployeeTicket) {
+    if (isTicketCreator) {
+      canReply = true;
+    } else {
+      canReply = false;
+      disabledReason = `This ticket was created by an employee (${item?.createdBy?.name || 'Staff'}). Your company can view this request, but only the employee who created it or support can send replies.`;
+    }
+  } else {
+    if (isCompanyOwnerOrManager || isTicketCreator) {
+      canReply = true;
+    } else {
+      canReply = false;
+      disabledReason = 'Only company owners or managers can reply to company support tickets.';
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12 animate-in fade-in duration-500">
@@ -188,18 +215,7 @@ export default function TicketDetail() {
                   ))}
                </div>
 
-               {item.status === 'RESOLVED' || item.status === 'CLOSED' ? (
-                 <div className="pt-6 border-t border-slate-100">
-                   <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
-                     <p className="text-sm font-semibold text-slate-700 mb-1">
-                       This ticket is {item.status === 'RESOLVED' ? 'Resolved' : 'Closed'}.
-                     </p>
-                     <p className="text-xs text-slate-500">
-                       Messaging is turned off for this ticket.
-                     </p>
-                   </div>
-                 </div>
-               ) : (
+               {canReply ? (
                  <form onSubmit={handleReply} className="pt-6 border-t border-slate-100">
                    <Textarea
                      placeholder={isAdmin ? "Type your response to the customer..." : "Type your message to support..."}
@@ -217,6 +233,17 @@ export default function TicketDetail() {
                       </Button>
                    </div>
                  </form>
+               ) : (
+                 <div className="pt-6 border-t border-slate-100">
+                   <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                     <p className="text-sm font-semibold text-slate-700 mb-1">
+                       Messaging Disabled
+                     </p>
+                     <p className="text-xs text-slate-500">
+                       {disabledReason}
+                     </p>
+                   </div>
+                 </div>
                )}
             </CardBody>
           </Card>
