@@ -119,6 +119,11 @@ export const addMessage = asyncHandler(async (req, res) => {
     throw ApiError.forbidden('Access denied');
   }
 
+  // Messaging is disabled for resolved or closed tickets
+  if (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') {
+    throw ApiError.badRequest('This support ticket is resolved or closed. Messaging is disabled.');
+  }
+
   const { message, attachments } = req.body;
   const newMsg = {
     senderType: isAdmin ? 'ADMIN' : 'USER',
@@ -137,9 +142,7 @@ export const addMessage = asyncHandler(async (req, res) => {
           ticket.status = 'IN_PROGRESS';
       }
   } else {
-      if (ticket.status === 'RESOLVED') {
-          ticket.status = 'OPEN'; // Reopen if user replies to resolved
-      } else if (ticket.status === 'IN_PROGRESS') {
+      if (ticket.status === 'IN_PROGRESS') {
           ticket.status = 'OPEN';
       }
   }

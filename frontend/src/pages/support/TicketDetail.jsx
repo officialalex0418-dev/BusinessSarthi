@@ -188,7 +188,18 @@ export default function TicketDetail() {
                   ))}
                </div>
 
-               {item.status !== 'CLOSED' && (
+               {item.status === 'RESOLVED' || item.status === 'CLOSED' ? (
+                 <div className="pt-6 border-t border-slate-100">
+                   <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                     <p className="text-sm font-semibold text-slate-700 mb-1">
+                       This ticket is {item.status === 'RESOLVED' ? 'Resolved' : 'Closed'}.
+                     </p>
+                     <p className="text-xs text-slate-500">
+                       Messaging is turned off for this ticket.
+                     </p>
+                   </div>
+                 </div>
+               ) : (
                  <form onSubmit={handleReply} className="pt-6 border-t border-slate-100">
                    <Textarea
                      placeholder={isAdmin ? "Type your response to the customer..." : "Type your message to support..."}

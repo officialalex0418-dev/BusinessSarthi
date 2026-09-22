@@ -231,20 +231,33 @@ export default function AdminTicketDetail() {
                   ))}
                </div>
 
-               <form onSubmit={handleReply} className="pt-6 border-t border-slate-100">
-                 <Textarea
-                   placeholder="Reply to customer..."
-                   value={reply}
-                   onChange={e => setReply(e.target.value)}
-                   className="mb-4"
-                   rows={4}
-                   required
-                 />
-                 <Button type="submit" loading={submitting} className="w-full gap-2 text-lg py-6">
-                    <Send className="h-5 w-5" />
-                    Send Response
-                 </Button>
-               </form>
+               {item.status === 'RESOLVED' || item.status === 'CLOSED' ? (
+                 <div className="pt-6 border-t border-slate-100">
+                   <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                     <p className="text-sm font-semibold text-slate-700 mb-1">
+                       This ticket is {item.status === 'RESOLVED' ? 'Resolved' : 'Closed'}.
+                     </p>
+                     <p className="text-xs text-slate-500">
+                       Messaging is turned off. To send additional responses, change the status to Open or In Progress in Management Actions.
+                     </p>
+                   </div>
+                 </div>
+               ) : (
+                 <form onSubmit={handleReply} className="pt-6 border-t border-slate-100">
+                   <Textarea
+                     placeholder="Reply to customer..."
+                     value={reply}
+                     onChange={e => setReply(e.target.value)}
+                     className="mb-4"
+                     rows={4}
+                     required
+                   />
+                   <Button type="submit" loading={submitting} className="w-full gap-2 text-lg py-6">
+                      <Send className="h-5 w-5" />
+                      Send Response
+                   </Button>
+                 </form>
+               )}
             </CardBody>
           </Card>
 
