@@ -71,6 +71,8 @@ export default function DashboardLayout({ title, nav }) {
     setNotifications((prev) => [n, ...prev].slice(0, 10));
     setUnread((u) => u + 1);
 
+    if (!Capacitor.isNativePlatform()) return;
+
     // 1. Permanent Shift Notification Control
     if (n.type === 'SHIFT_ACTIVE') {
       LocalNotifications.schedule({
