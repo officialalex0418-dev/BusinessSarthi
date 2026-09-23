@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "940663955074",
+    "project_id": "business-sarthi-ac8dc",
+    "storage_bucket": "business-sarthi-ac8dc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:940663955074:android:f423cd9b7812ba05699e9b",
+        "android_client_info": {
+          "package_name": "com.businesssarthi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJbzA5VSFJAtjJWhdiUo0fpDFpsQVNyaE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

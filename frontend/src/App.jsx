@@ -243,9 +243,7 @@ export default function App() {
   useEffect(() => {
     requestAllPermissions().catch(() => {});
 
-    // Guarded Push Notifications Initialization
-    // WARNING: This will crash the Android app on cold start if google-services.json is missing!
-    // I have disabled .register() until the Firebase configuration is completed.
+    // Native Push Notifications Initialization
     if (Capacitor.isNativePlatform()) {
       (async () => {
         try {
@@ -253,27 +251,46 @@ export default function App() {
             return;
           }
 
-          const result = await PushNotifications.requestPermissions();
-          if (result.receive === 'granted') {
-            // ONLY register if you have added google-services.json to android/app/
-            // Calling PushNotifications.register() without google-services.json causes native Java IllegalStateException & crashes the app.
-            // await PushNotifications.register().catch(e => console.error('Register error:', e));
-            console.log('Push Notifications granted, registration is deferred until google-services.json is added.');
-          }
+          // Remove any existing listeners before re-adding
+          await PushNotifications.removeAllListeners();
 
-          PushNotifications.addListener('registration', token => {
-            api.patch('/auth/fcm-token', { token: token.value }).catch(() => {});
+          // Set up listeners first before calling register()
+          await PushNotifications.addListener('registration', token => {
+            console.log('FCM Registration Token received:', token.value);
+            api.patch('/auth/fcm-token', { token: token.value }).catch(err => {
+              console.error('Failed to save FCM token on backend:', err);
+            });
           });
 
-          PushNotifications.addListener('registrationError', err => {
+          await PushNotifications.addListener('registrationError', err => {
             console.error('FCM Registration Error:', err);
           });
 
-          PushNotifications.addListener('pushNotificationReceived', notification => {
-            console.log('Push received:', notification);
+          await PushNotifications.addListener('pushNotificationReceived', notification => {
+            console.log('Push notification received in foreground:', notification);
           });
+
+          await PushNotifications.addListener('pushNotificationActionPerformed', action => {
+            console.log('Push notification action tapped:', action);
+          });
+
+          // Request permissions and register device with FCM
+          const result = await PushNotifications.requestPermissions();
+          if (result.receive === 'granted') {
+            try {
+              await PushNotifications.register();
+              console.log('Push Notifications registered successfully.');
+            } catch (regErr) {
+              console.warn(
+                'Push Notifications registration failed. Please ensure google-services.json is placed in android/app/:',
+                regErr
+              );
+            }
+          } else {
+            console.warn('Push Notification permissions not granted:', result.receive);
+          }
         } catch (e) {
-          console.error('Push Notifications init failed safely', e);
+          console.error('Push Notifications init error:', e);
         }
       })();
     }

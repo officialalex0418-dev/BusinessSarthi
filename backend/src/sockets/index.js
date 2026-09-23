@@ -18,7 +18,13 @@ let io = null;
 
 export function initSocket(server) {
   io = new Server(server, {
-    cors: { origin: env.clientUrl, credentials: true },
+    cors: {
+      origin: (origin, callback) => {
+        // Always allow connections from mobile apps (no origin/localhost/capacitor) or configured web apps
+        callback(null, true);
+      },
+      credentials: true,
+    },
     transports: ['websocket', 'polling'],
   });
 

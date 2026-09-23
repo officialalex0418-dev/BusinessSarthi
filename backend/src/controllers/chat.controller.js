@@ -58,7 +58,7 @@ export const createChat = asyncHandler(async (req, res) => {
   };
 
   if (chat.isGroup) {
-    let recipients = (chat.participants || []).filter(p => p.toString() !== req.user._id.toString());
+    let recipients = (chat.participants || []).filter(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString());
     if (recipients.length === 0) {
       // Company-wide group: Notify all active staff/users in the company except sender
       const companyUsers = await User.find({
@@ -72,7 +72,7 @@ export const createChat = asyncHandler(async (req, res) => {
       notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
     }
   } else {
-    const recipient = chat.recipient || (chat.participants || []).find(p => p.toString() !== req.user._id.toString());
+    const recipient = chat.recipient || (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString());
     if (recipient) {
       notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
     }
@@ -142,7 +142,7 @@ export const addChatMessage = asyncHandler(async (req, res) => {
   };
 
   if (chat.isGroup) {
-    let recipients = (chat.participants || []).filter(p => p.toString() !== req.user._id.toString());
+    let recipients = (chat.participants || []).filter(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString());
     if (recipients.length === 0) {
       // Company-wide group: Notify all active staff/users in the company except sender
       const companyUsers = await User.find({
@@ -156,7 +156,7 @@ export const addChatMessage = asyncHandler(async (req, res) => {
       notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
     }
   } else {
-    const recipient = chat.recipient || (chat.participants || []).find(p => p.toString() !== req.user._id.toString());
+    const recipient = chat.recipient || (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString());
     if (recipient) {
       notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
     }

@@ -4,6 +4,7 @@ import {
   Menu, X, Moon, Sun, Bell, LogOut, ChevronDown, MapPin, LifeBuoy
 } from 'lucide-react';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useSocket, useSocketEvent } from '@/context/SocketContext';
@@ -64,45 +65,68 @@ export default function DashboardLayout({ title, nav }) {
           vibration: true,
         }).catch(err => console.error('Channel creation error:', err));
       }).catch(() => {});
+
+      // Handle notification tap action from system status bar
+      const listener = LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+        const targetLink = action.notification.extra?.link;
+        if (targetLink) {
+          navigate(targetLink);
+        } else {
+          navigate(user?.role === 'COMPANY_OWNER' ? '/company/complaints' : '/staff/complaints');
+        }
+      });
+
+      return () => {
+        listener.then(l => l.remove()).catch(() => {});
+      };
     }
-  }, []);
+  }, [navigate, user?.role]);
 
   useSocketEvent('notification:new', useCallback((n) => {
     setNotifications((prev) => [n, ...prev].slice(0, 10));
     setUnread((u) => u + 1);
 
-    if (!Capacitor.isNativePlatform()) return;
-
-    // 1. Permanent Shift Notification Control
-    if (n.type === 'SHIFT_ACTIVE') {
-      LocalNotifications.schedule({
-        notifications: [{
-          id: 999,
-          title: 'Your Shift is Active',
-          body: n.message || 'Your shift is active and location is being tracked.',
-          ongoing: true,
-          sticky: true,
-          channelId: 'bs_alerts',
-        }]
-      }).catch(err => console.error('Local notification error:', err));
-    } else if (n.type === 'SHIFT_INACTIVE' || n.clearSticky) {
-      LocalNotifications.cancel({ notifications: [{ id: 999 }] }).catch(() => {});
-    } else {
-      // 2. Chat / Complaint / System Notifications on Notification Bar (with sender name & message)
-      LocalNotifications.schedule({
-        notifications: [{
-          title: n.title || 'Business Sarthi',
-          body: n.message,
-          id: Math.floor(Math.random() * 100000) + 1000,
-          schedule: { at: new Date(Date.now() + 100) },
-          attachments: [],
-          actionTypeId: '',
-          extra: { link: n.link },
-          channelId: 'bs_alerts',
-        }]
-      }).catch(err => console.error('Local notification error:', err));
+    if (Capacitor.isNativePlatform()) {
+      // 1. Permanent Shift Notification Control
+      if (n.type === 'SHIFT_ACTIVE') {
+        LocalNotifications.schedule({
+          notifications: [{
+            id: 999,
+            title: 'Your Shift is Active',
+            body: n.message || 'Your shift is active and location is being tracked.',
+            ongoing: true,
+            sticky: true,
+            channelId: 'bs_alerts',
+          }]
+        }).catch(err => console.error('Local notification error:', err));
+      } else if (n.type === 'SHIFT_INACTIVE' || n.clearSticky) {
+        LocalNotifications.cancel({ notifications: [{ id: 999 }] }).catch(() => {});
+      } else {
+        // 2. Chat / Complaint / System Notifications on Notification Bar (with sender name & message)
+        const targetLink = n.link || (user?.role === 'COMPANY_OWNER' ? '/company/complaints' : '/staff/complaints');
+        LocalNotifications.schedule({
+          notifications: [{
+            title: n.title || 'Business Sarthi',
+            body: n.message || '',
+            id: Math.floor(Math.random() * 100000) + 1000,
+            schedule: { at: new Date(Date.now() + 100) },
+            attachments: [],
+            actionTypeId: '',
+            extra: { link: targetLink },
+            channelId: 'bs_alerts',
+          }]
+        }).catch(err => console.error('Local notification error:', err));
+      }
+    } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      // Browser notification fallback
+      try {
+        new Notification(n.title || 'Business Sarthi', {
+          body: n.message || '',
+          icon: '/favicon.ico'
+        });
+      } catch (e) {}
     }
-  }, []));
+  }, [user?.role]));
 
   const markRead = async () => {
     setNotifOpen((o) => !o);
@@ -123,6 +147,11 @@ export default function DashboardLayout({ title, nav }) {
     // Base paths based on role
     const mgmtPrefix = isOwner ? '/company' : (isManager ? '/staff/management' : '');
     const staffPrefix = '/staff';
+
+    if (n.type === 'CHAT_MESSAGE' || n.type === 'COMPLAINT_NEW' || n.type === 'COMPLAINT_REPLY') {
+      navigate(isOwner ? '/company/complaints' : '/staff/complaints');
+      return;
+    }
 
     if (n.link) {
       navigate(n.link);

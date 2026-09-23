@@ -2,6 +2,48 @@ import { Notification, User, Attendance } from '../models/index.js';
 import { realtime } from '../sockets/index.js';
 import { todayStr } from '../utils/dates.js';
 
+let adminModule = null;
+let isFirebaseInitialized = false;
+
+// Dynamically initialize Firebase Admin if credentials are provided in environment
+(async () => {
+  try {
+    const mod = await import('firebase-admin');
+    adminModule = mod.default || mod;
+
+    if (!adminModule.apps || !adminModule.apps.length) {
+      if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        let serviceAccount;
+        try {
+          serviceAccount = typeof process.env.FIREBASE_SERVICE_ACCOUNT === 'string'
+            ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+            : process.env.FIREBASE_SERVICE_ACCOUNT;
+        } catch (jsonErr) {
+          console.error('[FCM] Invalid FIREBASE_SERVICE_ACCOUNT JSON:', jsonErr.message);
+        }
+
+        if (serviceAccount) {
+          adminModule.initializeApp({
+            credential: adminModule.credential.cert(serviceAccount)
+          });
+          isFirebaseInitialized = true;
+          console.log('[FCM] Firebase Admin initialized with FIREBASE_SERVICE_ACCOUNT env var');
+        }
+      } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        adminModule.initializeApp({
+          credential: adminModule.credential.applicationDefault()
+        });
+        isFirebaseInitialized = true;
+        console.log('[FCM] Firebase Admin initialized with GOOGLE_APPLICATION_CREDENTIALS');
+      }
+    } else {
+      isFirebaseInitialized = true;
+    }
+  } catch (err) {
+    console.warn('[FCM] firebase-admin setup notice:', err.message);
+  }
+})();
+
 /** Create DB notification + push over socket + FCM. Fire-and-forget safe. */
 export async function notify({ recipient, company, type, title, message, link, sticky = false, ongoing = false }) {
   try {
@@ -33,7 +75,6 @@ export async function notify({ recipient, company, type, title, message, link, s
 
     const n = await Notification.create({ recipient: targetUserId, company, type, title, message, link });
 
-
     // Socket.IO for real-time app users
     realtime.notify(targetUserId, { ...n.toObject(), sticky, ongoing });
 
@@ -52,30 +93,31 @@ async function sendPushNotification(userId, { title, message, type, link, sticky
     const user = await User.findById(userId).select('fcmToken');
     if (!user?.fcmToken) return;
 
-    // Placeholder for FCM implementation.
-    // This should use firebase-admin or FCM REST API v1.
-    // The mobile app (Capacitor) will receive this and show a notification.
-    console.log(`[FCM] Sending to ${user.fcmToken}: ${title} - ${message}`);
-
-    /*
-    Example FCM Payload for "WhatsApp-like" behavior:
-    {
-      message: {
+    if (adminModule && isFirebaseInitialized) {
+      await adminModule.messaging().send({
         token: user.fcmToken,
-        notification: { title, body: message },
-        data: { type, link, click_action: 'FLUTTER_NOTIFICATION_CLICK' },
+        notification: {
+          title: title || 'Notification',
+          body: message || ''
+        },
+        data: {
+          type: type || '',
+          link: link || '',
+          sticky: String(sticky || false),
+          ongoing: String(ongoing || false)
+        },
         android: {
           priority: 'high',
           notification: {
-            channel_id: 'high_importance_channel',
-            sticky: sticky,
-            ongoing: ongoing,
-            visibility: 'public'
+            channelId: 'default',
+            sound: 'default'
           }
         }
-      }
+      });
+      console.log(`[FCM] Notification successfully sent to user ${userId} (${user.fcmToken})`);
+    } else {
+      console.log(`[FCM] Logged notification for ${user.fcmToken} (Firebase Admin not initialized on backend): ${title} - ${message}`);
     }
-    */
   } catch (err) {
     console.error('FCM send failed:', err.message);
   }
