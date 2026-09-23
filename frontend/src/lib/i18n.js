@@ -14,6 +14,7 @@ const translations = {
     'Distributors': 'वितरकहरू',
     'Reports': 'रिपोर्टहरू',
     'Logout': 'लगआउट',
+    'Driving Business Forward': 'व्यापार अगाडि बढाउँदै',
     'Location tracking active': 'स्थान ट्र्याकिङ सक्रिय छ',
     'Check In': 'चेक इन',
     'Check Out': 'चेक आउट',

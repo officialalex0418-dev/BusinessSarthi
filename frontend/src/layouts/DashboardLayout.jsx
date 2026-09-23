@@ -177,19 +177,21 @@ export default function DashboardLayout({ title, nav }) {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm border border-slate-100 dark:border-slate-800">
               {branding.logoUrl ? (
-                <img src={fixFileUrl(branding.logoUrl)} alt="Logo" className="h-full w-full object-contain" />
+                <img src={fixFileUrl(branding.logoUrl)} alt="Logo" className="h-full w-full object-cover rounded-xl" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-primary-600 text-white">
+                <div className="flex h-full w-full items-center justify-center bg-primary-600 text-white rounded-xl">
                   <MapPin className="h-5 w-5" />
                 </div>
               )}
             </div>
             <div>
               <p className="text-sm font-bold leading-tight">{branding.appName}</p>
-              <p className="text-[10px] uppercase tracking-wider text-slate-400">{t(title, language)}</p>
+              <p className="text-[10px] font-medium tracking-wider text-slate-400">
+                {t('Driving Business Forward', language)}
+              </p>
             </div>
           </div>
           <button className="rounded-lg p-1 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(false)}>

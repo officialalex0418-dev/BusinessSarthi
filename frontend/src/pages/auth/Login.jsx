@@ -46,11 +46,11 @@ export default function Login() {
     <div className="auth-page-root relative flex min-h-screen items-center justify-center p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] overflow-y-auto">
       <Card className="w-full max-w-md p-8">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white p-1 shadow-sm">
-            {branding.logoUrl ? <img src={branding.logoUrl} alt="Logo" className="h-full w-full object-contain" /> : <MapPin className="h-7 w-7 text-primary-600" />}
+          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm border border-slate-100 dark:border-slate-800">
+            {branding.logoUrl ? <img src={branding.logoUrl} alt="Logo" className="h-full w-full object-cover rounded-2xl" /> : <MapPin className="h-7 w-7 text-primary-600" />}
           </div>
           <h1 className="text-2xl font-bold">{branding.appName}</h1>
-          <p className="text-sm text-slate-500">{branding.tagline || 'Driving Business Forward'}</p>
+          <p className="text-sm text-slate-500">Driving Business Forward</p>
         </div>
 
         {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-300">{error}</div>}
