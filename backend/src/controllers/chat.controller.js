@@ -72,7 +72,8 @@ export const createChat = asyncHandler(async (req, res) => {
       notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
     }
   } else {
-    const recipient = chat.recipient || (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString());
+    const recipient = (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString())
+                      || (chat.recipient?.toString() === req.user._id.toString() ? chat.sender : chat.recipient);
     if (recipient) {
       notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
     }
@@ -156,7 +157,8 @@ export const addChatMessage = asyncHandler(async (req, res) => {
       notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
     }
   } else {
-    const recipient = chat.recipient || (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString());
+    const recipient = (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString())
+                      || (chat.recipient?.toString() === req.user._id.toString() ? chat.sender : chat.recipient);
     if (recipient) {
       notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
     }

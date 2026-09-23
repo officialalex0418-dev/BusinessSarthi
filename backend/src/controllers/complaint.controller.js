@@ -135,7 +135,7 @@ export const addReply = asyncHandler(async (req, res) => {
   await ComplaintMessage.updateMany({ complaint: complaint._id }, { expiresAt });
 
   // Notify other party with sender name & message for notification bar
-  const recipientId = complaint.sender.toString() === req.user._id.toString() ? complaint.recipient : complaint.sender;
+  const recipientId = complaint.sender?.toString() === req.user._id.toString() ? complaint.recipient : complaint.sender;
   if (recipientId) {
     notify({
       recipient: recipientId,
@@ -145,6 +145,24 @@ export const addReply = asyncHandler(async (req, res) => {
       message: `${complaint.subject}: ${message || 'Sent an attachment'}`,
       link: '/staff/complaints',
     }).catch(e => console.error('Complaint notification failed:', e));
+  } else if (complaint.isGroup) {
+    const companyUsers = await User.find({
+      company: req.user.company,
+      _id: { $ne: req.user._id },
+      isActive: true,
+    }).select('_id');
+    const recipients = companyUsers.map(u => u._id);
+    if (recipients.length > 0) {
+      import('../services/notification.service.js').then(({ notifyMany }) => {
+        notifyMany(recipients, {
+          company: req.user.company,
+          type: 'COMPLAINT_REPLY',
+          title: `Complaint Reply from ${req.user.name}`,
+          message: `${complaint.subject}: ${message || 'Sent an attachment'}`,
+          link: '/staff/complaints',
+        }).catch(e => console.error('Complaint notification failed:', e));
+      });
+    }
   }
 
   res.status(201).json({ success: true, data: reply });

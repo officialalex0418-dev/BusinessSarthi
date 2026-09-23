@@ -140,7 +140,7 @@ async function sendPushNotification(userId, { title, message, type, link, sticky
         android: {
           priority: 'high',
           notification: {
-            channelId: 'default',
+            channelId: 'bs_alerts',
             sound: 'default',
             priority: 'high',
             visibility: 'public'
@@ -153,6 +153,10 @@ async function sendPushNotification(userId, { title, message, type, link, sticky
     }
   } catch (err) {
     console.error(`[FCM] Send failed for user ${userId}:`, err.message);
+    if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
+      console.log(`[FCM] Clearing invalid token for user ${userId}`);
+      await User.findByIdAndUpdate(userId, { $unset: { fcmToken: 1 } }).catch(() => {});
+    }
   }
 }
 

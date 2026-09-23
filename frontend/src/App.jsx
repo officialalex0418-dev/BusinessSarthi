@@ -251,17 +251,28 @@ export default function App() {
             return;
           }
 
-          // Create high-importance default channel for Android heads-up notifications
+          // Create high-importance channels for Android heads-up notifications
           try {
-            await PushNotifications.createChannel({
-              id: 'default',
-              name: 'Default Notifications',
-              description: 'General system notifications',
-              importance: 5, // High Importance (shows banner & plays sound)
-              visibility: 1, // Public
-              sound: 'default',
-              vibration: true,
-            });
+            await Promise.all([
+              PushNotifications.createChannel({
+                id: 'bs_alerts',
+                name: 'Business Sarthi Alerts',
+                description: 'Critical business notifications & chat messages',
+                importance: 5, // High Importance (shows banner & plays sound)
+                visibility: 1, // Public
+                sound: 'default',
+                vibration: true,
+              }),
+              PushNotifications.createChannel({
+                id: 'default',
+                name: 'Default Notifications',
+                description: 'General system notifications',
+                importance: 5,
+                visibility: 1,
+                sound: 'default',
+                vibration: true,
+              })
+            ]);
           } catch (chErr) {
             console.warn('FCM Channel Creation Warning:', chErr);
           }
