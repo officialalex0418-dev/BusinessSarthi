@@ -369,22 +369,13 @@ export const requestRefresh = asyncHandler(async (req, res) => {
       createdAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) }
     }).select('staff');
 
-    activeAttendance.forEach(a => {
-      if (a.staff) {
-        realtime.requestRefresh(a.staff.toString());
-      }
-    });
-  }
-
-  res.json({ success: true, message: 'Refresh request sent to active staff' });
-});
-    }).select('staff');
-
     const now = new Date();
     activeAttendance.forEach(a => {
-      const sId = a.staff.toString();
-      realtime.requestRefresh(sId);
-      CurrentStaffLocation.updateOne({ staff: sId }, { $set: { lastRefreshRequestedAt: now } }).catch(() => {});
+      if (a.staff) {
+        const sId = a.staff.toString();
+        realtime.requestRefresh(sId);
+        CurrentStaffLocation.updateOne({ staff: sId }, { $set: { lastRefreshRequestedAt: now } }).catch(() => {});
+      }
     });
   }
 
