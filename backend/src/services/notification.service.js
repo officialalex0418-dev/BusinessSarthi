@@ -5,10 +5,11 @@ import { todayStr } from '../utils/dates.js';
 /** Create DB notification + push over socket + FCM. Fire-and-forget safe. */
 export async function notify({ recipient, company, type, title, message, link, sticky = false, ongoing = false }) {
   try {
-    // 1. Staff Check-In Guard (Requirement 1)
-    // Most notifications should only be pushed if the staff is currently checked in.
-    // Exceptions: CRITICAL system alerts, payroll, or leave updates might still be sent.
-    const isCritical = ['PAYROLL_GENERATED', 'LEAVE_APPROVED', 'LEAVE_REJECTED', 'SYSTEM_ALERT'].includes(type);
+    // Critical types & real-time communications bypass check-in guard so notifications arrive immediately
+    const isCritical = [
+      'PAYROLL_GENERATED', 'LEAVE_APPROVED', 'LEAVE_REJECTED', 'SYSTEM_ALERT',
+      'CHAT_MESSAGE', 'COMPLAINT_NEW', 'COMPLAINT_REPLY', 'SHIFT_ACTIVE', 'SHIFT_INACTIVE'
+    ].includes(type);
 
     if (!isCritical) {
        const activeAtt = await Attendance.findOne({

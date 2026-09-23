@@ -70,20 +70,36 @@ export default function DashboardLayout({ title, nav }) {
     setNotifications((prev) => [n, ...prev].slice(0, 10));
     setUnread((u) => u + 1);
 
-    // Show system notification (WhatsApp-like)
-    LocalNotifications.schedule({
-      notifications: [{
-        title: n.title || 'Business Sarthi',
-        body: n.message,
-        id: Math.floor(Math.random() * 100000),
-        schedule: { at: new Date(Date.now() + 100) },
-        sound: 'beep.wav',
-        attachments: [],
-        actionTypeId: '',
-        extra: { link: n.link },
-        channelId: 'bs_alerts',
-      }]
-    }).catch(err => console.error('Local notification error:', err));
+    // 1. Permanent Shift Notification Control
+    if (n.type === 'SHIFT_ACTIVE') {
+      LocalNotifications.schedule({
+        notifications: [{
+          id: 999,
+          title: 'Your Shift is Active',
+          body: n.message || 'Your shift is active and location is being tracked.',
+          ongoing: true,
+          sticky: true,
+          channelId: 'bs_alerts',
+        }]
+      }).catch(err => console.error('Local notification error:', err));
+    } else if (n.type === 'SHIFT_INACTIVE' || n.clearSticky) {
+      LocalNotifications.cancel({ notifications: [{ id: 999 }] }).catch(() => {});
+    } else {
+      // 2. Chat / Complaint / System Notifications on Notification Bar (with sender name & message)
+      LocalNotifications.schedule({
+        notifications: [{
+          title: n.title || 'Business Sarthi',
+          body: n.message,
+          id: Math.floor(Math.random() * 100000) + 1000,
+          schedule: { at: new Date(Date.now() + 100) },
+          sound: 'beep.wav',
+          attachments: [],
+          actionTypeId: '',
+          extra: { link: n.link },
+          channelId: 'bs_alerts',
+        }]
+      }).catch(err => console.error('Local notification error:', err));
+    }
   }, []));
 
   const markRead = async () => {

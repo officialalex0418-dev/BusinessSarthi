@@ -207,10 +207,10 @@ export const checkIn = asyncHandler(async (req, res) => {
   realtime.dashboard(companyId.toString(), { event: 'check_in', staffId: req.user._id });
   realtime.activity(companyId.toString(), { text: `${req.user.name} checked in${isLate ? ' (late)' : ''}`, at: now });
 
-  // Shift Notification (Sticky)
+  // Permanent Shift Active Notification (Sticky/Ongoing)
   realtime.notify(req.user._id.toString(), {
-    title: 'Your shift is Active',
-    message: 'Tracking is active. Please check out at the end of your shift.',
+    title: 'Your Shift is Active',
+    message: 'Your shift is active and location is being tracked.',
     type: 'SHIFT_ACTIVE',
     sticky: true,
     ongoing: true

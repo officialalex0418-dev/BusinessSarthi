@@ -43,12 +43,12 @@ export const createComplaint = asyncHandler(async (req, res) => {
   complaint.lastMessageSender = req.user._id;
   await complaint.save();
 
-  // Notify recipient
+  // Notify recipient with sender name & message for notification bar
   const notificationPayload = {
     company: req.user.company,
     type: 'COMPLAINT_NEW',
-    title: `New Complaint: ${subject}`,
-    message: message || 'See details in complaints',
+    title: `New Complaint from ${req.user.name}`,
+    message: `${subject}${message ? `: ${message}` : ''}`,
     link: '/staff/complaints',
   };
 
@@ -124,15 +124,15 @@ export const addReply = asyncHandler(async (req, res) => {
 
   await ComplaintMessage.updateMany({ complaint: complaint._id }, { expiresAt });
 
-  // Notify other party
+  // Notify other party with sender name & message for notification bar
   const recipientId = complaint.sender.toString() === req.user._id.toString() ? complaint.recipient : complaint.sender;
   if (recipientId) {
     notify({
       recipient: recipientId,
       company: req.user.company,
       type: 'COMPLAINT_REPLY',
-      title: `Reply to: ${complaint.subject}`,
-      message: message || 'Sent an attachment',
+      title: `Complaint Reply from ${req.user.name}`,
+      message: `${complaint.subject}: ${message || 'Sent an attachment'}`,
       link: '/staff/complaints',
     }).catch(e => console.error('Complaint notification failed:', e));
   }

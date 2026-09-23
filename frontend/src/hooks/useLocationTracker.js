@@ -35,11 +35,11 @@ export function useLocationTracker(enabled = true) {
   const gpsOffStartTimeRef = useRef(null);
   const checkOutTimerRef = useRef(null);
 
-  const notifyUser = useCallback(async (title, message) => {
+  const notifyUser = useCallback(async (title, message, id = null) => {
     try {
       await LocalNotifications.schedule({
         notifications: [{
-          id: Math.floor(Math.random() * 1000),
+          id: id || Math.floor(Math.random() * 1000) + 1000,
           title,
           body: message,
           schedule: { at: new Date(Date.now() + 100) },
@@ -55,9 +55,9 @@ export function useLocationTracker(enabled = true) {
     setIsAlerting(true);
 
     if (reason === 'GPS_OFF') {
-      notifyUser('GPS Turned Off', 'Please turn on GPS/Location Services to continue tracking your shift.');
+      notifyUser('GPS Turned Off', 'Please turn on gps or you will be checkout', 888);
     } else if (reason === 'NO_INTERNET') {
-      notifyUser('Internet Disconnected', 'Please enable Mobile Data or Wi-Fi to sync your tracking data.');
+      notifyUser('Internet Disconnected', 'Please turn on Data/Wifi or you will be checkout', 777);
     }
 
     try {
@@ -92,7 +92,7 @@ export function useLocationTracker(enabled = true) {
         await LocalNotifications.schedule({
           notifications: [{
             id: 999,
-            title: 'Business Sarthi Tracking',
+            title: 'Your Shift is Active',
             body: 'Your shift is active and location is being tracked.',
             ongoing: true,
             sticky: true,

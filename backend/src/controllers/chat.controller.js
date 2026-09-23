@@ -48,11 +48,11 @@ export const createChat = asyncHandler(async (req, res) => {
   chat.lastMessageSender = req.user._id;
   await chat.save();
 
-  // Notify recipients
+  // Notify recipients with sender name & message for notification bar
   const notificationPayload = {
     company: req.user.company,
     type: 'CHAT_MESSAGE',
-    title: chat.isGroup ? `New message in ${chat.groupName}` : `New message from ${req.user.name}`,
+    title: chat.isGroup ? `${req.user.name} (${chat.groupName || 'Group Chat'})` : `New message from ${req.user.name}`,
     message: message || 'Sent an attachment',
     link: '/staff/complaints', // Chat and complaints share the same page
   };
@@ -120,11 +120,11 @@ export const addChatMessage = asyncHandler(async (req, res) => {
 
   await ChatMessage.updateMany({ chat: chat._id }, { expiresAt });
 
-  // Notify recipients
+  // Notify recipients with sender name & message for notification bar
   const notificationPayload = {
     company: req.user.company,
     type: 'CHAT_MESSAGE',
-    title: chat.isGroup ? `New message in ${chat.groupName}` : `New message from ${req.user.name}`,
+    title: chat.isGroup ? `${req.user.name} (${chat.groupName || 'Group Chat'})` : `New message from ${req.user.name}`,
     message: message || 'Sent an attachment',
     link: '/staff/complaints',
   };
