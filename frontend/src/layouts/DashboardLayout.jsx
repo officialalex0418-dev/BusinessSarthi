@@ -60,7 +60,6 @@ export default function DashboardLayout({ title, nav }) {
       importance: 5, // High
       visibility: 1, // Public (shows on lock screen)
       vibration: true,
-      sound: 'beep.wav',
     }).then(() => {
        console.log('Notification channel bs_alerts ensured');
     }).catch(err => console.error('Channel creation error:', err));
@@ -92,7 +91,6 @@ export default function DashboardLayout({ title, nav }) {
           body: n.message,
           id: Math.floor(Math.random() * 100000) + 1000,
           schedule: { at: new Date(Date.now() + 100) },
-          sound: 'beep.wav',
           attachments: [],
           actionTypeId: '',
           extra: { link: n.link },

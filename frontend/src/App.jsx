@@ -255,9 +255,11 @@ export default function App() {
 
           const result = await PushNotifications.requestPermissions();
           if (result.receive === 'granted') {
-            // ONLY register if you have added google-services.json to android/app/
-            // await PushNotifications.register().catch(e => console.error('Register error:', e));
-            console.log('Push Notifications granted, but registration is deferred until Firebase is configured.');
+            try {
+              await PushNotifications.register();
+            } catch (regErr) {
+              console.log('Push Notifications register skipped/failed (Firebase config may be required):', regErr);
+            }
           }
 
           PushNotifications.addListener('registration', token => {

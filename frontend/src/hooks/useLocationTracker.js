@@ -43,7 +43,6 @@ export function useLocationTracker(enabled = true) {
           title,
           body: message,
           schedule: { at: new Date(Date.now() + 100) },
-          sound: 'beep.wav',
           channelId: 'bs_alerts',
         }]
       });

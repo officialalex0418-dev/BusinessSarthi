@@ -55,8 +55,18 @@ export const createComplaint = asyncHandler(async (req, res) => {
   if (complaint.recipient) {
     notify({ ...notificationPayload, recipient: complaint.recipient }).catch(e => console.error('Complaint notification failed:', e));
   } else if (complaint.isGroup) {
-      // If it's a company-wide complaint, we might notify owners/managers
-      // For now, only notify specific recipient if set.
+    // Company-wide complaint: Notify active company owners & managers or users
+    const companyUsers = await User.find({
+      company: req.user.company,
+      _id: { $ne: req.user._id },
+      isActive: true,
+    }).select('_id');
+    const recipients = companyUsers.map(u => u._id);
+    if (recipients.length > 0) {
+      import('../services/notification.service.js').then(({ notifyMany }) => {
+        notifyMany(recipients, notificationPayload).catch(e => console.error('Complaint notification failed:', e));
+      });
+    }
   }
 
   return res.status(201).json({ success: true, data: complaint });
