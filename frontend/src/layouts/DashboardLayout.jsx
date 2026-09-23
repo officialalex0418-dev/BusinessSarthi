@@ -53,16 +53,18 @@ export default function DashboardLayout({ title, nav }) {
 
   useEffect(() => {
     // Setup Android Notification Channel for high priority (WhatsApp-like)
-    LocalNotifications.createChannel({
-      id: 'bs_alerts',
-      name: 'Business Sarthi Alerts',
-      description: 'Critical business notifications',
-      importance: 5, // High
-      visibility: 1, // Public (shows on lock screen)
-      vibration: true,
-    }).then(() => {
-       console.log('Notification channel bs_alerts ensured');
-    }).catch(err => console.error('Channel creation error:', err));
+    if (Capacitor.isNativePlatform()) {
+      LocalNotifications.requestPermissions().then(() => {
+        LocalNotifications.createChannel({
+          id: 'bs_alerts',
+          name: 'Business Sarthi Alerts',
+          description: 'Critical business notifications',
+          importance: 5, // High
+          visibility: 1, // Public (shows on lock screen)
+          vibration: true,
+        }).catch(err => console.error('Channel creation error:', err));
+      }).catch(() => {});
+    }
   }, []);
 
   useSocketEvent('notification:new', useCallback((n) => {
