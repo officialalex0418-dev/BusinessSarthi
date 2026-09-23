@@ -217,7 +217,7 @@ export default function Distributors() {
             <div class="footer-strip">
               <div class="footer-part-1">
                 <div style="width: 44px; height: 44px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #000;">
-                   <img src="/logo.png" style="width: 80%; height: 80%; object-fit: contain;" onerror="this.style.display='none'"/>
+                   <img src="/icon.jpg" style="width: 80%; height: 80%; object-fit: contain;" onerror="this.style.display='none'"/>
                 </div>
                 <div style="line-height: 1.1">
                   <div style="font-size: 12px; text-transform: uppercase;">Business Sarthi</div>

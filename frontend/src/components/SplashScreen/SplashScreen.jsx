@@ -46,7 +46,7 @@ export default function SplashScreen({ isAppReady, onFinished }) {
       <div className="splash-logo-container">
         {/* The Animated Logo */}
         <img
-          src="/logo.png"
+          src="/icon.jpg"
           alt={branding.appName || 'BusinessSarthi'}
           className="splash-logo"
         />

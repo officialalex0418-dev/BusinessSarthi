@@ -108,8 +108,8 @@
     rgba(255, 255, 255, 0) 60%,
     transparent 100%
   );
-  mask-image: url('/logo.png');
-  -webkit-mask-image: url('/logo.png');
+  mask-image: url('/icon.jpg');
+  -webkit-mask-image: url('/icon.jpg');
   mask-size: contain;
   -webkit-mask-size: contain;
   mask-repeat: no-repeat;

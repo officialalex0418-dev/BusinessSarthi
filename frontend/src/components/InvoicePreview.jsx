@@ -8,7 +8,7 @@ export const InvoicePreview = forwardRef(({ invoice, company, distributor, dateF
 
   const appBranding = settings?.branding || {
     appName: 'Business Sarthi',
-    logoUrl: '/logo.png',
+    logoUrl: '/icon.jpg',
     tagline: 'Driving Business Forward'
   };
 
