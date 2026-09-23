@@ -76,7 +76,7 @@ export function initSocket(server) {
       if (ticketId) socket.leave(`ticket:${ticketId}`);
     });
 
-    // Direct Live Refresh Response (Staff -> Server -> Manager)
+    // Direct Ephemeral Live Refresh Response (Staff -> Server -> Manager)
     socket.on('staff:location:live', async (payload) => {
        const { lat, lng, accuracy, batteryLevel, recordedAt } = payload;
        const serverNow = new Date();
@@ -86,30 +86,34 @@ export function initSocket(server) {
        if (accuracy != null && accuracy < 0) return;
        if (batteryLevel != null && (batteryLevel < 0 || batteryLevel > 100)) return;
 
-       const { User, Attendance, CurrentStaffLocation } = await import('../models/index.js');
-       const { todayStr } = await import('../utils/dates.js');
+       const { User, Attendance } = await import('../models/index.js');
 
        // 2. Authorization Check (Real-time account state)
-       const u = await authCache.getOrSet(`staff_min:${id}`, async () => {
-         return await User.findOne({ _id: id, company: company, isActive: true }).select('name position profilePhoto trackingEnabled').lean();
+       const u = await authCache.getOrSet(`staff_min_desig:${id}`, async () => {
+         return await User.findOne({ _id: id, company: company, isActive: true })
+           .select('name position profilePhoto designation trackingEnabled')
+           .populate({ path: 'designation', select: 'name' })
+           .lean();
        }, 300);
 
        if (!u || !u.trackingEnabled) return;
 
-       // 3. Attendance Check (Live purpose only allowed during shift)
+       // 3. Attendance Check (Live ping allowed for active shift)
        const attendance = await Attendance.findOne({
           staff: id,
-          date: todayStr(),
           'checkIn.time': { $exists: true },
-          'checkOut.time': { $exists: false }
+          'checkOut.time': { $exists: false },
+          createdAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) }
        }).select('_id').lean();
        if (!attendance) return;
 
-       // 4. Broadcast to company managers + platform
+       // 4. Ephemeral Live Broadcast to company managers + platform (Zero DB storage)
        if (company) {
           io.to(`company:${company}`).to('platform').emit('location:update', {
              staffId: id,
              staffName: u.name,
+             name: u.name,
+             designation: u.designation?.name || u.position || 'Staff',
              position: u.position || 'Staff',
              profilePhoto: u.profilePhoto,
              lat, lng, accuracy, batteryLevel,

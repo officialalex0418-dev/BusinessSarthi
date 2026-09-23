@@ -272,7 +272,7 @@ export default function LiveMap({ markers = [], route = [], attendance = [], hea
             <Popup>
               <div className="space-y-1 text-slate-900">
                 <p className="font-semibold text-sm">{marker.name}</p>
-                <p className="text-xs text-slate-600 font-medium">{marker.position || 'Staff'}</p>
+                <p className="text-xs text-slate-600 font-medium">{marker.designation || marker.position || 'Staff'}</p>
                 <div className="pt-1 mt-1 border-t border-slate-100">
                   <p className="text-[10px] text-slate-400 uppercase tracking-wide">Last Location</p>
                   <p className="text-xs font-semibold">{marker.address || 'Loading address...'}</p>

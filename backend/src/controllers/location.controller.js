@@ -27,10 +27,28 @@ export const pushLocation = asyncHandler(async (req, res) => {
     return res.status(201).json({ success: true, saved: 0 });
   }
 
-  // 2. LIVE BROADCAST (Zero DB for live tracking)
+  // Privacy & Performance: Ephemeral pings (LIVE_REFRESH or REFRESH) are live broadcast only and NEVER saved to DB
+  if (['LIVE_REFRESH', 'REFRESH'].includes(source)) {
+    realtime.staffLocation(companyId.toString(), {
+      staffId: staffId.toString(),
+      staffName: req.user.name,
+      name: req.user.name,
+      designation: req.user.designation?.name || req.user.position || 'Staff',
+      position: req.user.position || 'Staff',
+      profilePhoto: req.user.profilePhoto,
+      lat: latitude, lng: longitude, accuracy, batteryLevel,
+      recordedAt: pTime,
+      source
+    });
+    return res.status(200).json({ success: true, saved: 0, ephemeral: true });
+  }
+
+  // 2. LIVE BROADCAST
   realtime.staffLocation(companyId.toString(), {
     staffId: staffId.toString(),
     staffName: req.user.name,
+    name: req.user.name,
+    designation: req.user.designation?.name || req.user.position || 'Staff',
     position: req.user.position || 'Staff',
     profilePhoto: req.user.profilePhoto,
     lat: latitude, lng: longitude, accuracy, batteryLevel,
@@ -40,11 +58,13 @@ export const pushLocation = asyncHandler(async (req, res) => {
 
   // 3. PERSISTENT TRACKING: Only on specific interval or special events
   const isSpecial = ['CHECKIN', 'CHECKOUT', 'MANUAL'].includes(source);
+  const isRefreshResponse = ['REFRESH', 'LIVE_REFRESH'].includes(source);
   const packageIntervalMs = (req.user.company?.package?.trackingIntervalMinutes || 60) * 60000;
 
-  let shouldStore = isSpecial;
+  // Don't store REFRESH pings in database as per user requirement
+  let shouldStore = isSpecial && !isRefreshResponse;
 
-  if (!shouldStore) {
+  if (!shouldStore && !isRefreshResponse) {
     const state = await CurrentStaffLocation.findOne({
       staff: staffId,
       $or: [
@@ -119,7 +139,11 @@ export const liveLocations = asyncHandler(async (req, res) => {
     'checkIn.time': { $exists: true },
     'checkOut.time': { $exists: false },
     createdAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) }
-  }).populate('staff', 'name position profilePhoto');
+  }).populate({
+    path: 'staff',
+    select: 'name position profilePhoto designation',
+    populate: { path: 'designation', select: 'name' }
+  });
 
   if (!activeAttendance.length) {
     return res.json({ success: true, data: { items: [] } });
@@ -127,32 +151,19 @@ export const liveLocations = asyncHandler(async (req, res) => {
 
   const staffIds = activeAttendance.filter(a => a.staff).map(a => a.staff._id);
 
-  // 2. Fetch current state from optimized collection (instead of aggregation on logs)
+  // 2. Fetch current state from optimized collection
   const states = await CurrentStaffLocation.find({ staff: { $in: staffIds } }).lean();
   const stateMap = new Map(states.map(s => [s.staff.toString(), s]));
-
-  // Get company package for dynamic status calculation
-  const companyDoc = await mongoose.model('Company').findById(req.companyId).populate('package');
-  const interval = companyDoc?.package?.trackingIntervalMinutes || 60;
 
   const items = activeAttendance.filter(a => a.staff).map(a => {
     const s = a.staff;
     const state = stateMap.get(s._id.toString());
     const recordedAt = state?.recordedAt || a.checkIn?.time;
 
-    // Calculate status relative to package interval (as per audit report recommendation)
-    // LIVE (< 2m), ON_SCHEDULE (<= 1.25x interval), DELAYED (<= 2x interval), STALE
-    let locationStatus = 'STALE';
-    if (recordedAt) {
-      const diffMin = (Date.now() - new Date(recordedAt)) / 60000;
-      if (diffMin < 2) locationStatus = 'LIVE';
-      else if (diffMin <= interval * 1.25) locationStatus = 'ON_SCHEDULE';
-      else if (diffMin <= interval * 2) locationStatus = 'DELAYED';
-    }
-
     return {
       staffId: s._id.toString(),
       name: s.name,
+      designation: s.designation?.name || s.position || 'Staff',
       position: s.position || 'Staff',
       profilePhoto: s.profilePhoto,
       lat: state?.location?.coordinates?.[1] || a.checkIn?.location?.coordinates?.[1],
@@ -161,10 +172,8 @@ export const liveLocations = asyncHandler(async (req, res) => {
       batteryLevel: state?.batteryLevel,
       recordedAt,
       receivedAt: state?.receivedAt || a.checkIn?.time,
-      locationStatus,
       source: state?.source,
       checkInTime: a.checkIn?.time,
-      lastRefreshRequestedAt: state?.lastRefreshRequestedAt,
     };
   }).filter(i => i.lat != null);
 
@@ -338,37 +347,37 @@ export const heatmap = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { points } });
 });
 
-/** POST /locations/request-refresh (manager/owner) — ask active staff to ping NOW */
+/** POST /locations/request-refresh (manager/owner) — ask active staff to ping NOW (Ephemeral live update, zero DB storage for coordinates) */
 export const requestRefresh = asyncHandler(async (req, res) => {
   const companyId = req.user.company?._id || req.user.company;
   if (!companyId) throw ApiError.forbidden('No company associated');
 
   const { staffId } = req.body;
-  const COOLDOWN_MS = 20000; // 20-second server-side cooldown per staff
 
   if (staffId) {
-    // 1. Cooldown Check
-    const state = await CurrentStaffLocation.findOne({ staff: staffId });
-    if (state?.lastRefreshRequestedAt && (Date.now() - state.lastRefreshRequestedAt < COOLDOWN_MS)) {
-       return res.status(429).json({ success: false, message: 'Please wait before requesting another refresh for this staff.' });
-    }
-
-    // 2. Refresh specific user
     const staff = await User.findById(staffId);
     if (!staff || staff.company?.toString() !== companyId.toString()) {
        throw ApiError.notFound('Staff not found in your company');
     }
-
-    await CurrentStaffLocation.updateOne({ staff: staffId }, { $set: { lastRefreshRequestedAt: new Date() } });
     realtime.requestRefresh(staffId);
   } else {
-    // Refresh all active staff in company
-    const today = todayStr();
+    // Refresh all active checked-in staff in company
     const activeAttendance = await Attendance.find({
       company: companyId,
-      date: today,
       'checkIn.time': { $exists: true },
       'checkOut.time': { $exists: false },
+      createdAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) }
+    }).select('staff');
+
+    activeAttendance.forEach(a => {
+      if (a.staff) {
+        realtime.requestRefresh(a.staff.toString());
+      }
+    });
+  }
+
+  res.json({ success: true, message: 'Refresh request sent to active staff' });
+});
     }).select('staff');
 
     const now = new Date();

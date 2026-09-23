@@ -89,7 +89,12 @@ export default function LiveTracking() {
     setMarkers((prev) => {
       if (!prev) return prev;
       const others = prev.filter((m) => m.staffId !== p.staffId);
-      return [...others, { ...p, name: p.staffName, profilePhoto: p.profilePhoto }];
+      return [...others, {
+        ...p,
+        name: p.name || p.staffName,
+        designation: p.designation || p.position || 'Staff',
+        profilePhoto: p.profilePhoto
+      }];
     });
   }, []));
 
@@ -160,12 +165,12 @@ export default function LiveTracking() {
           <Card>
             <CardHeader
               title={refreshing ? "Refreshing Staff..." : `Active Staff (${activeMarkers.length})`}
-              action={<Button variant="ghost" onClick={handleManualRefresh} disabled={refreshing}>
+              action={<Button variant="ghost" onClick={handleManualRefresh} disabled={refreshing} title="Trigger direct location ping to employee devices">
                 <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
               </Button>}
             />
             <CardBody className="max-h-[420px] space-y-3 overflow-y-auto text-slate-900 dark:text-slate-100">
-              {activeMarkers.length === 0 && <p className="text-sm text-slate-400">No location pings in the last 24h.</p>}
+              {activeMarkers.length === 0 && <p className="text-sm text-slate-400">No active staff currently checked in.</p>}
               {activeMarkers.map((m) => (
                 <div
                   key={m.staffId}
@@ -176,30 +181,39 @@ export default function LiveTracking() {
                   }`}
                   onClick={() => handleStaffFocus(m.staffId)}
                 >
-
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                      {m.profilePhoto ? <img src={fixFileUrl(m.profilePhoto)} alt={m.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-500">{(m.name || '?').slice(0, 1)}</div>}
+                    {/* 1. Employee Profile Picture */}
+                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
+                      {m.profilePhoto ? (
+                        <img src={fixFileUrl(m.profilePhoto)} alt={m.name || 'Staff'} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500">
+                          {(m.name || '?').slice(0, 1)}
+                        </div>
+                      )}
                     </div>
+
+                    {/* 2. Employee Name & 3. Employee Designation */}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{m.name}</p>
-                      <p className="text-xs text-slate-500 font-bold uppercase tracking-tighter">{m.position || 'Staff'}</p>
-                    </div>
-                    {m.batteryLevel != null && <Badge color={m.batteryLevel > 20 ? 'green' : 'red'}>🔋 {m.batteryLevel}%</Badge>}
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] text-slate-400 font-medium truncate">
-                        {m.lat != null ? `${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}` : 'No GPS data'}
+                      <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{m.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                        {m.designation || m.position || 'Staff'}
                       </p>
-                      {m.accuracy != null && <p className="text-[9px] text-slate-500">Acc: ±{Math.round(m.accuracy)}m</p>}
                     </div>
-                    <p className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap",
-                      getStatusInfo(m).color
-                    )}>
-                      {getStatusInfo(m).label} • {getRelativeTime(m.recordedAt)}
-                    </p>
+
+                    {/* 4. Battery Percentage */}
+                    <div className="flex items-center gap-1">
+                      {m.batteryLevel != null && (
+                        <div className={cn(
+                          "flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold border",
+                          m.batteryLevel > 20
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400"
+                            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:border-red-800 dark:text-red-400 animate-pulse"
+                        )}>
+                          <span>{m.batteryLevel}%</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

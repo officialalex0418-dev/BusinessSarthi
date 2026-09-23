@@ -211,6 +211,9 @@ export function useLocationTracker(enabled = true) {
              batteryLevel: point.batteryLevel,
              recordedAt: point.recordedAt
           });
+        } else {
+          // Ephemeral REST fallback if socket disconnected (Server broadcasts live with zero DB storage)
+          api.post('/locations', { ...point, source: 'LIVE_REFRESH' }).catch(() => {});
         }
         return;
       }
