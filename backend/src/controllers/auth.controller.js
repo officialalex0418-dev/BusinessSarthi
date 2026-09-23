@@ -22,7 +22,7 @@ const cookieOpts = {
 
 /** POST /auth/login */
 export const login = asyncHandler(async (req, res) => {
-  const { email, password, deviceId } = req.body;
+  const { email, password, deviceId, deviceInfo } = req.body;
   const user = await User.findOne({ email: email.toLowerCase() })
     .select('+password +refreshTokens')
     .populate({
@@ -49,9 +49,11 @@ export const login = asyncHandler(async (req, res) => {
 
     if (!user.primaryDeviceId) {
       user.primaryDeviceId = deviceId;
+      user.deviceInfo = deviceInfo;
     } else if (user.primaryDeviceId !== deviceId) {
       if (user.isDeviceResetAuthorized) {
         user.primaryDeviceId = deviceId;
+        user.deviceInfo = deviceInfo;
         user.isDeviceResetAuthorized = false;
         user.deviceResetRequested = false;
       } else if (allowedMobile === 1) {

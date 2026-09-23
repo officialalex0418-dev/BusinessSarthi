@@ -40,19 +40,33 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     let deviceId = localStorage.getItem('bs_device_id');
+    let deviceInfo = null;
 
     try {
-      const info = await Device.getId();
-      deviceId = info.identifier;
+      const [idInfo, info] = await Promise.all([
+        Device.getId(),
+        Device.getInfo()
+      ]);
+      deviceId = idInfo.identifier;
+      deviceInfo = {
+        name: info.name,
+        model: info.model,
+        platform: info.platform,
+        operatingSystem: info.operatingSystem,
+        osVersion: info.osVersion,
+        manufacturer: info.manufacturer,
+        isVirtual: info.isVirtual,
+      };
       localStorage.setItem('bs_device_id', deviceId);
     } catch (e) {
       if (!deviceId) {
         deviceId = `WEB-${Math.random().toString(36).substring(2, 15)}`;
         localStorage.setItem('bs_device_id', deviceId);
       }
+      deviceInfo = { platform: 'web', name: 'Browser' };
     }
 
-    const { data } = await api.post('/auth/login', { email, password, deviceId });
+    const { data } = await api.post('/auth/login', { email, password, deviceId, deviceInfo });
     setAccessToken(data.data.accessToken);
     localStorage.setItem('bs_refresh', data.data.refreshToken);
     setUser(data.data.user);

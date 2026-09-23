@@ -54,6 +54,16 @@ const userSchema = new mongoose.Schema(
     lastLoginAt: Date,
     // Device locking
     primaryDeviceId: { type: String, default: null },
+    deviceInfo: {
+      name: String,
+      model: String,
+      platform: String,
+      operatingSystem: String,
+      osVersion: String,
+      manufacturer: String,
+      isVirtual: Boolean,
+      appVersion: String,
+    },
     isDeviceResetAuthorized: { type: Boolean, default: false },
     deviceResetRequested: { type: Boolean, default: false },
     allowedMobileCount: { type: Number, default: 1 },

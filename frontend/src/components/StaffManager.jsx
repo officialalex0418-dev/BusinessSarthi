@@ -2,7 +2,11 @@
  * Reusable employee CRUD table.
  */
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Pencil, Trash2, FileDown, UserMinus, X, RefreshCw, Camera, User as UserIcon, Upload } from 'lucide-react';
+import {
+  Plus, Pencil, Trash2, FileDown, UserMinus, X, RefreshCw, Camera,
+  User as UserIcon, Upload, Monitor, Smartphone, Calendar, MapPin,
+  CreditCard, Briefcase, Info, Mail, Phone, Hash
+} from 'lucide-react';
 import { api, downloadFile } from '@/api/client';
 import { Card, Button, Input, Select, Modal, Table, Badge, Spinner, Pagination } from '@/components/ui';
 import { formatMoney, cn, fixFileUrl, fileToDataUrl } from '@/lib/utils';
@@ -33,6 +37,8 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(false);
+  const [detailModal, setDetailModal] = useState(false);
+  const [viewingEmployee, setViewingEmployee] = useState(null);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -220,16 +226,19 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
           }
           data={data.items}
           renderRow={(u) => (
-            <tr key={u._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+            <tr key={u._id} className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+              onClick={() => { setViewingEmployee(u); setDetailModal(true); }}>
               <td className="table-td">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700 dark:bg-primary-900/50 dark:text-primary-300">
-                    {u.name?.[0]}
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700 dark:bg-primary-900/50 dark:text-primary-300">
+                    {u.profilePhoto ? (
+                      <img src={fixFileUrl(u.profilePhoto)} className="h-full w-full rounded-full object-cover" alt="" />
+                    ) : u.name?.[0]}
                   </div>
                   <div>
                     <p className="font-medium">{u.name}</p>
                     <div className="flex items-center gap-1">
-                      <p className="text-[9px] uppercase font-bold text-primary-600 bg-primary-50 px-1 rounded">{u.workMode}</p>
+                      <p className="text-[9px] uppercase font-bold text-primary-600 bg-primary-50 px-1 rounded dark:bg-primary-900/30">{u.workMode}</p>
                       {u.workMode === 'INDOOR' && (
                         <p className="text-[9px] text-slate-500 italic">
                            ({u.branch?.name || 'Main Office'})
@@ -257,7 +266,7 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
                 <Badge color={u.isActive ? 'green' : 'red'}>{u.isActive ? 'Active' : 'Inactive'}</Badge>
               </td>
               <td className="table-td">
-                <div className="flex gap-1">
+                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                   <button className="rounded p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" title="Edit"
                     onClick={() => {
                       setEditing(u);
@@ -297,11 +306,14 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
             </tr>
           )}
           mobileRender={(u) => (
-            <div key={u._id} className="p-4 space-y-3">
+            <div key={u._id} className="p-4 space-y-3 cursor-pointer active:bg-slate-50 dark:active:bg-slate-800/40"
+              onClick={() => { setViewingEmployee(u); setDetailModal(true); }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700 dark:bg-primary-900/50 dark:text-primary-300">
-                    {u.name?.[0]}
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700 dark:bg-primary-900/50 dark:text-primary-300">
+                    {u.profilePhoto ? (
+                      <img src={fixFileUrl(u.profilePhoto)} className="h-full w-full rounded-full object-cover" alt="" />
+                    ) : u.name?.[0]}
                   </div>
                   <div>
                     <p className="font-semibold">{u.name}</p>
@@ -337,7 +349,8 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800"
+                onClick={(e) => e.stopPropagation()}>
                 <Button variant="outline" size="sm" className="justify-start px-2"
                   onClick={() => {
                     setEditing(u);
@@ -468,6 +481,172 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
             <Button type="submit" loading={saving} className="px-8">{editing ? 'Save Changes' : 'Register Employee'}</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Employee Detail Modal */}
+      <Modal open={detailModal} onClose={() => setDetailModal(false)} title="Employee Profile" wide>
+        {viewingEmployee && (
+          <div className="space-y-8">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6 border-b pb-6">
+              <div className="h-32 w-32 shrink-0 overflow-hidden rounded-2xl border-4 border-slate-100 bg-slate-50 shadow-sm dark:border-slate-800">
+                {viewingEmployee.profilePhoto ? (
+                  <img src={fixFileUrl(viewingEmployee.profilePhoto)} alt={viewingEmployee.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-slate-300">
+                    <UserIcon className="h-14 w-14" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-white">{viewingEmployee.name}</h2>
+                <div className="mt-1 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                  <Badge color="blue" className="text-sm px-2.5 py-0.5">
+                    {viewingEmployee.designation?.name || viewingEmployee.position || viewingEmployee.role.replace('COMPANY_', '')}
+                  </Badge>
+                  <Badge color={viewingEmployee.isActive ? 'green' : 'red'}>{viewingEmployee.isActive ? 'Active' : 'Inactive'}</Badge>
+                  <span className="text-xs font-medium text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                    {viewingEmployee.workMode}
+                  </span>
+                </div>
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center gap-2 justify-center sm:justify-start">
+                    <Mail className="h-4 w-4 text-slate-400" />
+                    <span>{viewingEmployee.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 justify-center sm:justify-start">
+                    <Phone className="h-4 w-4 text-slate-400" />
+                    <span>{viewingEmployee.phone || 'No phone provided'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 justify-center sm:justify-start">
+                    <MapPin className="h-4 w-4 text-slate-400" />
+                    <span className="truncate">{viewingEmployee.address || 'No address provided'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 justify-center sm:justify-start">
+                    <Hash className="h-4 w-4 text-slate-400" />
+                    <span>PAN: {viewingEmployee.pan || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+              {/* Employment Details */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b pb-2">
+                  <Briefcase className="h-5 w-5 text-primary-600" />
+                  <h3 className="font-bold text-slate-800 dark:text-slate-200">Employment Details</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Branch / Office</p>
+                    <p className="text-sm font-medium">{viewingEmployee.branch?.name || 'Main Office'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Shift</p>
+                    <p className="text-sm font-medium">{viewingEmployee.shift?.name || 'Standard Shift'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Basic Salary</p>
+                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(viewingEmployee.basicSalary)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Monthly Allowances</p>
+                    <p className="text-sm font-medium">{formatMoney(viewingEmployee.allowances)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Joined On</p>
+                    <p className="text-sm font-medium">{new Date(viewingEmployee.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last Login</p>
+                    <p className="text-sm font-medium">
+                      {viewingEmployee.lastLoginAt ? new Date(viewingEmployee.lastLoginAt).toLocaleString() : 'Never logged in'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Device Details */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b pb-2">
+                  <Smartphone className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-bold text-slate-800 dark:text-slate-200">Security & Device</h3>
+                </div>
+                {viewingEmployee.primaryDeviceId ? (
+                  <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30">
+                        {viewingEmployee.deviceInfo?.platform === 'web' ? <Monitor className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate">
+                          {viewingEmployee.deviceInfo?.name || viewingEmployee.deviceInfo?.model || 'Primary Device'}
+                        </p>
+                        <p className="text-[10px] font-mono text-slate-400 truncate mt-0.5">ID: {viewingEmployee.primaryDeviceId}</p>
+                      </div>
+                      <Badge color={viewingEmployee.deviceResetRequested ? 'amber' : 'blue'}>
+                        {viewingEmployee.deviceResetRequested ? 'Reset Requested' : 'Bound'}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 border-t pt-4">
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Model</p>
+                        <p className="text-xs font-medium">{viewingEmployee.deviceInfo?.model || viewingEmployee.deviceInfo?.manufacturer || 'Unknown'}</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">OS</p>
+                        <p className="text-xs font-medium">
+                          {viewingEmployee.deviceInfo?.operatingSystem || viewingEmployee.deviceInfo?.platform || 'Unknown'} {viewingEmployee.deviceInfo?.osVersion || ''}
+                        </p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mobile Sessions</p>
+                        <p className="text-xs font-medium">1 / {viewingEmployee.allowedMobileCount}</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Web Sessions</p>
+                        <p className="text-xs font-medium">Max {viewingEmployee.allowedWebCount}</p>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                       <Button variant="outline" size="sm" className="w-full text-blue-600" onClick={() => authorizeReset(viewingEmployee)}>
+                          <RefreshCw className={cn("h-3.5 w-3.5 mr-2", viewingEmployee.deviceResetRequested && "animate-spin")} />
+                          Authorize New Device
+                       </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                    <Smartphone className="h-10 w-10 text-slate-300 mb-2" />
+                    <p className="text-sm text-slate-500">No device bound yet.</p>
+                    <p className="text-[10px] text-slate-400 mt-1 max-w-[200px]">The device info will appear after their first login from the app.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-6 border-t">
+              <Button variant="outline" onClick={() => setDetailModal(false)}>Close</Button>
+              <Button onClick={() => {
+                setDetailModal(false);
+                setEditing(viewingEmployee);
+                setForm({
+                  ...emptyForm,
+                  ...viewingEmployee,
+                  designation: viewingEmployee.designation?._id || '',
+                  branch: viewingEmployee.branch?._id || 'MAIN',
+                  shift: viewingEmployee.shift?._id || '',
+                  profilePhoto: viewingEmployee.profilePhoto || ''
+                });
+                setModal(true);
+              }}>
+                <Pencil className="h-4 w-4 mr-2" /> Edit Employee
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
