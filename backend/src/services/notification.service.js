@@ -1,48 +1,72 @@
+import admin from 'firebase-admin';
 import { Notification, User, Attendance } from '../models/index.js';
 import { realtime } from '../sockets/index.js';
 import { todayStr } from '../utils/dates.js';
 
-let adminModule = null;
 let isFirebaseInitialized = false;
 
-// Dynamically initialize Firebase Admin if credentials are provided in environment
-(async () => {
-  try {
-    const mod = await import('firebase-admin');
-    adminModule = mod.default || mod;
-
-    if (!adminModule.apps || !adminModule.apps.length) {
-      if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-        let serviceAccount;
-        try {
-          serviceAccount = typeof process.env.FIREBASE_SERVICE_ACCOUNT === 'string'
-            ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-            : process.env.FIREBASE_SERVICE_ACCOUNT;
-        } catch (jsonErr) {
-          console.error('[FCM] Invalid FIREBASE_SERVICE_ACCOUNT JSON:', jsonErr.message);
-        }
-
-        if (serviceAccount) {
-          adminModule.initializeApp({
-            credential: adminModule.credential.cert(serviceAccount)
-          });
-          isFirebaseInitialized = true;
-          console.log('[FCM] Firebase Admin initialized with FIREBASE_SERVICE_ACCOUNT env var');
-        }
-      } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-        adminModule.initializeApp({
-          credential: adminModule.credential.applicationDefault()
-        });
-        isFirebaseInitialized = true;
-        console.log('[FCM] Firebase Admin initialized with GOOGLE_APPLICATION_CREDENTIALS');
-      }
-    } else {
-      isFirebaseInitialized = true;
-    }
-  } catch (err) {
-    console.warn('[FCM] firebase-admin setup notice:', err.message);
+function initFirebaseAdmin() {
+  if (isFirebaseInitialized) return true;
+  if (admin.apps && admin.apps.length > 0) {
+    isFirebaseInitialized = true;
+    return true;
   }
-})();
+
+  const rawEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+  let serviceAccount = null;
+
+  if (rawEnv) {
+    let str = typeof rawEnv === 'string' ? rawEnv.trim() : rawEnv;
+    if (typeof str === 'string') {
+      if ((str.startsWith("'") && str.endsWith("'")) || (str.startsWith('"') && str.endsWith('"'))) {
+        str = str.slice(1, -1).trim();
+      }
+      try {
+        serviceAccount = JSON.parse(str);
+      } catch (e1) {
+        try {
+          const unescaped = str.replace(/\\n/g, '\n');
+          serviceAccount = JSON.parse(unescaped);
+        } catch (e2) {
+          console.error('[FCM] Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:', e1.message);
+        }
+      }
+    } else if (typeof rawEnv === 'object') {
+      serviceAccount = rawEnv;
+    }
+  }
+
+  if (serviceAccount) {
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      isFirebaseInitialized = true;
+      console.log('[FCM] Firebase Admin initialized with FIREBASE_SERVICE_ACCOUNT');
+      return true;
+    } catch (err) {
+      console.error('[FCM] Failed to initialize Firebase Admin with service account:', err.message);
+    }
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    try {
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault()
+      });
+      isFirebaseInitialized = true;
+      console.log('[FCM] Firebase Admin initialized with GOOGLE_APPLICATION_CREDENTIALS');
+      return true;
+    } catch (err) {
+      console.error('[FCM] Failed to initialize Firebase Admin with default credentials:', err.message);
+    }
+  } else {
+    console.warn('[FCM] FIREBASE_SERVICE_ACCOUNT environment variable is not set on backend');
+  }
+
+  return isFirebaseInitialized;
+}
+
+// Try initializing immediately on module import
+initFirebaseAdmin();
 
 /** Create DB notification + push over socket + FCM. Fire-and-forget safe. */
 export async function notify({ recipient, company, type, title, message, link, sticky = false, ongoing = false }) {
@@ -92,12 +116,16 @@ async function sendPushNotification(userId, { title, message, type, link, sticky
   try {
     const user = await User.findById(userId).select('fcmToken name');
     if (!user?.fcmToken) {
-      console.log(`[FCM] Skip push to user ${userId} (No FCM token registered in DB)`);
+      console.log(`[FCM] Skip push to user ${userId} (${user?.name || 'Unknown'}): No FCM token registered in DB`);
       return;
     }
 
-    if (adminModule && isFirebaseInitialized) {
-      const response = await adminModule.messaging().send({
+    if (!isFirebaseInitialized) {
+      initFirebaseAdmin();
+    }
+
+    if (isFirebaseInitialized) {
+      const response = await admin.messaging().send({
         token: user.fcmToken,
         notification: {
           title: title || 'Business Sarthi',
@@ -121,7 +149,7 @@ async function sendPushNotification(userId, { title, message, type, link, sticky
       });
       console.log(`[FCM] Notification successfully sent to ${user.name || userId} [MsgID: ${response}]`);
     } else {
-      console.log(`[FCM] Logged notification for ${user.fcmToken} (Firebase Admin not initialized on backend): ${title} - ${message}`);
+      console.log(`[FCM] Cannot send push to ${user.name || userId} (Firebase Admin not initialized on server): ${title} - ${message}`);
     }
   } catch (err) {
     console.error(`[FCM] Send failed for user ${userId}:`, err.message);

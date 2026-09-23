@@ -1,7 +1,7 @@
-// Version: 1.0.1 - Triggering Cloudflare Build
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
 import {
@@ -282,8 +282,27 @@ export default function App() {
             console.error('FCM Registration Error:', err);
           });
 
-          await PushNotifications.addListener('pushNotificationReceived', notification => {
+          await PushNotifications.addListener('pushNotificationReceived', async notification => {
             console.log('Push notification received in foreground:', notification);
+            try {
+              const notifTitle = notification.title || notification.data?.title || 'Business Sarthi';
+              const notifBody = notification.body || notification.data?.message || notification.data?.body || 'New notification';
+              await LocalNotifications.schedule({
+                notifications: [
+                  {
+                    title: notifTitle,
+                    body: notifBody,
+                    id: Math.floor(Math.random() * 100000) + 1,
+                    schedule: { at: new Date(Date.now() + 200) },
+                    sound: 'default',
+                    actionTypeId: '',
+                    extra: notification.data || {}
+                  }
+                ]
+              });
+            } catch (fErr) {
+              console.warn('Foreground local notification error:', fErr);
+            }
           });
 
           await PushNotifications.addListener('pushNotificationActionPerformed', action => {
