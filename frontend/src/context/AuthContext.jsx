@@ -4,10 +4,26 @@ import { Device } from '@capacitor/device';
 
 const AuthContext = createContext(null);
 
+export function syncFcmToken() {
+  const fcmToken = localStorage.getItem('fcm_token');
+  if (fcmToken) {
+    api.patch('/auth/fcm-token', { token: fcmToken }).catch(err => {
+      console.warn('[FCM] Token sync warning:', err?.response?.data?.message || err.message);
+    });
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Sync FCM Token whenever user session changes or activates
+  useEffect(() => {
+    if (user?._id) {
+      syncFcmToken();
+    }
+  }, [user?._id]);
 
   useEffect(() => {
     (async () => {
@@ -21,7 +37,10 @@ export function AuthProvider({ children }) {
         ]);
 
         if (settingsRes?.data?.success) setSettings(settingsRes.data.data);
-        if (userRes?.data?.success) setUser(userRes.data.data.user);
+        if (userRes?.data?.success) {
+          setUser(userRes.data.data.user);
+          syncFcmToken();
+        }
 
       } catch (e) {
         console.warn('Initialization failed', e);
@@ -70,6 +89,7 @@ export function AuthProvider({ children }) {
     setAccessToken(data.data.accessToken);
     localStorage.setItem('bs_refresh', data.data.refreshToken);
     setUser(data.data.user);
+    syncFcmToken();
     return data.data.user;
   }, []);
 

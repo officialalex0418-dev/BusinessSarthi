@@ -251,14 +251,30 @@ export default function App() {
             return;
           }
 
+          // Create high-importance default channel for Android heads-up notifications
+          try {
+            await PushNotifications.createChannel({
+              id: 'default',
+              name: 'Default Notifications',
+              description: 'General system notifications',
+              importance: 5, // High Importance (shows banner & plays sound)
+              visibility: 1, // Public
+              sound: 'default',
+              vibration: true,
+            });
+          } catch (chErr) {
+            console.warn('FCM Channel Creation Warning:', chErr);
+          }
+
           // Remove any existing listeners before re-adding
           await PushNotifications.removeAllListeners();
 
           // Set up listeners first before calling register()
           await PushNotifications.addListener('registration', token => {
             console.log('FCM Registration Token received:', token.value);
+            localStorage.setItem('fcm_token', token.value);
             api.patch('/auth/fcm-token', { token: token.value }).catch(err => {
-              console.error('Failed to save FCM token on backend:', err);
+              console.warn('Token save deferred until login:', err?.response?.data?.message || err.message);
             });
           });
 

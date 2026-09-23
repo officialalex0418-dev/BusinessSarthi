@@ -90,14 +90,17 @@ export async function notify({ recipient, company, type, title, message, link, s
 
 async function sendPushNotification(userId, { title, message, type, link, sticky, ongoing }) {
   try {
-    const user = await User.findById(userId).select('fcmToken');
-    if (!user?.fcmToken) return;
+    const user = await User.findById(userId).select('fcmToken name');
+    if (!user?.fcmToken) {
+      console.log(`[FCM] Skip push to user ${userId} (No FCM token registered in DB)`);
+      return;
+    }
 
     if (adminModule && isFirebaseInitialized) {
-      await adminModule.messaging().send({
+      const response = await adminModule.messaging().send({
         token: user.fcmToken,
         notification: {
-          title: title || 'Notification',
+          title: title || 'Business Sarthi',
           body: message || ''
         },
         data: {
@@ -110,16 +113,18 @@ async function sendPushNotification(userId, { title, message, type, link, sticky
           priority: 'high',
           notification: {
             channelId: 'default',
-            sound: 'default'
+            sound: 'default',
+            priority: 'high',
+            visibility: 'public'
           }
         }
       });
-      console.log(`[FCM] Notification successfully sent to user ${userId} (${user.fcmToken})`);
+      console.log(`[FCM] Notification successfully sent to ${user.name || userId} [MsgID: ${response}]`);
     } else {
       console.log(`[FCM] Logged notification for ${user.fcmToken} (Firebase Admin not initialized on backend): ${title} - ${message}`);
     }
   } catch (err) {
-    console.error('FCM send failed:', err.message);
+    console.error(`[FCM] Send failed for user ${userId}:`, err.message);
   }
 }
 

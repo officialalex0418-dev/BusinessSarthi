@@ -325,6 +325,7 @@ export const updateFcmToken = asyncHandler(async (req, res) => {
   if (!token) throw ApiError.badRequest('FCM token is required');
 
   await User.findByIdAndUpdate(req.user._id, { $set: { fcmToken: token } });
+  console.log(`[FCM] Successfully updated FCM token for user ${req.user.name} (${req.user._id}): ${token.substring(0, 15)}...`);
 
   res.json({ success: true, message: 'FCM token updated successfully' });
 });
