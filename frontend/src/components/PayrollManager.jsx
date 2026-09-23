@@ -237,36 +237,29 @@ export default function PayrollManager({ scope }) {
             </tr>
           )}
           mobileRender={(p) => (
-            <div key={p._id} className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
+            <div key={p._id} className="p-4 border-b border-slate-100 dark:border-slate-800 last:border-0 space-y-3">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="font-semibold">{p.staff?.name}</p>
+                  <p className="font-bold text-slate-900 dark:text-white">{p.staff?.name}</p>
                   <p className="text-xs text-slate-500">{dateFormat === 'BS' ? toNepaliMonth(p.month) : p.month} · {p.presentDays}/{p.workingDays} days</p>
                 </div>
                 <Badge color={p.status === 'PAID' ? 'green' : p.status === 'GENERATED' ? 'blue' : 'gray'}>{p.status}</Badge>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Gross</p>
-                  <p className="text-emerald-600">{formatMoney(p.basicSalary + p.allowance)}</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Net Payable</p>
+                  <p className="text-base font-extrabold text-primary-600 dark:text-primary-400">{formatMoney(p.netSalary)}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Net Salary</p>
-                  <p className="font-bold">{formatMoney(p.netSalary)}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="outline" size="sm" className="text-xs px-2.5 py-1" onClick={() => loadDetail(p._id)}>
+                    View Details
+                  </Button>
+                  {p.status !== 'PAID' && (
+                    <Button variant="primary" size="sm" className="text-xs px-2.5 py-1" onClick={() => markPaid(p)}>
+                      Pay
+                    </Button>
+                  )}
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button className="flex items-center gap-1 text-xs font-medium text-slate-600" onClick={() => loadDetail(p._id)}>
-                  <FileText className="h-4 w-4" /> Detail
-                </button>
-                <button className="flex items-center gap-1 text-xs font-medium text-blue-600" onClick={() => downloadDetail(p)}>
-                  <FileDown className="h-4 w-4" /> PDF
-                </button>
-                {p.status !== 'PAID' && (
-                  <button className="ml-auto flex items-center gap-1 text-xs font-medium text-emerald-600" onClick={() => markPaid(p)}>
-                    <CheckCircle2 className="h-4 w-4" /> Pay
-                  </button>
-                )}
               </div>
             </div>
           )}

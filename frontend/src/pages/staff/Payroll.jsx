@@ -43,7 +43,7 @@ export default function StaffPayroll() {
         <Wallet className="h-6 w-6 text-primary-600" />
       </div>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader title="Salary History" subtitle="View your monthly salary slips and payment status" />
         <Table
           columns={['Month', 'Basic Salary', 'Allowance', 'Net Salary', 'Status', 'Action']}
@@ -55,12 +55,36 @@ export default function StaffPayroll() {
               <td className="table-td">{formatMoney(p.allowance)}</td>
               <td className="table-td font-bold text-primary-600">{formatMoney(p.netSalary)}</td>
               <td className="table-td">
-                <Badge color={p.status === 'PAID' ? 'green' : 'yellow'}>{p.status}</Badge>
+                <Badge color={p.status === 'PAID' ? 'green' : p.status === 'GENERATED' ? 'blue' : 'yellow'}>{p.status}</Badge>
               </td>
               <td className="table-td">
                 <Button variant="ghost" size="sm" onClick={() => viewDetail(p._id)}>View Details</Button>
               </td>
             </tr>
+          )}
+          mobileRender={(p) => (
+            <div key={p._id} className="p-4 border-b border-slate-100 dark:border-slate-800 last:border-0 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-base font-bold text-slate-900 dark:text-white">
+                    {dateFormat === 'BS' ? toNepaliMonth(p.month) : p.month}
+                  </p>
+                  <p className="text-xs text-slate-400">Net Payable Salary</p>
+                </div>
+                <Badge color={p.status === 'PAID' ? 'green' : p.status === 'GENERATED' ? 'blue' : 'yellow'}>
+                  {p.status}
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <p className="text-lg font-extrabold text-primary-600 dark:text-primary-400">
+                  {formatMoney(p.netSalary)}
+                </p>
+                <Button variant="outline" size="sm" className="text-xs font-semibold px-3 py-1.5" onClick={() => viewDetail(p._id)}>
+                  View Details
+                </Button>
+              </div>
+            </div>
           )}
         />
       </Card>
