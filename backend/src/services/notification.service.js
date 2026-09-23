@@ -11,9 +11,15 @@ export async function notify({ recipient, company, type, title, message, link, s
       'CHAT_MESSAGE', 'COMPLAINT_NEW', 'COMPLAINT_REPLY', 'SHIFT_ACTIVE', 'SHIFT_INACTIVE'
     ].includes(type);
 
+    const targetUserId = (recipient && typeof recipient === 'object' && recipient._id)
+      ? recipient._id.toString()
+      : recipient?.toString();
+
+    if (!targetUserId) return null;
+
     if (!isCritical) {
        const activeAtt = await Attendance.findOne({
-          staff: recipient,
+          staff: targetUserId,
           date: todayStr(),
           'checkIn.time': { $exists: true },
           'checkOut.time': { $exists: false }
@@ -21,18 +27,18 @@ export async function notify({ recipient, company, type, title, message, link, s
 
        if (!activeAtt) {
           // If not checked in, we still record in DB but skip the real-time/push delivery
-          return await Notification.create({ recipient, company, type, title, message, link });
+          return await Notification.create({ recipient: targetUserId, company, type, title, message, link });
        }
     }
 
-    const n = await Notification.create({ recipient, company, type, title, message, link });
+    const n = await Notification.create({ recipient: targetUserId, company, type, title, message, link });
 
 
     // Socket.IO for real-time app users
-    realtime.notify(recipient.toString(), { ...n.toObject(), sticky, ongoing });
+    realtime.notify(targetUserId, { ...n.toObject(), sticky, ongoing });
 
     // FCM for background/killed app notifications
-    sendPushNotification(recipient, { title, message, type, link, sticky, ongoing });
+    sendPushNotification(targetUserId, { title, message, type, link, sticky, ongoing });
 
     return n;
   } catch (e) {

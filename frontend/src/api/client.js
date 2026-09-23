@@ -6,14 +6,17 @@ import { Capacitor } from '@capacitor/core';
 let rawBaseURL = import.meta.env.VITE_API_URL || 'https://app.bussinesssarthi.com';
 
 // Safety for mobile: If running on native and URL is localhost, force production API
-if (Capacitor.isNativePlatform() && (rawBaseURL.includes('localhost') || rawBaseURL.includes('127.0.0.1'))) {
+if (Capacitor.isNativePlatform() && (rawBaseURL.includes('localhost') || rawBaseURL.includes('127.0.0.1') || !rawBaseURL)) {
   rawBaseURL = 'https://app.bussinesssarthi.com';
 }
 
 if (rawBaseURL && !rawBaseURL.startsWith('http')) {
   rawBaseURL = `https://${rawBaseURL}`;
 }
-const baseURL = `${rawBaseURL.replace(/\/$/, '')}/api/v1`;
+
+export const getSocketBaseURL = () => rawBaseURL.replace(/\/$/, '');
+
+const baseURL = `${getSocketBaseURL()}/api/v1`;
 
 export const api = axios.create({
   baseURL,
