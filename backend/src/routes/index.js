@@ -57,6 +57,7 @@ r.get('/auth/settings', misc.getPublicSettings);
 r.patch('/auth/change-password', protect, validate({ body: schemas.changePassword }), auth.changePassword);
 r.post('/auth/request-device-reset', auth.requestDeviceReset);
 r.patch('/auth/fcm-token', protect, auth.updateFcmToken);
+r.post('/auth/test-push', protect, auth.testPushNotification);
 
 // ============ PUBLIC / WEBSITE ============
 r.post('/public/inquiries', apiLimiter, validate({ body: schemas.createInquiry }), inquiry.createInquiry);

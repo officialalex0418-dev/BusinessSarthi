@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { MessageSquare, Clock, User, Users, Send, ChevronLeft, MoreVertical, Paperclip, Check, CheckCheck, Plus, AlertCircle, Search } from 'lucide-react';
+import { MessageSquare, Clock, User, Users, Send, ChevronLeft, MoreVertical, Paperclip, CheckCheck, Plus, Search, Bell } from 'lucide-react';
 import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
-import { Card, CardHeader, CardBody, Badge, Table, Spinner, Button, Input, Textarea, Modal, Select, Checkbox } from '@/components/ui';
+import { Card, Badge, Spinner, Button, Input, Textarea, Modal, Select, Checkbox } from '@/components/ui';
 import { formatDate, formatTime, cn } from '@/lib/utils';
 
 function ConversationModal({ open, onClose, onSuccess, mode = 'CHAT' }) {
@@ -182,7 +182,7 @@ function ConversationModal({ open, onClose, onSuccess, mode = 'CHAT' }) {
   );
 }
 
-function ChatView({ item, mode, onBack }) {
+function ChatView({ item, mode, onBack, onRead }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -197,10 +197,11 @@ function ChatView({ item, mode, onBack }) {
     try {
       const { data } = await api.get(endpoint);
       setMessages(data.data);
+      if (onRead) onRead(item._id);
     } finally {
       setLoading(false);
     }
-  }, [endpoint]);
+  }, [endpoint, item._id, onRead]);
 
   useEffect(() => {
     loadMessages();
@@ -321,6 +322,39 @@ export default function Complaints() {
   const [tab, setTab] = useState('CHAT'); // CHAT | COMPLAINT
   const [modal, setModal] = useState({ open: false, mode: 'CHAT' });
 
+  // Persistent read status tracking map: { [itemId]: isoTimestamp }
+  const [readMap, setReadMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('bs_chat_read_map') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  const markAsRead = useCallback((itemId) => {
+    setReadMap(prev => {
+      const updated = { ...prev, [itemId]: new Date().toISOString() };
+      try {
+        localStorage.setItem('bs_chat_read_map', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, []);
+
+  const handleSelect = (item) => {
+    markAsRead(item._id);
+    setSelected(item);
+  };
+
+  const handleTestPush = async () => {
+    try {
+      const { data } = await api.post('/auth/test-push');
+      alert(data.message || 'Test notification sent!');
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Could not send test push notification');
+    }
+  };
+
   const load = useCallback(async () => {
     try {
       const endpoint = tab === 'CHAT' ? '/chats' : '/complaints';
@@ -342,7 +376,7 @@ export default function Complaints() {
   if (selected) {
     return (
       <div className="fixed inset-0 z-[60] bg-white dark:bg-slate-950 lg:relative lg:inset-auto lg:h-full lg:rounded-xl lg:overflow-hidden lg:shadow-xl lg:border dark:border-slate-800">
-        <ChatView item={selected} mode={tab} onBack={() => setSelected(null)} />
+        <ChatView item={selected} mode={tab} onBack={() => setSelected(null)} onRead={markAsRead} />
       </div>
     );
   }
@@ -365,6 +399,9 @@ export default function Complaints() {
           </button>
         </div>
         <div className="flex gap-2">
+          <Button size="sm" variant="ghost" className="text-slate-500" title="Test Push Notification" onClick={handleTestPush}>
+            <Bell className="h-4 w-4 mr-1 text-blue-600" /> Test Push
+          </Button>
           <Button size="sm" variant="outline" className="flex-1 bg-white sm:flex-none" onClick={() => setModal({ open: true, mode: 'CHAT' })}>
             <MessageSquare className="h-4 w-4 mr-1" /> New Chat
           </Button>
@@ -380,34 +417,66 @@ export default function Complaints() {
             <MessageSquare className="h-12 w-12 mb-2 opacity-20" />
             <p>No {tab.toLowerCase()}s yet</p>
           </div>
-        ) : data.map((c) => (
-          <div
-            key={c._id}
-            onClick={() => setSelected(c)}
-            className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 font-bold text-lg uppercase">
-              {c.isGroup ? <Users className="h-6 w-6" /> : (c.recipient?.name?.[0] || 'U')}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-0.5">
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 truncate">
-                   {tab === 'CHAT' && !c.isGroup ? (c.recipient?.name || 'User') : (c.subject || c.groupName)}
-                </h3>
-                <span className="text-[10px] text-slate-400">{formatDate(c.lastMessageAt || c.updatedAt, dateFormat)}</span>
+        ) : data.map((c) => {
+          // Determine if this item has an unread message from another user
+          const isUnread = Boolean(
+            c.lastMessage &&
+            c.lastMessageSender &&
+            c.lastMessageSender._id !== user._id &&
+            (!readMap[c._id] || new Date(readMap[c._id]) < new Date(c.lastMessageAt || c.updatedAt))
+          );
+
+          return (
+            <div
+              key={c._id}
+              onClick={() => handleSelect(c)}
+              className={cn(
+                "flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition",
+                isUnread && "bg-blue-50/60 dark:bg-blue-950/20"
+              )}
+            >
+              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 font-bold text-lg uppercase">
+                {c.isGroup ? <Users className="h-6 w-6" /> : (c.recipient?.name?.[0] || 'U')}
+                {isUnread && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-blue-600 border-2 border-white dark:border-slate-900"></span>
+                  </span>
+                )}
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500 truncate pr-4">
-                  {c.lastMessageSender && <span className="font-semibold text-slate-400 mr-1">{c.lastMessageSender._id === user._id ? 'You:' : `${c.lastMessageSender.name}:`}</span>}
-                  {c.lastMessage || c.message}
-                </p>
-                <Badge color={c.isGroup ? "gray" : "blue"} className="text-[9px] uppercase font-bold tracking-wider">
-                  {c.isGroup ? 'GROUP' : (c.recipient?.name || 'Manager')}
-                </Badge>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                  <h3 className={cn(
+                    "text-sm truncate",
+                    isUnread ? "font-extrabold text-slate-900 dark:text-white" : "font-semibold text-slate-800 dark:text-slate-200"
+                  )}>
+                     {tab === 'CHAT' && !c.isGroup ? (c.recipient?.name || 'User') : (c.subject || c.groupName)}
+                     {isUnread && (
+                       <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-600 text-white uppercase tracking-wider">
+                         Unread
+                       </span>
+                     )}
+                  </h3>
+                  <span className={cn("text-[10px]", isUnread ? "font-bold text-blue-600 dark:text-blue-400" : "text-slate-400")}>
+                    {formatDate(c.lastMessageAt || c.updatedAt, dateFormat)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className={cn(
+                    "text-sm truncate pr-4",
+                    isUnread ? "font-bold text-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400 font-normal"
+                  )}>
+                    {c.lastMessageSender && <span className={cn("mr-1", isUnread ? "font-bold text-blue-700 dark:text-blue-300" : "font-semibold text-slate-400")}>{c.lastMessageSender._id === user._id ? 'You:' : `${c.lastMessageSender.name}:`}</span>}
+                    {c.lastMessage || c.message}
+                  </p>
+                  <Badge color={c.isGroup ? "gray" : "blue"} className="text-[9px] uppercase font-bold tracking-wider">
+                    {c.isGroup ? 'GROUP' : (c.recipient?.name || 'Manager')}
+                  </Badge>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </Card>
 
       <ConversationModal

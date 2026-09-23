@@ -330,3 +330,28 @@ export const updateFcmToken = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'FCM token updated successfully' });
 });
 
+/** POST /auth/test-push */
+export const testPushNotification = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select('fcmToken name');
+  if (!user?.fcmToken) {
+    return res.status(400).json({
+      success: false,
+      message: 'No FCM token registered in DB for your account yet. Please open the app on your mobile device to register.'
+    });
+  }
+
+  const { sendPushNotification } = await import('../services/notification.service.js');
+
+  await sendPushNotification(user._id, {
+    title: 'Test Notification 🔔',
+    message: `Hello ${user.name}, push notifications are working on your device!`,
+    type: 'SYSTEM_ALERT',
+    link: '/staff/dashboard'
+  });
+
+  res.json({
+    success: true,
+    message: `Test notification sent to ${user.name} (${user.fcmToken.substring(0, 15)}...)`
+  });
+});
+

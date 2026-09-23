@@ -112,7 +112,7 @@ export async function notify({ recipient, company, type, title, message, link, s
   }
 }
 
-async function sendPushNotification(userId, { title, message, type, link, sticky, ongoing }) {
+export async function sendPushNotification(userId, { title, message, type, link, sticky, ongoing }) {
   try {
     const user = await User.findById(userId).select('fcmToken name');
     if (!user?.fcmToken) {
@@ -132,6 +132,8 @@ async function sendPushNotification(userId, { title, message, type, link, sticky
           body: message || ''
         },
         data: {
+          title: title || 'Business Sarthi',
+          message: message || '',
           type: type || '',
           link: link || '',
           sticky: String(sticky || false),
@@ -143,6 +145,8 @@ async function sendPushNotification(userId, { title, message, type, link, sticky
             channelId: 'bs_alerts',
             sound: 'default',
             priority: 'high',
+            defaultSound: true,
+            defaultVibrateTimings: true,
             visibility: 'public'
           }
         }
