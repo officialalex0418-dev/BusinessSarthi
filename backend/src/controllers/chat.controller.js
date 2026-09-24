@@ -68,15 +68,17 @@ export const createChat = asyncHandler(async (req, res) => {
       }).select('_id');
       recipients = companyUsers.map(u => u._id);
     }
-    if (recipients.length > 0) {
-      notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
+    if (recipients.length === 0) {
+      recipients = [req.user._id];
     }
+    notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
   } else {
-    const recipient = (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString())
+    let recipient = (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString())
                       || (chat.recipient?.toString() === req.user._id.toString() ? chat.sender : chat.recipient);
-    if (recipient) {
-      notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
+    if (!recipient) {
+      recipient = req.user._id;
     }
+    notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
   }
 
   return res.status(201).json({ success: true, data: chat });
@@ -153,15 +155,17 @@ export const addChatMessage = asyncHandler(async (req, res) => {
       }).select('_id');
       recipients = companyUsers.map(u => u._id);
     }
-    if (recipients.length > 0) {
-      notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
+    if (recipients.length === 0) {
+      recipients = [req.user._id];
     }
+    notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
   } else {
-    const recipient = (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString())
+    let recipient = (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString())
                       || (chat.recipient?.toString() === req.user._id.toString() ? chat.sender : chat.recipient);
-    if (recipient) {
-      notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
+    if (!recipient) {
+      recipient = req.user._id;
     }
+    notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
   }
 
   res.status(201).json({ success: true, data: reply });
