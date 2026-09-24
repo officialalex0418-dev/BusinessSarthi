@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { MessageSquare, Clock, User, Users, Send, ChevronLeft, MoreVertical, Paperclip, CheckCheck, Plus, Search, Bell } from 'lucide-react';
+import { MessageSquare, Users, Send, ChevronLeft, MoreVertical, Paperclip, CheckCheck, Plus, Search, Bell } from 'lucide-react';
 import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { Card, Badge, Spinner, Button, Input, Textarea, Modal, Select, Checkbox } from '@/components/ui';
@@ -76,13 +76,13 @@ function ConversationModal({ open, onClose, onSuccess, mode = 'CHAT' }) {
       <form onSubmit={submit} className="space-y-4">
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Select Recipient</label>
-          <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             <Button
               type="button"
               variant={form.recipientType === 'group' ? 'primary' : 'outline'}
               size="sm"
               onClick={() => setForm({ ...form, recipientType: 'group' })}
-              className="text-[10px] px-2 py-2"
+              className="text-[10px] px-1 py-1.5 h-auto text-center justify-center truncate"
             >
               Company Group
             </Button>
@@ -91,7 +91,7 @@ function ConversationModal({ open, onClose, onSuccess, mode = 'CHAT' }) {
               variant={form.recipientType === 'individual' ? 'primary' : 'outline'}
               size="sm"
               onClick={() => setForm({ ...form, recipientType: 'individual' })}
-              className="text-[10px] px-2 py-2"
+              className="text-[10px] px-1 py-1.5 h-auto text-center justify-center truncate"
             >
               Specific Person
             </Button>
@@ -100,7 +100,7 @@ function ConversationModal({ open, onClose, onSuccess, mode = 'CHAT' }) {
               variant={form.recipientType === 'create_group' ? 'primary' : 'outline'}
               size="sm"
               onClick={() => setForm({ ...form, recipientType: 'create_group' })}
-              className="text-[10px] px-2 py-2"
+              className="text-[10px] px-1 py-1.5 h-auto text-center justify-center truncate"
             >
               Create Group
             </Button>
@@ -127,7 +127,7 @@ function ConversationModal({ open, onClose, onSuccess, mode = 'CHAT' }) {
                 <input
                   type="text"
                   placeholder="Search employees..."
-                  className="input pl-10 h-10 text-sm"
+                  className="input pl-10 h-10 text-sm w-full"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -248,17 +248,17 @@ function ChatView({ item, mode, onBack, onRead }) {
   if (loading) return <Spinner />;
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col bg-[#efeae2] dark:bg-slate-950">
-      <div className="flex items-center justify-between bg-[#f0f2f5] px-4 py-2 dark:bg-slate-900 border-b dark:border-slate-800">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="rounded-full p-2 hover:bg-black/5 dark:hover:bg-white/5">
+    <div className="flex h-[calc(100vh-8rem)] flex-col bg-[#efeae2] dark:bg-slate-950 max-w-full overflow-hidden">
+      <div className="flex items-center justify-between bg-[#f0f2f5] px-3 sm:px-4 py-2 dark:bg-slate-900 border-b dark:border-slate-800 w-full min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          <button onClick={onBack} className="rounded-full p-1.5 hover:bg-black/5 dark:hover:bg-white/5 shrink-0">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-300 text-slate-600 font-bold uppercase">
+          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-slate-300 text-slate-600 font-bold uppercase text-sm">
             {item.isGroup ? <Users className="h-5 w-5" /> : (item.recipient?.name?.[0] || 'U')}
           </div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">
               {mode === 'CHAT' && !item.isGroup ? (item.recipient?.name || 'User') : (item.subject || item.groupName)}
             </h3>
             <p className="text-[10px] text-slate-500 truncate">
@@ -266,28 +266,28 @@ function ChatView({ item, mode, onBack, onRead }) {
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" className="rounded-full p-2"><MoreVertical className="h-5 w-5 text-slate-500" /></Button>
+        <Button variant="ghost" size="sm" className="rounded-full p-2 shrink-0"><MoreVertical className="h-5 w-5 text-slate-500" /></Button>
       </div>
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2"
+        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 w-full max-w-full"
         style={{ backgroundImage: 'radial-gradient(#00000010 1px, transparent 0)', backgroundSize: '20px 20px' }}
       >
         {messages.map((m, idx) => {
           const isMe = m.sender._id === user._id;
           const showSender = !isMe && (!messages[idx - 1] || messages[idx - 1].sender._id !== m.sender._id);
           return (
-            <div key={m._id} className={cn('flex w-full mb-1', isMe ? 'justify-end' : 'justify-start')}>
+            <div key={m._id} className={cn('flex w-full mb-1 min-w-0', isMe ? 'justify-end' : 'justify-start')}>
               <div className={cn(
-                'relative max-w-[92%] sm:max-w-[85%] rounded-lg px-3 py-1.5 shadow-sm',
+                'relative max-w-[88%] sm:max-w-[80%] rounded-lg px-3 py-1.5 shadow-sm break-words overflow-hidden',
                 isMe ? 'bg-[#dcf8c6] dark:bg-emerald-900/80 rounded-tr-none' : 'bg-white dark:bg-slate-800 rounded-tl-none'
               )}>
-                {showSender && <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mb-0.5">{m.sender.name}</p>}
+                {showSender && <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mb-0.5 truncate">{m.sender.name}</p>}
                 {m.attachments?.map((att, i) => <img key={i} src={att} className="max-w-full rounded mb-1 max-h-60 object-cover" />)}
-                <div className="flex flex-wrap items-end gap-2">
-                  <p className="text-[14px] text-slate-800 dark:text-slate-100 leading-normal">{m.message}</p>
-                  <div className="ml-auto flex items-center gap-1 pt-1">
+                <div className="flex flex-wrap items-end gap-1.5 min-w-0">
+                  <p className="text-[13px] sm:text-[14px] text-slate-800 dark:text-slate-100 leading-normal break-words whitespace-pre-wrap flex-1 min-w-0">{m.message}</p>
+                  <div className="ml-auto flex items-center gap-1 pt-0.5 shrink-0">
                     <span className="text-[9px] text-slate-400">{formatTime(m.createdAt)}</span>
                     {isMe && <CheckCheck className="h-3 w-3 text-blue-500" />}
                   </div>
@@ -298,16 +298,16 @@ function ChatView({ item, mode, onBack, onRead }) {
         })}
       </div>
 
-      <form onSubmit={(e) => send(e)} className="flex items-center gap-2 bg-[#f0f2f5] dark:bg-slate-900 px-4 py-3 border-t dark:border-slate-800">
+      <form onSubmit={(e) => send(e)} className="flex items-center gap-2 bg-[#f0f2f5] dark:bg-slate-900 px-3 py-2.5 sm:px-4 sm:py-3 border-t dark:border-slate-800 w-full max-w-full">
         <input type="file" hidden ref={fileInputRef} onChange={handleFileUpload} accept="image/*" />
-        <Button type="button" variant="ghost" className="rounded-full p-2 text-slate-500" onClick={() => fileInputRef.current?.click()}><Paperclip className="h-5 w-5" /></Button>
+        <Button type="button" variant="ghost" className="rounded-full p-2 text-slate-500 shrink-0" onClick={() => fileInputRef.current?.click()}><Paperclip className="h-5 w-5" /></Button>
         <input
           placeholder="Type a message"
-          className="flex-1 rounded-lg bg-white dark:bg-slate-800 px-4 py-2 text-sm focus:outline-none dark:text-white"
+          className="flex-1 rounded-lg bg-white dark:bg-slate-800 px-3 py-2 text-xs sm:text-sm focus:outline-none dark:text-white min-w-0"
           value={text}
           onChange={e => setText(e.target.value)}
         />
-        <button type="submit" disabled={!text.trim() && !sending} className={cn("flex h-10 w-10 items-center justify-center rounded-full", text.trim() ? "bg-emerald-600 text-white" : "text-slate-400")}><Send className="h-5 w-5" /></button>
+        <button type="submit" disabled={!text.trim() && !sending} className={cn("flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full shrink-0", text.trim() ? "bg-emerald-600 text-white" : "text-slate-400")}><Send className="h-4 w-4 sm:h-5 sm:w-5" /></button>
       </form>
     </div>
   );
@@ -375,47 +375,52 @@ export default function Complaints() {
 
   if (selected) {
     return (
-      <div className="fixed inset-0 z-[60] bg-white dark:bg-slate-950 lg:relative lg:inset-auto lg:h-full lg:rounded-xl lg:overflow-hidden lg:shadow-xl lg:border dark:border-slate-800">
+      <div className="fixed inset-0 z-[60] bg-white dark:bg-slate-950 lg:relative lg:inset-auto lg:h-full lg:rounded-xl lg:overflow-hidden lg:shadow-xl lg:border dark:border-slate-800 max-w-full">
         <ChatView item={selected} mode={tab} onBack={() => setSelected(null)} onRead={markAsRead} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="w-full max-w-3xl mx-auto space-y-4 px-1 sm:px-4 overflow-x-hidden">
+      {/* Responsive Header Controls */}
+      <div className="flex flex-col gap-3 w-full sm:flex-row sm:items-center sm:justify-between">
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-full sm:w-auto">
           <button
             onClick={() => { setTab('CHAT'); setLoading(true); }}
-            className={cn("flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-all", tab === 'CHAT' ? "bg-white dark:bg-slate-700 shadow-sm text-primary-600 dark:text-primary-400" : "text-slate-500")}
+            className={cn("flex-1 sm:flex-none px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all", tab === 'CHAT' ? "bg-white dark:bg-slate-700 shadow-sm text-primary-600 dark:text-primary-400" : "text-slate-500")}
           >
             Chat
           </button>
           <button
             onClick={() => { setTab('COMPLAINT'); setLoading(true); }}
-            className={cn("flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-all", tab === 'COMPLAINT' ? "bg-white dark:bg-slate-700 shadow-sm text-primary-600 dark:text-primary-400" : "text-slate-500")}
+            className={cn("flex-1 sm:flex-none px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all", tab === 'COMPLAINT' ? "bg-white dark:bg-slate-700 shadow-sm text-primary-600 dark:text-primary-400" : "text-slate-500")}
           >
             Complaint
           </button>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="ghost" className="text-slate-500" title="Test Push Notification" onClick={handleTestPush}>
-            <Bell className="h-4 w-4 mr-1 text-blue-600" /> Test Push
+
+        <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+          <Button size="sm" variant="ghost" className="px-2 text-xs text-slate-500 shrink-0" title="Test Push Notification" onClick={handleTestPush}>
+            <Bell className="h-3.5 w-3.5 mr-1 text-blue-600" />
+            <span>Test Push</span>
           </Button>
-          <Button size="sm" variant="outline" className="flex-1 bg-white sm:flex-none" onClick={() => setModal({ open: true, mode: 'CHAT' })}>
-            <MessageSquare className="h-4 w-4 mr-1" /> New Chat
+          <Button size="sm" variant="outline" className="flex-1 sm:flex-none text-xs px-2.5 bg-white shrink-0" onClick={() => setModal({ open: true, mode: 'CHAT' })}>
+            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+            <span>New Chat</span>
           </Button>
-          <Button size="sm" className="flex-1 sm:flex-none" onClick={() => setModal({ open: true, mode: 'COMPLAINT' })}>
-            <Plus className="h-4 w-4 mr-1" /> Add Complaint
+          <Button size="sm" className="flex-1 sm:flex-none text-xs px-2.5 shrink-0" onClick={() => setModal({ open: true, mode: 'COMPLAINT' })}>
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            <span>Add Complaint</span>
           </Button>
         </div>
       </div>
 
-      <Card className="overflow-hidden divide-y dark:divide-slate-800">
+      <Card className="overflow-hidden divide-y dark:divide-slate-800 w-full max-w-full">
         {data.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-20 text-slate-400">
-            <MessageSquare className="h-12 w-12 mb-2 opacity-20" />
-            <p>No {tab.toLowerCase()}s yet</p>
+          <div className="flex flex-col items-center justify-center p-12 sm:p-20 text-slate-400">
+            <MessageSquare className="h-10 w-10 sm:h-12 sm:w-12 mb-2 opacity-20" />
+            <p className="text-xs sm:text-sm">No {tab.toLowerCase()}s yet</p>
           </div>
         ) : data.map((c) => {
           // Determine if this item has an unread message from another user
@@ -431,45 +436,49 @@ export default function Complaints() {
               key={c._id}
               onClick={() => handleSelect(c)}
               className={cn(
-                "flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition",
+                "flex items-center gap-3 p-3 sm:p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition w-full max-w-full overflow-hidden",
                 isUnread && "bg-blue-50/60 dark:bg-blue-950/20"
               )}
             >
-              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 font-bold text-lg uppercase">
-                {c.isGroup ? <Users className="h-6 w-6" /> : (c.recipient?.name?.[0] || 'U')}
+              <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 font-bold text-base sm:text-lg uppercase">
+                {c.isGroup ? <Users className="h-5 w-5 sm:h-6 sm:w-6" /> : (c.recipient?.name?.[0] || 'U')}
                 {isUnread && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5">
+                  <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 sm:h-3.5 sm:w-3.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-blue-600 border-2 border-white dark:border-slate-900"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 bg-blue-600 border-2 border-white dark:border-slate-900"></span>
                   </span>
                 )}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <h3 className={cn(
-                    "text-sm truncate",
-                    isUnread ? "font-extrabold text-slate-900 dark:text-white" : "font-semibold text-slate-800 dark:text-slate-200"
-                  )}>
-                     {tab === 'CHAT' && !c.isGroup ? (c.recipient?.name || 'User') : (c.subject || c.groupName)}
-                     {isUnread && (
-                       <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-600 text-white uppercase tracking-wider">
-                         Unread
-                       </span>
-                     )}
-                  </h3>
-                  <span className={cn("text-[10px]", isUnread ? "font-bold text-blue-600 dark:text-blue-400" : "text-slate-400")}>
+
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <div className="flex items-center justify-between gap-2 mb-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <h3 className={cn(
+                      "text-xs sm:text-sm truncate min-w-0",
+                      isUnread ? "font-extrabold text-slate-900 dark:text-white" : "font-semibold text-slate-800 dark:text-slate-200"
+                    )}>
+                       {tab === 'CHAT' && !c.isGroup ? (c.recipient?.name || 'User') : (c.subject || c.groupName)}
+                    </h3>
+                    {isUnread && (
+                      <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-extrabold bg-blue-600 text-white uppercase tracking-wider">
+                        Unread
+                      </span>
+                    )}
+                  </div>
+                  <span className={cn("shrink-0 text-[10px]", isUnread ? "font-bold text-blue-600 dark:text-blue-400" : "text-slate-400")}>
                     {formatDate(c.lastMessageAt || c.updatedAt, dateFormat)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+
+                <div className="flex items-center justify-between gap-2 min-w-0">
                   <p className={cn(
-                    "text-sm truncate pr-4",
+                    "text-xs sm:text-sm truncate flex-1 min-w-0 pr-1",
                     isUnread ? "font-bold text-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400 font-normal"
                   )}>
                     {c.lastMessageSender && <span className={cn("mr-1", isUnread ? "font-bold text-blue-700 dark:text-blue-300" : "font-semibold text-slate-400")}>{c.lastMessageSender._id === user._id ? 'You:' : `${c.lastMessageSender.name}:`}</span>}
                     {c.lastMessage || c.message}
                   </p>
-                  <Badge color={c.isGroup ? "gray" : "blue"} className="text-[9px] uppercase font-bold tracking-wider">
+                  <Badge color={c.isGroup ? "gray" : "blue"} className="shrink-0 text-[8px] sm:text-[9px] uppercase px-1.5 py-0.5 font-bold tracking-tight truncate max-w-[90px] sm:max-w-none">
                     {c.isGroup ? 'GROUP' : (c.recipient?.name || 'Manager')}
                   </Badge>
                 </div>
