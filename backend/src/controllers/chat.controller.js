@@ -48,37 +48,58 @@ export const createChat = asyncHandler(async (req, res) => {
   chat.lastMessageSender = req.user._id;
   await chat.save();
 
+  const senderIdStr = req.user._id.toString();
+
   // Notify recipients with sender name & message for notification bar
   const notificationPayload = {
     company: req.user.company,
     type: 'CHAT_MESSAGE',
     title: chat.isGroup ? `${req.user.name} (${chat.groupName || 'Group Chat'})` : `New message from ${req.user.name}`,
     message: message || 'Sent an attachment',
-    link: '/staff/complaints', // Chat and complaints share the same page
+    link: '/staff/complaints',
+    data: { chatId: chat._id.toString(), type: 'CHAT_MESSAGE' }
   };
 
   if (chat.isGroup) {
-    let recipients = (chat.participants || []).filter(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString());
+    let recipients = (chat.participants || []).filter(p => {
+      const pId = p._id ? p._id.toString() : p.toString();
+      return pId !== senderIdStr;
+    }).map(p => p._id ? p._id.toString() : p.toString());
+
     if (recipients.length === 0) {
-      // Company-wide group: Notify all active staff/users in the company except sender
       const companyUsers = await User.find({
         company: req.user.company,
         _id: { $ne: req.user._id },
         isActive: true,
       }).select('_id');
-      recipients = companyUsers.map(u => u._id);
+      recipients = companyUsers.map(u => u._id.toString());
     }
     if (recipients.length === 0) {
-      recipients = [req.user._id];
+      recipients = [senderIdStr];
     }
-    notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
+    console.log(`[CHAT NOTIF CREATE GROUP] Sender: ${senderIdStr} | Recipients: ${recipients.join(', ')}`);
+    notifyMany(recipients, notificationPayload).catch(e => console.error('[CHAT NOTIF ERROR]', e));
   } else {
-    let recipient = (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString())
-                      || (chat.recipient?.toString() === req.user._id.toString() ? chat.sender : chat.recipient);
-    if (!recipient) {
-      recipient = req.user._id;
+    let recipient = (chat.participants || []).find(p => {
+      const pId = p._id ? p._id.toString() : p.toString();
+      return pId !== senderIdStr;
+    });
+
+    let recipientId = recipient ? (recipient._id ? recipient._id.toString() : recipient.toString()) : null;
+
+    if (!recipientId && chat.recipient) {
+      recipientId = chat.recipient._id ? chat.recipient._id.toString() : chat.recipient.toString();
+      if (recipientId === senderIdStr && chat.sender) {
+        recipientId = chat.sender._id ? chat.sender._id.toString() : chat.sender.toString();
+      }
     }
-    notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
+
+    if (!recipientId) {
+      recipientId = senderIdStr;
+    }
+
+    console.log(`[CHAT NOTIF CREATE] Sender: ${senderIdStr} | Target Recipient: ${recipientId}`);
+    notify({ ...notificationPayload, recipient: recipientId }).catch(e => console.error('[CHAT NOTIF ERROR]', e));
   }
 
   return res.status(201).json({ success: true, data: chat });
@@ -135,6 +156,8 @@ export const addChatMessage = asyncHandler(async (req, res) => {
 
   await ChatMessage.updateMany({ chat: chat._id }, { expiresAt });
 
+  const senderIdStr = req.user._id.toString();
+
   // Notify recipients with sender name & message for notification bar
   const notificationPayload = {
     company: req.user.company,
@@ -142,30 +165,49 @@ export const addChatMessage = asyncHandler(async (req, res) => {
     title: chat.isGroup ? `${req.user.name} (${chat.groupName || 'Group Chat'})` : `New message from ${req.user.name}`,
     message: message || 'Sent an attachment',
     link: '/staff/complaints',
+    data: { chatId: chat._id.toString(), type: 'CHAT_MESSAGE' }
   };
 
   if (chat.isGroup) {
-    let recipients = (chat.participants || []).filter(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString());
+    let recipients = (chat.participants || []).filter(p => {
+      const pId = p._id ? p._id.toString() : p.toString();
+      return pId !== senderIdStr;
+    }).map(p => p._id ? p._id.toString() : p.toString());
+
     if (recipients.length === 0) {
-      // Company-wide group: Notify all active staff/users in the company except sender
       const companyUsers = await User.find({
         company: req.user.company,
         _id: { $ne: req.user._id },
         isActive: true,
       }).select('_id');
-      recipients = companyUsers.map(u => u._id);
+      recipients = companyUsers.map(u => u._id.toString());
     }
     if (recipients.length === 0) {
-      recipients = [req.user._id];
+      recipients = [senderIdStr];
     }
-    notifyMany(recipients, notificationPayload).catch(e => console.error('Chat notification failed:', e));
+    console.log(`[CHAT NOTIF ADD GROUP] Sender: ${senderIdStr} | Recipients: ${recipients.join(', ')}`);
+    notifyMany(recipients, notificationPayload).catch(e => console.error('[CHAT NOTIF ERROR]', e));
   } else {
-    let recipient = (chat.participants || []).find(p => (p._id ? p._id.toString() : p.toString()) !== req.user._id.toString())
-                      || (chat.recipient?.toString() === req.user._id.toString() ? chat.sender : chat.recipient);
-    if (!recipient) {
-      recipient = req.user._id;
+    let recipient = (chat.participants || []).find(p => {
+      const pId = p._id ? p._id.toString() : p.toString();
+      return pId !== senderIdStr;
+    });
+
+    let recipientId = recipient ? (recipient._id ? recipient._id.toString() : recipient.toString()) : null;
+
+    if (!recipientId && chat.recipient) {
+      recipientId = chat.recipient._id ? chat.recipient._id.toString() : chat.recipient.toString();
+      if (recipientId === senderIdStr && chat.sender) {
+        recipientId = chat.sender._id ? chat.sender._id.toString() : chat.sender.toString();
+      }
     }
-    notify({ ...notificationPayload, recipient }).catch(e => console.error('Chat notification failed:', e));
+
+    if (!recipientId) {
+      recipientId = senderIdStr;
+    }
+
+    console.log(`[CHAT NOTIF ADD] Sender: ${senderIdStr} | Target Recipient: ${recipientId}`);
+    notify({ ...notificationPayload, recipient: recipientId }).catch(e => console.error('[CHAT NOTIF ERROR]', e));
   }
 
   res.status(201).json({ success: true, data: reply });

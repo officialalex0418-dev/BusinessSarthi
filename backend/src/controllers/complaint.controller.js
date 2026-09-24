@@ -1,16 +1,16 @@
-import { Complaint, User, ComplaintMessage, Company } from '../models/index.js';
+import { Complaint, ComplaintMessage, User, Company } from '../models/index.js';
 import { asyncHandler, ApiError } from '../utils/ApiError.js';
 import { notify } from '../services/notification.service.js';
 
 /**
- * @desc    Submit a new complaint
+ * @desc    Create a new complaint
  * @route   POST /api/v1/complaints
  */
 export const createComplaint = asyncHandler(async (req, res) => {
   const { recipientId, subject, message, isGroup, attachments } = req.body;
 
   const company = await Company.findById(req.user.company).populate('package');
-  const retentionDays = company?.package?.chatRetentionDays || 30;
+  const retentionDays = company?.package?.complaintRetentionDays || 90;
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + retentionDays);
 
@@ -19,14 +19,10 @@ export const createComplaint = asyncHandler(async (req, res) => {
     company: req.user.company,
     subject,
     message,
-    isGroup: isGroup !== false,
+    isGroup: isGroup === true,
+    recipient: isGroup ? null : (recipientId || null),
     expiresAt,
-    attachments: attachments || [],
   };
-
-  if (!complaintData.isGroup && recipientId) {
-    complaintData.recipient = recipientId;
-  }
 
   const complaint = await Complaint.create(complaintData);
 
@@ -43,28 +39,32 @@ export const createComplaint = asyncHandler(async (req, res) => {
   complaint.lastMessageSender = req.user._id;
   await complaint.save();
 
-  // Notify recipient with sender name & message for notification bar
+  const senderIdStr = req.user._id.toString();
+
   const notificationPayload = {
     company: req.user.company,
     type: 'COMPLAINT_NEW',
     title: `New Complaint from ${req.user.name}`,
     message: `${subject}${message ? `: ${message}` : ''}`,
     link: '/staff/complaints',
+    data: { complaintId: complaint._id.toString(), type: 'COMPLAINT_NEW' }
   };
 
   if (complaint.recipient) {
-    notify({ ...notificationPayload, recipient: complaint.recipient }).catch(e => console.error('Complaint notification failed:', e));
+    const targetRecipientId = complaint.recipient._id ? complaint.recipient._id.toString() : complaint.recipient.toString();
+    console.log(`[COMPLAINT NOTIF CREATE] Sender: ${senderIdStr} | Recipient: ${targetRecipientId}`);
+    notify({ ...notificationPayload, recipient: targetRecipientId }).catch(e => console.error('Complaint notification failed:', e));
   } else if (complaint.isGroup) {
-    // Company-wide complaint: Notify active company owners & managers or users
     const companyUsers = await User.find({
       company: req.user.company,
       _id: { $ne: req.user._id },
       isActive: true,
     }).select('_id');
-    let recipients = companyUsers.map(u => u._id);
+    let recipients = companyUsers.map(u => u._id.toString());
     if (recipients.length === 0) {
-      recipients = [req.user._id];
+      recipients = [senderIdStr];
     }
+    console.log(`[COMPLAINT NOTIF CREATE GROUP] Sender: ${senderIdStr} | Recipients: ${recipients.join(', ')}`);
     import('../services/notification.service.js').then(({ notifyMany }) => {
       notifyMany(recipients, notificationPayload).catch(e => console.error('Complaint notification failed:', e));
     });
@@ -83,7 +83,7 @@ export const getComplaints = asyncHandler(async (req, res) => {
     $or: [
       { isGroup: true },
       { sender: req.user._id },
-      { recipient: req.user._id }
+      { recipient: req.user._id },
     ]
   };
 
@@ -98,6 +98,7 @@ export const getComplaints = asyncHandler(async (req, res) => {
 
 /**
  * @desc    Get messages for a complaint
+ * @route   GET /api/v1/complaints/:id/messages
  */
 export const getComplaintMessages = asyncHandler(async (req, res) => {
   const messages = await ComplaintMessage.find({ complaint: req.params.id })
@@ -107,15 +108,16 @@ export const getComplaintMessages = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Add a reply to a complaint
+ * @desc    Add a message/reply to a complaint
+ * @route   POST /api/v1/complaints/:id/messages
  */
-export const addReply = asyncHandler(async (req, res) => {
+export const addComplaintReply = asyncHandler(async (req, res) => {
   const { message, attachments } = req.body;
   const complaint = await Complaint.findById(req.params.id);
   if (!complaint) throw ApiError.notFound('Complaint not found');
 
   const company = await Company.findById(req.user.company).populate('package');
-  const retentionDays = company?.package?.chatRetentionDays || 30;
+  const retentionDays = company?.package?.complaintRetentionDays || 90;
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + retentionDays);
 
@@ -135,19 +137,30 @@ export const addReply = asyncHandler(async (req, res) => {
 
   await ComplaintMessage.updateMany({ complaint: complaint._id }, { expiresAt });
 
-  // Notify other party with sender name & message for notification bar
-  let recipientId = complaint.sender?.toString() === req.user._id.toString() ? complaint.recipient : complaint.sender;
-  if (!recipientId) {
-    recipientId = req.user._id;
+  const senderIdStr = req.user._id.toString();
+
+  let targetRecipientId = complaint.sender?.toString() === senderIdStr
+    ? (complaint.recipient ? complaint.recipient.toString() : null)
+    : (complaint.sender ? complaint.sender.toString() : null);
+
+  if (!targetRecipientId) {
+    targetRecipientId = senderIdStr;
   }
-  if (recipientId) {
+
+  const notificationPayload = {
+    company: req.user.company,
+    type: 'COMPLAINT_REPLY',
+    title: `Complaint Reply from ${req.user.name}`,
+    message: `${complaint.subject}: ${message || 'Sent an attachment'}`,
+    link: '/staff/complaints',
+    data: { complaintId: complaint._id.toString(), type: 'COMPLAINT_REPLY' }
+  };
+
+  if (targetRecipientId) {
+    console.log(`[COMPLAINT NOTIF REPLY] Sender: ${senderIdStr} | Target Recipient: ${targetRecipientId}`);
     notify({
-      recipient: recipientId,
-      company: req.user.company,
-      type: 'COMPLAINT_REPLY',
-      title: `Complaint Reply from ${req.user.name}`,
-      message: `${complaint.subject}: ${message || 'Sent an attachment'}`,
-      link: '/staff/complaints',
+      ...notificationPayload,
+      recipient: targetRecipientId,
     }).catch(e => console.error('Complaint notification failed:', e));
   } else if (complaint.isGroup) {
     const companyUsers = await User.find({
@@ -155,32 +168,15 @@ export const addReply = asyncHandler(async (req, res) => {
       _id: { $ne: req.user._id },
       isActive: true,
     }).select('_id');
-    let recipients = companyUsers.map(u => u._id);
+    let recipients = companyUsers.map(u => u._id.toString());
     if (recipients.length === 0) {
-      recipients = [req.user._id];
+      recipients = [senderIdStr];
     }
+    console.log(`[COMPLAINT NOTIF REPLY GROUP] Sender: ${senderIdStr} | Recipients: ${recipients.join(', ')}`);
     import('../services/notification.service.js').then(({ notifyMany }) => {
-      notifyMany(recipients, {
-        company: req.user.company,
-        type: 'COMPLAINT_REPLY',
-        title: `Complaint Reply from ${req.user.name}`,
-        message: `${complaint.subject}: ${message || 'Sent an attachment'}`,
-        link: '/staff/complaints',
-      }).catch(e => console.error('Complaint notification failed:', e));
+      notifyMany(recipients, notificationPayload).catch(e => console.error('Complaint notification failed:', e));
     });
   }
 
   res.status(201).json({ success: true, data: reply });
-});
-
-/**
- * @desc    Get company users for recipient selection
- */
-export const getRecipients = asyncHandler(async (req, res) => {
-  const users = await User.find({
-    company: req.user.company,
-    _id: { $ne: req.user._id },
-    isActive: true,
-  }).select('name position role');
-  res.status(200).json({ success: true, data: users });
 });

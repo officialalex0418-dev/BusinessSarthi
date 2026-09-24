@@ -69,19 +69,25 @@ function initFirebaseAdmin() {
 initFirebaseAdmin();
 
 /** Create DB notification + push over socket + FCM. Fire-and-forget safe. */
-export async function notify({ recipient, company, type, title, message, link, sticky = false, ongoing = false }) {
+export async function notify({ recipient, company, type, title, message, link, data = {}, sticky = false, ongoing = false }) {
   try {
-    // Critical types & real-time communications bypass check-in guard so notifications arrive immediately
-    const isCritical = [
+    const CRITICAL_TYPES = [
       'PAYROLL_GENERATED', 'LEAVE_APPROVED', 'LEAVE_REJECTED', 'SYSTEM_ALERT',
-      'CHAT_MESSAGE', 'COMPLAINT_NEW', 'COMPLAINT_REPLY', 'SHIFT_ACTIVE', 'SHIFT_INACTIVE'
-    ].includes(type);
+      'CHAT_MESSAGE', 'COMPLAINT_NEW', 'COMPLAINT_REPLY', 'SHIFT_ACTIVE', 'SHIFT_INACTIVE', 'ANNOUNCEMENT'
+    ];
+
+    const isCritical = CRITICAL_TYPES.includes(type);
 
     const targetUserId = (recipient && typeof recipient === 'object' && recipient._id)
       ? recipient._id.toString()
       : recipient?.toString();
 
-    if (!targetUserId) return null;
+    if (!targetUserId) {
+      console.warn('[NOTIFY SKIP] No valid targetUserId provided for notification:', { type, title });
+      return null;
+    }
+
+    console.log(`[NOTIFY] Dispatching type=${type} to targetUserId=${targetUserId} (isCritical=${isCritical})`);
 
     if (!isCritical) {
        const activeAtt = await Attendance.findOne({
@@ -92,7 +98,7 @@ export async function notify({ recipient, company, type, title, message, link, s
        }).select('_id').lean();
 
        if (!activeAtt) {
-          // If not checked in, we still record in DB but skip the real-time/push delivery
+          console.log(`[NOTIFY SKIP PUSH] User ${targetUserId} not checked in today for non-critical type ${type}`);
           return await Notification.create({ recipient: targetUserId, company, type, title, message, link });
        }
     }
@@ -103,20 +109,20 @@ export async function notify({ recipient, company, type, title, message, link, s
     realtime.notify(targetUserId, { ...n.toObject(), sticky, ongoing });
 
     // FCM for background/killed app notifications
-    sendPushNotification(targetUserId, { title, message, type, link, sticky, ongoing });
+    sendPushNotification(targetUserId, { title, message, type, link, data, sticky, ongoing });
 
     return n;
   } catch (e) {
-    console.error('notification failed:', e.message);
+    console.error('[NOTIFY ERROR] notification failed:', e.message);
     return null;
   }
 }
 
-export async function sendPushNotification(userId, { title, message, type, link, sticky, ongoing }) {
+export async function sendPushNotification(userId, { title, message, type, link, data = {}, sticky, ongoing }) {
   try {
     const user = await User.findById(userId).select('fcmToken name');
     if (!user?.fcmToken) {
-      console.log(`[FCM] Skip push to user ${userId} (${user?.name || 'Unknown'}): No FCM token registered in DB`);
+      console.warn(`[FCM SKIP] User ${userId} (${user?.name || 'Unknown'}): No FCM token registered in DB`);
       return;
     }
 
@@ -125,20 +131,29 @@ export async function sendPushNotification(userId, { title, message, type, link,
     }
 
     if (isFirebaseInitialized) {
+      // Sanitize data dictionary so every value is string (FCM requirement)
+      const sanitizedData = {
+        title: String(title || 'Business Sarthi'),
+        message: String(message || ''),
+        type: String(type || ''),
+        link: String(link || ''),
+        sticky: String(sticky || false),
+        ongoing: String(ongoing || false)
+      };
+
+      if (data && typeof data === 'object') {
+        for (const [k, v] of Object.entries(data)) {
+          sanitizedData[k] = String(v ?? '');
+        }
+      }
+
       const response = await admin.messaging().send({
         token: user.fcmToken,
         notification: {
           title: title || 'Business Sarthi',
           body: message || ''
         },
-        data: {
-          title: title || 'Business Sarthi',
-          message: message || '',
-          type: type || '',
-          link: link || '',
-          sticky: String(sticky || false),
-          ongoing: String(ongoing || false)
-        },
+        data: sanitizedData,
         android: {
           priority: 'high',
           notification: {
@@ -151,14 +166,14 @@ export async function sendPushNotification(userId, { title, message, type, link,
           }
         }
       });
-      console.log(`[FCM] Notification successfully sent to ${user.name || userId} [MsgID: ${response}]`);
+      console.log(`[FCM SUCCESS] Push sent to ${user.name} (${userId}) [MsgID: ${response}]`);
     } else {
-      console.log(`[FCM] Cannot send push to ${user.name || userId} (Firebase Admin not initialized on server): ${title} - ${message}`);
+      console.warn(`[FCM WARN] Cannot send push to ${user?.name || userId} (Firebase Admin not initialized on server)`);
     }
   } catch (err) {
-    console.error(`[FCM] Send failed for user ${userId}:`, err.message);
+    console.error(`[FCM ERROR] Send failed for user ${userId}:`, err.message);
     if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
-      console.log(`[FCM] Clearing invalid token for user ${userId}`);
+      console.log(`[FCM CLEANUP] Clearing invalid token for user ${userId}`);
       await User.findByIdAndUpdate(userId, { $unset: { fcmToken: 1 } }).catch(() => {});
     }
   }
