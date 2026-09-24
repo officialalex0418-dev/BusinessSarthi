@@ -306,6 +306,7 @@ export default function App() {
                     id: Math.floor(Math.random() * 100000) + 1,
                     schedule: { at: new Date(Date.now() + 200) },
                     sound: 'default',
+                    channelId: 'bs_alerts',
                     actionTypeId: '',
                     extra: notification.data || {}
                   }
@@ -322,7 +323,8 @@ export default function App() {
 
           // Request permissions and register device with FCM
           const result = await PushNotifications.requestPermissions();
-          if (result.receive === 'granted') {
+          const isGranted = result.receive === 'granted' || result.display === 'granted' || Capacitor.getPlatform() === 'android';
+          if (isGranted) {
             try {
               await PushNotifications.register();
               console.log('Push Notifications registered successfully.');
@@ -333,7 +335,7 @@ export default function App() {
               );
             }
           } else {
-            console.warn('Push Notification permissions not granted:', result.receive);
+            console.warn('Push Notification permissions not granted:', result);
           }
         } catch (e) {
           console.error('Push Notifications init error:', e);

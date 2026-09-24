@@ -144,7 +144,7 @@ export async function sendPushNotification(userId, { title, message, type, link,
           notification: {
             channelId: 'bs_alerts',
             sound: 'default',
-            priority: 'high',
+            priority: 'PRIORITY_HIGH',
             defaultSound: true,
             defaultVibrateTimings: true,
             visibility: 'public'
