@@ -72,9 +72,9 @@ export default function CompanyDashboard() {
       <Card className="overflow-hidden border-none shadow-sm">
         <div className="flex flex-col items-center justify-between gap-6 p-6 sm:flex-row">
           <div className="flex items-center gap-5">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-50 p-2 shadow-inner dark:bg-slate-800/50">
+            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 shadow-inner dark:bg-slate-800/50">
               {data.company?.logo ? (
-                <img src={fixFileUrl(data.company.logo)} alt="Logo" className="h-full w-full object-contain" />
+                <img src={fixFileUrl(data.company.logo)} alt="Logo" className="h-full w-full object-cover" />
               ) : (
                 <Building2 className="h-10 w-10 text-primary-600" />
               )}
