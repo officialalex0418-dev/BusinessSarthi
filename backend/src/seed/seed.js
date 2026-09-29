@@ -42,7 +42,7 @@ async function seed() {
       {
         name: 'Starter', price: 2999, maxStaff: 10, trackingIntervalMinutes: 120,
         description: 'Basic tracking for small teams',
-        features: { employeeTracking: true, inventoryManagement: false, vendorManagement: false, distributorManagement: false, payrollManagement: false, salesTracking: true },
+        features: { employeeTracking: true, inventoryManagement: false, vendorManagement: false, distributorManagement: true, payrollManagement: false, salesTracking: true },
       },
       {
         name: 'Growth', price: 7999, maxStaff: 50, trackingIntervalMinutes: 60,

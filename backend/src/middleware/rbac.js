@@ -179,7 +179,11 @@ export const requireFeature = (feature) => async (req, _res, next) => {
 
     if (!pkg || pkg.status !== 'ACTIVE') return next(ApiError.forbidden('Package inactive or not found'));
 
-    if (!pkg.features?.[feature]) {
+    const isAllowed = feature === 'distributorManagement'
+      ? (pkg.features?.[feature] !== false)
+      : !!pkg.features?.[feature];
+
+    if (!isAllowed) {
       return next(ApiError.forbidden(`Your package does not include this feature (${feature})`));
     }
 

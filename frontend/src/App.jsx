@@ -146,6 +146,9 @@ export default function App() {
   const hasFeature = (feature) => {
     if (['SUPER_ADMIN', 'ADMIN_EMPLOYEE'].includes(user?.role)) return true;
     const features = user?.company?.package?.features || {};
+    if (feature === 'distributorManagement') {
+      return features.distributorManagement !== false;
+    }
     return !!features[feature];
   };
 

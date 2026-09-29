@@ -20,7 +20,7 @@ const emptyForm = {
   chatRetentionDays: 30,
   features: {
     employeeTracking: true, inventoryManagement: false, vendorManagement: false,
-    distributorManagement: false, payrollManagement: false, salesTracking: false, complaintChat: false
+    distributorManagement: true, payrollManagement: false, salesTracking: false, complaintChat: false
   },
 };
 
