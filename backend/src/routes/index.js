@@ -39,9 +39,9 @@ import * as misc from '../controllers/misc.controller.js';
 const r = Router();
 
 const PLATFORM = ['SUPER_ADMIN', 'ADMIN_EMPLOYEE'];
-const ALL_STAFF = ['COMPANY_OWNER', 'COMPANY_MANAGER', 'STAFF'];
-const MANAGERS = ['SUPER_ADMIN', 'ADMIN_EMPLOYEE', 'COMPANY_OWNER', 'COMPANY_MANAGER'];
-const OWNERS = ['SUPER_ADMIN', 'ADMIN_EMPLOYEE', 'COMPANY_OWNER'];
+const ALL_STAFF = ['COMPANY_OWNER', 'COMPANY_MANAGER', 'STAFF', 'STOCKIST'];
+const MANAGERS = ['SUPER_ADMIN', 'ADMIN_EMPLOYEE', 'COMPANY_OWNER', 'COMPANY_MANAGER', 'STOCKIST'];
+const OWNERS = ['SUPER_ADMIN', 'ADMIN_EMPLOYEE', 'COMPANY_OWNER', 'STOCKIST'];
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -73,8 +73,8 @@ r.get('/dashboard/staff', protect, authorize(...ALL_STAFF), dashboard.staffDashb
 // ============ COMPANIES (Super Admin) ============
 r.get('/companies', protect, authorize(...PLATFORM), company.listCompanies);
 r.post('/companies', protect, authorize(...PLATFORM), validate({ body: schemas.createCompany }), company.createCompany);
-r.get('/companies/me', protect, authorize('COMPANY_OWNER', 'COMPANY_MANAGER'), company.myCompany);
-r.patch('/companies/me', protect, authorize('COMPANY_OWNER', 'COMPANY_MANAGER'), validate({ body: schemas.updateCompany }), company.updateMyCompany);
+r.get('/companies/me', protect, authorize('COMPANY_OWNER', 'COMPANY_MANAGER', 'STOCKIST'), company.myCompany);
+r.patch('/companies/me', protect, authorize('COMPANY_OWNER', 'COMPANY_MANAGER', 'STOCKIST'), validate({ body: schemas.updateCompany }), company.updateMyCompany);
 r.get('/companies/:id', protect, authorize(...PLATFORM), company.getCompany);
 r.patch('/companies/:id', protect, authorize(...PLATFORM), company.updateCompany);
 r.patch('/companies/:id/package', protect, authorize(...PLATFORM), validate({ body: schemas.assignPackage }), company.assignPackage);

@@ -339,7 +339,7 @@ export default function DashboardLayout({ title, nav }) {
       {/* Floating Support Button for Users */}
       {user?.role !== 'SUPER_ADMIN' && (
         <Link
-          to={user?.role === 'COMPANY_OWNER' ? '/company/support' : '/staff/support'}
+          to={user?.role === 'COMPANY_OWNER' ? '/company/support' : user?.role === 'STOCKIST' ? '/stockist/support' : '/staff/support'}
           className="fixed bottom-6 right-6 z-[1000] flex items-center gap-2 bg-primary-600 text-white px-5 py-3 rounded-full shadow-2xl hover:bg-primary-700 hover:scale-105 transition-all group"
         >
           <LifeBuoy className="h-5 w-5 group-hover:rotate-12 transition-transform" />

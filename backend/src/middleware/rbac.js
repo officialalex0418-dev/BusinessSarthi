@@ -24,9 +24,9 @@ export const authorize = (...roles) => (req, _res, next) => {
       if (path.includes('/staff') && !req.query.scope && !permissions.companyStaff) return next(ApiError.forbidden('Access denied: Company Staff'));
     }
 
-    // Company-level permissions (for STAFF and COMPANY_MANAGER)
-    // Owners bypass designation checks within their company
-    if (role !== 'COMPANY_OWNER' && role !== 'SUPER_ADMIN') {
+    // Company/Stockist-level permissions (for STAFF and COMPANY_MANAGER)
+    // Owners and Stockists bypass designation checks within their workspace
+    if (role !== 'COMPANY_OWNER' && role !== 'STOCKIST' && role !== 'SUPER_ADMIN') {
       let permissionChecked = false;
       let permissionGranted = false;
 
@@ -148,12 +148,13 @@ export const authorize = (...roles) => (req, _res, next) => {
  * Sets req.companyId for downstream controllers.
  */
 export const scopeCompany = (req, _res, next) => {
-  const { role, company } = req.user;
+  const { role, company, stockist } = req.user;
   if (role === 'SUPER_ADMIN' || role === 'ADMIN_EMPLOYEE') {
     req.companyId = req.params.companyId || req.query.companyId || null;
   } else {
-    if (!company) return next(ApiError.forbidden('No company associated with this account'));
-    req.companyId = company._id ? company._id.toString() : company.toString();
+    const entity = company || stockist;
+    if (!entity) return next(ApiError.forbidden('No company or stockist associated with this account'));
+    req.companyId = entity._id ? entity._id.toString() : entity.toString();
   }
   next();
 };
@@ -164,10 +165,10 @@ export const scopeCompany = (req, _res, next) => {
  */
 export const requireFeature = (feature) => async (req, _res, next) => {
   try {
-    if (['SUPER_ADMIN', 'ADMIN_EMPLOYEE'].includes(req.user.role)) return next();
+    if (['SUPER_ADMIN', 'ADMIN_EMPLOYEE', 'STOCKIST'].includes(req.user.role)) return next();
 
-    const companyDoc = req.user.company;
-    if (!companyDoc) return next(ApiError.forbidden('No company associated with this account'));
+    const companyDoc = req.user.company || req.user.stockist;
+    if (!companyDoc) return next(ApiError.forbidden('No company or stockist associated with this account'));
 
     // Use populated package if available, else fetch it
     let pkg = companyDoc.package;

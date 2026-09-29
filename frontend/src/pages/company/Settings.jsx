@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Package, ShieldCheck, Mail, Phone, MapPin, Pencil, Lock, Globe, FileText } from 'lucide-react';
 import { api } from '@/api/client';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardHeader, CardBody, Button, Badge, Spinner } from '@/components/ui';
 import { fixFileUrl } from '@/lib/utils';
 
 export default function CompanySettings() {
+  const { user } = useAuth();
   const [company, setCompany] = useState(null);
   const navigate = useNavigate();
 
@@ -44,7 +46,7 @@ export default function CompanySettings() {
               variant="outline"
               size="sm"
               className="h-8 bg-white/10 text-xs text-white border-white/20 hover:bg-white/20 backdrop-blur-md sm:h-9 sm:text-sm"
-              onClick={() => navigate('/company/settings/edit')}
+              onClick={() => navigate(user?.role === 'STOCKIST' ? '/stockist/settings/edit' : '/company/settings/edit')}
             >
               <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit Profile
             </Button>

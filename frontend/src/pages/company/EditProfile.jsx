@@ -90,6 +90,8 @@ export default function CompanyEditProfile() {
     });
   }, []);
 
+  const settingsPath = user?.role === 'STOCKIST' ? '/stockist/settings' : '/company/settings';
+
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true); setError(''); setSuccess('');
@@ -101,7 +103,7 @@ export default function CompanyEditProfile() {
       await api.patch('/companies/me', body);
       await refreshUser();
       setSuccess('Profile updated successfully ✓');
-      setTimeout(() => navigate('/company/settings'), 1500);
+      setTimeout(() => navigate(settingsPath), 1500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update profile');
     } finally {
@@ -122,10 +124,10 @@ export default function CompanyEditProfile() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/company/settings')} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+        <button onClick={() => navigate(settingsPath)} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-2xl font-bold">Edit Company Profile</h1>
+        <h1 className="text-2xl font-bold">Edit Profile</h1>
       </div>
 
       {success && <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">{success}</div>}
@@ -238,7 +240,7 @@ export default function CompanyEditProfile() {
               <Button type="submit" loading={loading} className="flex-1">
                 <Save className="h-4 w-4" /> Save Profile
               </Button>
-              <Button type="button" variant="outline" onClick={() => navigate('/company/settings')} className="flex-1">
+              <Button type="button" variant="outline" onClick={() => navigate(settingsPath)} className="flex-1">
                 Cancel
               </Button>
             </div>

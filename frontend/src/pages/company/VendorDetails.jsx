@@ -288,7 +288,7 @@ export default function VendorDetails() {
     <div className="space-y-6 pb-20">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
-          <Link to="/company/vendors" className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <Link to={user?.role === 'STOCKIST' ? '/stockist/vendors' : '/company/vendors'} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>

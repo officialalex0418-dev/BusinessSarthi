@@ -84,16 +84,24 @@ export const getCompany = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { company } });
 });
 
-/** GET /companies/me — current user's company (owner/manager) */
+/** GET /companies/me — current user's company or stockist */
 export const myCompany = asyncHandler(async (req, res) => {
-  const company = await Company.findById(req.user.company).populate('package').populate('owner', 'name email phone');
-  if (!company) throw ApiError.notFound('Company not found');
+  const entityId = req.user.company || req.user.stockist;
+  if (!entityId) throw ApiError.notFound('Workspace not found');
+
+  let company = await Company.findById(entityId).populate('package').populate('owner', 'name email phone');
+  if (!company) {
+    const { Stockist } = await import('../models/index.js');
+    company = await Stockist.findById(entityId).populate('package').populate('owner', 'name email phone');
+  }
+  if (!company) throw ApiError.notFound('Workspace not found');
   res.json({ success: true, data: { company } });
 });
 
-/** PATCH /companies/me — company owner can edit own company details */
+/** PATCH /companies/me — owner can edit own workspace details */
 export const updateMyCompany = asyncHandler(async (req, res) => {
-  if (!req.user.company) throw ApiError.forbidden('No company associated with this account');
+  const entityId = req.user.company || req.user.stockist;
+  if (!entityId) throw ApiError.forbidden('No workspace associated with this account');
 
   const updates = (({ name, address, panVat, phone, email, logo, settings, registrationNumber, website, description, additionalInfo, location, checkInRadiusMeters }) =>
     ({ name, address, panVat, phone, email, logo, settings, registrationNumber, website, description, additionalInfo, location, checkInRadiusMeters }))(req.body);
@@ -104,10 +112,16 @@ export const updateMyCompany = asyncHandler(async (req, res) => {
     updates.logo = await uploadFile(updates.logo, 'logos');
   }
 
-  const companyId = req.user.company._id || req.user.company;
-  const company = await Company.findByIdAndUpdate(companyId, updates, { new: true, runValidators: true })
+  const companyId = entityId._id || entityId;
+  let company = await Company.findByIdAndUpdate(companyId, updates, { new: true, runValidators: true })
     .populate('package').populate('owner', 'name email phone');
-  if (!company) throw ApiError.notFound('Company not found');
+
+  if (!company) {
+    const { Stockist } = await import('../models/index.js');
+    company = await Stockist.findByIdAndUpdate(companyId, updates, { new: true, runValidators: true })
+      .populate('package').populate('owner', 'name email phone');
+  }
+  if (!company) throw ApiError.notFound('Workspace not found');
 
   audit({ req, action: 'UPDATE_MY_COMPANY', entity: 'Company', entityId: company._id });
   res.json({ success: true, data: { company } });

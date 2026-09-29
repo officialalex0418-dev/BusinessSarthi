@@ -145,6 +145,18 @@ const staffNavBase = [
 
 const stockistNav = [
   { to: '/stockist', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/stockist/staff', label: 'Employee', icon: Users },
+  { to: '/stockist/attendance', label: 'Attendance', icon: CalendarCheck },
+  { to: '/stockist/leaves', label: 'Leave Management', icon: CalendarOff },
+  { to: '/stockist/sales', label: 'Sales Tracker', icon: TrendingUp },
+  { to: '/stockist/inventory', label: 'Inventory', icon: Boxes },
+  { to: '/stockist/outlets', label: 'Outlets', icon: Truck },
+  { to: '/stockist/vendors', label: 'Vendors', icon: Building2 },
+  { to: '/stockist/payroll', label: 'Payroll Management', icon: Wallet },
+  { to: '/stockist/support', label: 'Support', icon: LifeBuoy },
+  { to: '/stockist/reports', label: 'Report', icon: FileText },
+  { to: '/stockist/configuration', label: 'Configuration', icon: Settings },
+  { to: '/stockist/settings', label: 'Setting', icon: Settings },
 ];
 
 export default function App() {
@@ -499,6 +511,31 @@ export default function App() {
         }
       >
         <Route index element={<StockistDashboard />} />
+        <Route path="staff" element={<StaffList />} />
+        <Route path="attendance" element={<AttendancePage />} />
+        <Route path="leaves" element={<Leaves />} />
+        <Route path="sales" element={<SalesTracker />} />
+        <Route path="inventory" element={<InventoryPage />} />
+        <Route path="outlets" element={<Distributors />} />
+        <Route path="outlets/:id" element={<DistributorDetails />} />
+        <Route path="vendors" element={<Vendors />} />
+        <Route path="vendors/:id" element={<VendorDetails />} />
+        <Route path="payroll" element={<CompanyPayroll />} />
+        <Route path="support" element={<TicketList />} />
+        <Route path="support/:id" element={<TicketDetail />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="configuration">
+          <Route index element={<CompanyConfiguration />} />
+          <Route path="designations" element={<CompanyDesignations />} />
+          <Route path="branches" element={<CompanyBranches />} />
+          <Route path="shifts" element={<CompanyShifts />} />
+          <Route path="targets" element={<CompanyTargets />} />
+          <Route path="departments" element={<CompanyDepartments />} />
+          <Route path="leaves" element={<CompanyLeavesConfig />} />
+          <Route path="holidays" element={<HolidayCalendar />} />
+        </Route>
+        <Route path="settings" element={<CompanySettings />} />
+        <Route path="settings/edit" element={<CompanyEditProfile />} />
       </Route>
 
       <Route path="*" element={<Navigate to={user ? ROLE_HOME[user.role] : '/login'} replace />} />

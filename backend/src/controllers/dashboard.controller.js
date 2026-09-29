@@ -39,7 +39,11 @@ export const companyDashboard = asyncHandler(async (req, res) => {
   const cachedData = statsCache.get(`company_dashboard:${companyId}`);
   if (cachedData) return res.json({ success: true, data: cachedData });
 
-  const company = await Company.findById(companyId).populate('package', 'name').lean();
+  let company = await Company.findById(companyId).populate('package', 'name').lean();
+  if (!company) {
+    const { Stockist } = await import('../models/index.js');
+    company = await Stockist.findById(companyId).populate('package', 'name').lean();
+  }
   const dateFormat = company?.settings?.dateFormat || 'AD';
 
   const now = new Date();
