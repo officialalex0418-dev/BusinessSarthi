@@ -1,5 +1,6 @@
 export { default as User } from './User.js';
 export { default as Company } from './Company.js';
+export { default as Stockist } from './Stockist.js';
 export { default as Branch } from './Branch.js';
 export { default as Shift } from './Shift.js';
 export { default as Department } from './Department.js';

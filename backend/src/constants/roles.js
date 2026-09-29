@@ -4,6 +4,7 @@ export const ROLES = Object.freeze({
   COMPANY_OWNER: 'COMPANY_OWNER',
   COMPANY_MANAGER: 'COMPANY_MANAGER',
   STAFF: 'STAFF',
+  STOCKIST: 'STOCKIST',
 });
 
 export const ADMIN_EMPLOYEE_SUBROLES = Object.freeze(['ADMIN', 'HR', 'SUPPORT', 'FINANCE']);

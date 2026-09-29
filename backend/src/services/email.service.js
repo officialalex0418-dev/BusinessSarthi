@@ -127,6 +127,20 @@ export const emails = {
       ctaUrl: `${env.clientUrl}/login`,
     }),
 
+  stockistCreated: (to, { stockistName, ownerEmail, tempPassword }) =>
+    sendEmail({
+      to,
+      subject: 'Welcome to Business Sarthi 🎉',
+      title: `Your Stockist workspace is ready`,
+      bodyHtml: `Hi there!<br/><br/>
+        An account for Stockist <b>${stockistName}</b> has been created on Business Sarthi.<br/><br/>
+        <b>Login Email:</b> ${ownerEmail}<br/>
+        <b>Temporary Password:</b> <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-weight:bold;">${tempPassword}</code><br/><br/>
+        For security reasons, you will be required to change this password upon your first login.`,
+      ctaText: 'Login to Dashboard',
+      ctaUrl: `${env.clientUrl}/login`,
+    }),
+
   staffCreated: (to, { name, companyName, tempPassword }) =>
     sendEmail({
       to,

@@ -31,6 +31,11 @@ export const login = asyncHandler(async (req, res) => {
       populate: { path: 'package', select: 'name status features chatRetentionDays' }
     })
     .populate({
+      path: 'stockist',
+      select: 'name status package settings address phone panVat registrationNumber logo website description additionalInfo',
+      populate: { path: 'package', select: 'name status features' }
+    })
+    .populate({
       path: 'designation',
       populate: { path: 'department', select: 'name' }
     });
@@ -41,6 +46,7 @@ export const login = asyncHandler(async (req, res) => {
   }
   if (!user.isActive) throw ApiError.forbidden('Account is deactivated');
   if (user.company?.status === 'SUSPENDED') throw ApiError.forbidden('Company is suspended');
+  if (user.stockist?.status === 'SUSPENDED') throw ApiError.forbidden('Stockist is suspended');
 
   // Single device login for APP USERS (Staff & Managers)
   const isAppRequest = !!deviceId;
@@ -130,6 +136,10 @@ export const refresh = asyncHandler(async (req, res) => {
     path: 'company',
     select: 'name status package settings address phone panVat registrationNumber logo website description additionalInfo',
     populate: { path: 'package', select: 'name status features chatRetentionDays trackingIntervalMinutes' }
+  }).populate({
+    path: 'stockist',
+    select: 'name status package settings address phone panVat registrationNumber logo website description additionalInfo',
+    populate: { path: 'package', select: 'name status features' }
   }).populate({
     path: 'designation',
     populate: { path: 'department', select: 'name' }

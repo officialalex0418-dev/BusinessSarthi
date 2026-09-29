@@ -152,6 +152,7 @@ export const ROLE_LABELS = {
   COMPANY_OWNER: 'Company Owner',
   COMPANY_MANAGER: 'Company Manager',
   STAFF: 'Staff',
+  STOCKIST: 'Stockist',
 };
 
 export const ROLE_HOME = {
@@ -160,4 +161,5 @@ export const ROLE_HOME = {
   COMPANY_OWNER: '/company',
   COMPANY_MANAGER: '/staff',
   STAFF: '/staff',
+  STOCKIST: '/stockist',
 };

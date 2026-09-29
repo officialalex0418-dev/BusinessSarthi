@@ -36,6 +36,7 @@ const userSchema = new mongoose.Schema(
     designation: { type: mongoose.Schema.Types.ObjectId, ref: 'Designation', default: null },
     shift: { type: mongoose.Schema.Types.ObjectId, ref: 'Shift', default: null },
     company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', index: true, default: null },
+    stockist: { type: mongoose.Schema.Types.ObjectId, ref: 'Stockist', index: true, default: null },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null },
     position: { type: String, trim: true, maxlength: 100 },
     workMode: { type: String, enum: ['INDOOR', 'OUTDOOR'], default: 'OUTDOOR' },

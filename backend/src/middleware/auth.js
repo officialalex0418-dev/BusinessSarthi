@@ -24,6 +24,10 @@ export const protect = asyncHandler(async (req, _res, next) => {
       select: 'name status package settings address phone panVat registrationNumber logo website description additionalInfo',
       populate: { path: 'package', select: 'name status features chatRetentionDays trackingIntervalMinutes' }
     }).populate({
+      path: 'stockist',
+      select: 'name status package settings address phone panVat registrationNumber logo website description additionalInfo',
+      populate: { path: 'package', select: 'name status features' }
+    }).populate({
       path: 'designation',
       populate: { path: 'department', select: 'name' }
     }).populate('shift');
@@ -38,6 +42,10 @@ export const protect = asyncHandler(async (req, _res, next) => {
 
   if (user.company && user.company.status === 'SUSPENDED') {
     throw ApiError.forbidden('Company account is suspended');
+  }
+
+  if (user.stockist && user.stockist.status === 'SUSPENDED') {
+    throw ApiError.forbidden('Stockist account is suspended');
   }
 
   // Force password change if required

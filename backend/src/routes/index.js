@@ -8,6 +8,7 @@ import { schemas } from './validators.js';
 
 import * as auth from '../controllers/auth.controller.js';
 import * as company from '../controllers/company.controller.js';
+import * as stockist from '../controllers/stockist.controller.js';
 import * as pkg from '../controllers/package.controller.js';
 import * as staff from '../controllers/staff.controller.js';
 import * as location from '../controllers/location.controller.js';
@@ -79,6 +80,16 @@ r.patch('/companies/:id', protect, authorize(...PLATFORM), company.updateCompany
 r.patch('/companies/:id/package', protect, authorize(...PLATFORM), validate({ body: schemas.assignPackage }), company.assignPackage);
 r.delete('/companies/:id', protect, authorize('SUPER_ADMIN'), company.deleteCompany);
 r.delete('/companies/:id/hard', protect, authorize('SUPER_ADMIN'), company.hardDeleteCompany);
+
+// ============ STOCKISTS (Super Admin & Stockist Owner) ============
+r.get('/stockists', protect, authorize(...PLATFORM), stockist.listStockists);
+r.post('/stockists', protect, authorize(...PLATFORM), stockist.createStockist);
+r.get('/stockists/me', protect, authorize('STOCKIST'), stockist.myStockist);
+r.patch('/stockists/me', protect, authorize('STOCKIST'), stockist.updateMyStockist);
+r.get('/stockists/:id', protect, authorize(...PLATFORM), stockist.getStockist);
+r.patch('/stockists/:id', protect, authorize(...PLATFORM), stockist.updateStockist);
+r.delete('/stockists/:id', protect, authorize('SUPER_ADMIN'), stockist.deleteStockist);
+r.delete('/stockists/:id/hard', protect, authorize('SUPER_ADMIN'), stockist.hardDeleteStockist);
 
 // ============ PACKAGES ============
 r.get('/packages', protect, pkg.listPackages);

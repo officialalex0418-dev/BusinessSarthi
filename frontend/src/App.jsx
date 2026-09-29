@@ -7,7 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import {
   LayoutDashboard, Building2, Users, Package, Wallet, Settings, ShieldCheck,
   MapPin, Boxes, Truck, TrendingUp, FileText, CalendarCheck, CalendarOff, User,
-  MessageSquare, LayoutGrid, Inbox, LifeBuoy
+  MessageSquare, LayoutGrid, Inbox, LifeBuoy, Store
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
@@ -26,6 +26,7 @@ import ResetPassword from '@/pages/auth/ResetPassword';
 // Super Admin
 import SuperDashboard from '@/pages/superadmin/Dashboard';
 import Companies from '@/pages/superadmin/Companies';
+import Stockists from '@/pages/superadmin/Stockists';
 import Packages from '@/pages/superadmin/Packages';
 import SystemEmployees from '@/pages/superadmin/SystemEmployees';
 import CompanyStaff from '@/pages/superadmin/CompanyStaff';
@@ -69,6 +70,9 @@ import Chat from '@/pages/shared/Complaints';
 
 // Staff
 import StaffDashboard from '@/pages/staff/Dashboard';
+
+// Stockist
+import StockistDashboard from '@/pages/stockist/StockistDashboard';
 import StaffAttendance from '@/pages/staff/Attendance';
 import StaffLeaves from '@/pages/staff/Leaves';
 import StaffCustomers from '@/pages/staff/Customers';
@@ -96,6 +100,7 @@ function Protected({ roles, children }) {
 const adminNav = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/companies', label: 'Companies', icon: Building2 },
+  { to: '/admin/stockists', label: 'Stockists', icon: Store },
   { to: '/admin/packages', label: 'Packages', icon: Package },
   { to: '/admin/employees', label: 'System Employees', icon: Users },
   { to: '/admin/company-staff', label: 'Company Staff', icon: Users },
@@ -138,6 +143,10 @@ const staffNavBase = [
   { to: '/staff/profile', label: 'Profile', icon: User },
 ];
 
+const stockistNav = [
+  { to: '/stockist', label: 'Dashboard', icon: LayoutDashboard, end: true },
+];
+
 export default function App() {
   const { user, loading } = useAuth();
   const { requestAllPermissions } = useAppPermissions();
@@ -157,6 +166,7 @@ export default function App() {
     if (user?.role === 'ADMIN_EMPLOYEE') {
       const perms = user.designation?.permissions || {};
       if (item.to === '/admin/companies') return perms.companies;
+      if (item.to === '/admin/stockists') return perms.companies;
       if (item.to === '/admin/packages') return perms.packages;
       if (item.to === '/admin/employees') return perms.systemEmployees;
       if (item.to === '/admin/company-staff') return perms.companyStaff;
@@ -378,6 +388,7 @@ export default function App() {
       >
         <Route index element={<SuperDashboard />} />
         <Route path="companies" element={<Companies />} />
+        <Route path="stockists" element={<Stockists />} />
         <Route path="packages" element={<Packages />} />
         <Route path="employees" element={<SystemEmployees />} />
         <Route path="company-staff" element={<CompanyStaff />} />
@@ -477,6 +488,17 @@ export default function App() {
           <Route path="leaves" element={<CompanyLeavesConfig />} />
           <Route path="holidays" element={<HolidayCalendar />} />
         </Route>
+      </Route>
+
+      <Route
+        path="/stockist"
+        element={
+          <Protected roles={['STOCKIST']}>
+            <DashboardLayout title="Stockist Panel" nav={stockistNav} />
+          </Protected>
+        }
+      >
+        <Route index element={<StockistDashboard />} />
       </Route>
 
       <Route path="*" element={<Navigate to={user ? ROLE_HOME[user.role] : '/login'} replace />} />
