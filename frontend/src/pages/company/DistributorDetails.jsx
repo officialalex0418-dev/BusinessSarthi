@@ -506,7 +506,7 @@ export default function DistributorDetails() {
                 <Plus className="h-4 w-4 mr-2" /> New Invoice
               </Button>
               <Button className="w-full" variant="outline" onClick={() => setModal('payment')}>
-                <CreditCard className="h-4 w-4 mr-1 sm:mr-2" /> <span className="truncate">Pay</span>
+                <CreditCard className="h-4 w-4 mr-1 sm:mr-2" /> <span className="truncate">Record Payment</span>
               </Button>
               <Button className="w-full" variant="outline" onClick={() => { setEditingCheque(null); setChequeForm({ chequeNumber: '', bankName: '', issueDate: '', cashDate: '', amount: 0, remarks: '', status: 'ISSUED' }); setModal('cheque'); }}>
                 <Plus className="h-4 w-4 mr-1 sm:mr-2" /> <span className="truncate">Cheque</span>

@@ -35,6 +35,16 @@ export const getDistributorDetails = asyncHandler(async (req, res) => {
     Payment.find({ distributor: distributor._id, company: req.companyId }).sort('paymentDate'),
   ]);
 
+  // Recalculate and ensure accurate outstanding balance (Total Invoiced - Total Paid)
+  const totalInvoiced = invoices.reduce((sum, i) => sum + (i.netTotal || 0), 0);
+  const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const calculatedOutstanding = totalInvoiced - totalPaid;
+
+  if (distributor.outstandingBalance !== calculatedOutstanding) {
+    distributor.outstandingBalance = calculatedOutstanding;
+    await distributor.save();
+  }
+
   // Aging calculation using FIFO matching on-the-fly
   // Total received vs chronological invoices
   let totalPaymentsReceived = payments.reduce((sum, p) => sum + p.amount, 0);
