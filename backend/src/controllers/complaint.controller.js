@@ -180,3 +180,20 @@ export const addComplaintReply = asyncHandler(async (req, res) => {
 
   res.status(201).json({ success: true, data: reply });
 });
+
+export const addReply = addComplaintReply;
+
+/**
+ * @desc    Get complaint recipients (users in same company)
+ * @route   GET /api/v1/complaints/recipients
+ */
+export const getRecipients = asyncHandler(async (req, res) => {
+  const users = await User.find({
+    company: req.user.company,
+    _id: { $ne: req.user._id },
+    isActive: true,
+  }).select('_id name position role email phone');
+
+  res.status(200).json({ success: true, data: users });
+});
+
