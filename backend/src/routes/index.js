@@ -165,7 +165,7 @@ r.post('/inventory/:id/stock', protect, authorize(...ALL_STAFF), scopeCompany, r
 r.delete('/inventory/:id', protect, authorize(...OWNERS), scopeCompany, requireFeature('inventoryManagement'), inventory.deleteProduct);
 r.delete('/inventory/:id/hard', protect, authorize(...OWNERS), scopeCompany, requireFeature('inventoryManagement'), inventory.hardDeleteProduct);
 
-// ============ DISTRIBUTORS (feature-gated) ============
+// ============ DISTRIBUTORS / OUTLETS (feature-gated) ============
 r.get('/distributors', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.listDistributors);
 r.post('/distributors', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.createDistributor);
 r.patch('/distributors/:id', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.updateDistributor);
@@ -175,6 +175,17 @@ r.get('/distributors/analytics', protect, authorize(...MANAGERS), scopeCompany, 
 r.get('/distributors/:id', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.getDistributorDetails);
 r.post('/distributors/:id/bulk-transactions', protect, authorize(...MANAGERS), scopeCompany, requireFeature('distributorManagement'), upload.single('file'), distributor.bulkUploadTransactions);
 r.get('/distributors/:id/ledger', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.getLedger);
+
+// Alias routes for Outlets (Stockist)
+r.get('/outlets', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.listDistributors);
+r.post('/outlets', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.createDistributor);
+r.patch('/outlets/:id', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.updateDistributor);
+r.delete('/outlets/:id', protect, authorize(...OWNERS), scopeCompany, requireFeature('distributorManagement'), distributor.deleteDistributor);
+r.delete('/outlets/:id/hard', protect, authorize(...OWNERS), scopeCompany, requireFeature('distributorManagement'), distributor.hardDeleteDistributor);
+r.get('/outlets/analytics', protect, authorize(...MANAGERS), scopeCompany, requireFeature('distributorManagement'), distributor.distributorAnalytics);
+r.get('/outlets/:id', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.getDistributorDetails);
+r.post('/outlets/:id/bulk-transactions', protect, authorize(...MANAGERS), scopeCompany, requireFeature('distributorManagement'), upload.single('file'), distributor.bulkUploadTransactions);
+r.get('/outlets/:id/ledger', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.getLedger);
 
 // ============ CHEQUES ============
 r.get('/cheques', protect, authorize(...ALL_STAFF), scopeCompany, cheque.listCheques);

@@ -6,6 +6,9 @@ import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
 import { adToBs, getBsMonthRange } from '../utils/nepaliDate.js';
 
+const getNotFoundMsg = (req) => (req.user?.role === 'STOCKIST' ? 'Outlet not found' : 'Distributor not found');
+const getDeactivatedMsg = (req) => (req.user?.role === 'STOCKIST' ? 'Outlet deactivated' : 'Distributor deactivated');
+
 /** GET /distributors */
 export const listDistributors = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
@@ -25,7 +28,7 @@ export const listDistributors = asyncHandler(async (req, res) => {
 /** GET /distributors/:id - includes aging and transaction history */
 export const getDistributorDetails = asyncHandler(async (req, res) => {
   const distributor = await Distributor.findOne({ _id: req.params.id, company: req.companyId });
-  if (!distributor) throw ApiError.notFound('Distributor not found');
+  if (!distributor) throw ApiError.notFound(getNotFoundMsg(req));
 
   const [invoices, payments] = await Promise.all([
     SalesInvoice.find({ distributor: distributor._id, company: req.companyId }).sort('saleDate'),
@@ -92,7 +95,7 @@ export const updateDistributor = asyncHandler(async (req, res) => {
     { $set: req.body },
     { new: true, runValidators: true }
   );
-  if (!distributor) throw ApiError.notFound('Distributor not found');
+  if (!distributor) throw ApiError.notFound(getNotFoundMsg(req));
   audit({ req, action: 'UPDATE_DISTRIBUTOR', entity: 'Distributor', entityId: distributor._id });
   res.json({ success: true, data: { distributor } });
 });
@@ -104,15 +107,15 @@ export const deleteDistributor = asyncHandler(async (req, res) => {
     { isActive: false },
     { new: true }
   );
-  if (!distributor) throw ApiError.notFound('Distributor not found');
+  if (!distributor) throw ApiError.notFound(getNotFoundMsg(req));
   audit({ req, action: 'DEACTIVATE_DISTRIBUTOR', entity: 'Distributor', entityId: distributor._id });
-  res.json({ success: true, message: 'Distributor deactivated' });
+  res.json({ success: true, message: getDeactivatedMsg(req) });
 });
 
 /** DELETE /distributors/:id/hard */
 export const hardDeleteDistributor = asyncHandler(async (req, res) => {
   const distributor = await Distributor.findOne({ _id: req.params.id, company: req.companyId });
-  if (!distributor) throw ApiError.notFound('Distributor not found');
+  if (!distributor) throw ApiError.notFound(getNotFoundMsg(req));
 
   const distributorId = distributor._id;
   await Promise.all([
@@ -155,7 +158,7 @@ export const createInvoice = asyncHandler(async (req, res) => {
   const companyId = req.companyId;
 
   const distributor = await Distributor.findOne({ _id: distributorId, company: companyId });
-  if (!distributor) throw ApiError.notFound('Distributor not found');
+  if (!distributor) throw ApiError.notFound(getNotFoundMsg(req));
 
   let totalAmount = 0;
   const processedItems = [];
@@ -174,7 +177,7 @@ export const createInvoice = asyncHandler(async (req, res) => {
       product.movements.push({
         type: 'OUT',
         quantity: item.quantity,
-        note: `Invoice Entry (Distributor)`,
+        note: `Invoice Entry (${req.user?.role === 'STOCKIST' ? 'Outlet' : 'Distributor'})`,
         by: req.user._id
       });
       await product.save();
@@ -232,7 +235,7 @@ export const recordPayment = asyncHandler(async (req, res) => {
   const { distributorId, amount, method, remarks, paymentDate } = req.body;
 
   const distributor = await Distributor.findOne({ _id: distributorId, company: req.companyId });
-  if (!distributor) throw ApiError.notFound('Distributor not found');
+  if (!distributor) throw ApiError.notFound(getNotFoundMsg(req));
 
   let finalDate = new Date();
   if (paymentDate) {
@@ -275,7 +278,7 @@ export const bulkUploadTransactions = asyncHandler(async (req, res) => {
 
   const { id } = req.params;
   const distributor = await Distributor.findOne({ _id: id, company: req.companyId });
-  if (!distributor) throw ApiError.notFound('Distributor not found');
+  if (!distributor) throw ApiError.notFound(getNotFoundMsg(req));
 
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(req.file.buffer);

@@ -17,6 +17,9 @@ export default function InventoryPage() {
   const { user, setUser } = useAuth();
   const [data, setData] = useState(null);
   const [allProducts, setAllProducts] = useState([]);
+  const isStockist = user?.role === 'STOCKIST' || window.location.pathname.startsWith('/stockist');
+  const entitySingular = isStockist ? 'Outlet' : 'Distributor';
+
   const [vendors, setVendors] = useState([]);
   const [distributors, setDistributors] = useState([]);
   const [page, setPage] = useState(1);
@@ -684,8 +687,8 @@ export default function InventoryPage() {
          </form>
       </Modal>
 
-      {/* Simple Quick Distributor Create Modal */}
-      <Modal open={modal === 'distributor'} onClose={() => setModal('invoice')} title="Quick Add Distributor">
+      {/* Simple Quick Distributor / Outlet Create Modal */}
+      <Modal open={modal === 'distributor'} onClose={() => setModal('invoice')} title={`Quick Add ${entitySingular}`}>
          <form onSubmit={async (e) => {
            e.preventDefault();
            const body = {
@@ -700,8 +703,8 @@ export default function InventoryPage() {
            setInvoiceDistributorId(data.data.distributor._id);
            setModal('invoice');
          }} className="space-y-4">
-            <Input name="name" label="Distributor Name *" required />
-            <Input name="panVat" label="Distributor PAN" />
+            <Input name="name" label={`${entitySingular} Name *`} required />
+            <Input name="panVat" label={`${entitySingular} PAN`} />
             <Input name="registrationNumber" label="Registration Number" />
             <Input name="phone" label="Phone Number" />
             <Input name="address" label="Location / Address" />
@@ -941,15 +944,15 @@ export default function InventoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end bg-slate-50 dark:bg-slate-900/30 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-inner">
             <div className="space-y-4">
               <Select
-                label="Distributor Name *"
+                label={`${entitySingular} Name *`}
                 value={invoiceDistributorId}
                 onChange={e => {
                   if (e.target.value === 'NEW') setModal('distributor');
                   else setInvoiceDistributorId(e.target.value);
                 }}
                 options={[
-                  { value: '', label: 'Select distributor...' },
-                  { value: 'NEW', label: '+ Add New Distributor' },
+                  { value: '', label: `Select ${entitySingular.toLowerCase()}...` },
+                  { value: 'NEW', label: `+ Add New ${entitySingular}` },
                   ...distributors.map(d => ({ value: d._id, label: d.name }))
                 ]}
                 required

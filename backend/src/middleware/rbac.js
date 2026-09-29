@@ -88,7 +88,7 @@ export const authorize = (...roles) => (req, _res, next) => {
       } else if (path.startsWith('/inventory')) {
         permissionChecked = true;
         permissionGranted = permissions.inventory;
-      } else if (path.startsWith('/distributors') || path.startsWith('/invoices') || path.startsWith('/payments') || path.startsWith('/sales-invoices')) {
+      } else if (path.startsWith('/distributors') || path.startsWith('/outlets') || path.startsWith('/invoices') || path.startsWith('/payments') || path.startsWith('/sales-invoices')) {
         permissionChecked = true;
         permissionGranted = permissions.distributors;
       } else if (path.startsWith('/vendors') || path.startsWith('/purchases') || path.startsWith('/vendor-payments')) {

@@ -12,6 +12,11 @@ const emptyCheque = { distributor: '', chequeNumber: '', bankName: '', issueDate
 
 export default function Distributors() {
   const { user } = useAuth();
+  const isStockist = user?.role === 'STOCKIST' || window.location.pathname.startsWith('/stockist');
+  const entitySingular = isStockist ? 'Outlet' : 'Distributor';
+  const entityPlural = isStockist ? 'Outlets' : 'Distributors';
+  const activeStatLabel = isStockist ? 'Active Outlet' : 'Active Dist';
+
   const [data, setData] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const dateFormat = user?.company?.settings?.dateFormat || 'BS';
@@ -145,7 +150,6 @@ export default function Distributors() {
     }
 
     const companyLogo = user?.company?.logo || '';
-    const logoHtml = companyLogo ? `<img src="${companyLogo}" style="max-height: 80px; margin-bottom: 10px;" />` : '';
 
     printWindow.document.write(`
       <html>
@@ -256,7 +260,7 @@ export default function Distributors() {
     csvRows.push(`"Company:",${JSON.stringify(user?.company?.name || '')}`);
     csvRows.push(`"Address:",${JSON.stringify(user?.company?.address || '')}`);
     csvRows.push("");
-    csvRows.push(`"DISTRIBUTOR INFORMATION"`);
+    csvRows.push(`"${entitySingular.toUpperCase()} INFORMATION"`);
     csvRows.push(`"Name:",${JSON.stringify(editing.name)}`);
     csvRows.push(`"Phone:",${JSON.stringify(editing.phone || '')}`);
     csvRows.push(`"Closing Balance:",${JSON.stringify(formatMoney(ledger.finalBalance))}`);
@@ -294,21 +298,21 @@ export default function Distributors() {
   };
 
   if (featureBlocked) {
-    return <Card><EmptyState icon={Truck} title="Distributor management not included in your package"
-      subtitle="Upgrade your package to unlock distributor management." /></Card>;
+    return <Card><EmptyState icon={Truck} title={`${entitySingular} management not included in your package`}
+      subtitle={`Upgrade your package to unlock ${entitySingular.toLowerCase()} management.`} /></Card>;
   }
   if (!data) return <Spinner />;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Distributors</h1>
+        <h1 className="text-2xl font-bold">{entityPlural}</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => { setEditingCheque(null); setChequeForm(emptyCheque); setModal('cheque'); }}>
             Add Cheque
           </Button>
           <Button onClick={() => { setEditing(null); setForm(emptyDistributor); setModal('form'); }}>
-            <Plus className="h-4 w-4" /> Add Distributor
+            <Plus className="h-4 w-4" /> Add {entitySingular}
           </Button>
         </div>
       </div>
@@ -332,7 +336,7 @@ export default function Distributors() {
             <p className="text-lg font-bold text-red-600 mt-1">{formatMoney(analytics.overdueOutstanding)}</p>
           </Card>
           <Card className="p-3 border-l-4 border-l-blue-500 bg-white dark:bg-slate-900">
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Active Dist</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{activeStatLabel}</p>
             <p className="text-lg font-bold text-blue-600 mt-1">{analytics.activeDistributors}</p>
           </Card>
           <Card
@@ -347,11 +351,11 @@ export default function Distributors() {
 
       <Card>
         <div className="border-b border-slate-200 p-4 dark:border-slate-800">
-          <Input placeholder="Search distributors…" value={search}
+          <Input placeholder={`Search ${entityPlural.toLowerCase()}...`} value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="max-w-xs" />
         </div>
         <Table
-          columns={['Distributor', 'Contact', 'Outstanding', 'Credit Limit', 'Status', 'Actions']}
+          columns={[entitySingular, 'Contact', 'Outstanding', 'Credit Limit', 'Status', 'Actions']}
           data={data.items}
           renderRow={(v) => (
             <tr key={v._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 text-sm">
@@ -416,8 +420,8 @@ export default function Distributors() {
         <Pagination pagination={data.pagination} onPage={setPage} />
       </Card>
 
-      {/* Distributor Form */}
-      <Modal open={modal === 'form'} onClose={() => setModal(null)} title={editing ? 'Edit Distributor' : 'Add Distributor'}>
+      {/* Form Modal */}
+      <Modal open={modal === 'form'} onClose={() => setModal(null)} title={editing ? `Edit ${entitySingular}` : `Add ${entitySingular}`}>
         <form onSubmit={submitDistributor} className="space-y-4">
           <Input label="Name *" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
           <div className="grid grid-cols-2 gap-4">
@@ -519,13 +523,13 @@ export default function Distributors() {
         )}
         <form onSubmit={submitCheque} className="space-y-4">
           <Select
-            label="Select Distributor *"
+            label={`Select ${entitySingular} *`}
             required
             disabled={!!editingCheque}
             value={chequeForm.distributor}
             onChange={e => setChequeForm({...chequeForm, distributor: e.target.value})}
             options={[
-              { value: '', label: 'Select a distributor...' },
+              { value: '', label: `Select ${isStockist ? 'an outlet' : 'a distributor'}...` },
               ...(data?.items?.map(d => ({ value: d._id, label: d.name })) || [])
             ]}
           />
@@ -566,7 +570,7 @@ export default function Distributors() {
             value={chequeForm.status}
             onChange={e => setChequeForm({...chequeForm, status: e.target.value})}
             options={[
-              { value: 'ISSUED', label: 'Issued (by distributor)' },
+              { value: 'ISSUED', label: `Issued (by ${entitySingular.toLowerCase()})` },
               { value: 'COLLECTED', label: 'Collected (at company)' },
               { value: 'DEPOSITED', label: 'Deposited (in bank)' },
               { value: 'CASHED', label: 'Cashed (payment received)' },
@@ -595,7 +599,7 @@ export default function Distributors() {
                 <tr>
                   <th className="p-3 text-left">Issue Date</th>
                   <th className="p-3 text-left">Cash Date</th>
-                  <th className="p-3 text-left">Distributor</th>
+                  <th className="p-3 text-left">{entitySingular}</th>
                   <th className="p-3 text-left">Cheque NO</th>
                   <th className="p-3 text-left">Bank</th>
                   <th className="p-3 text-right">Amount</th>

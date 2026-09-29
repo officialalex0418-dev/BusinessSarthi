@@ -9,6 +9,10 @@ import { InvoicePreview } from '@/components/InvoicePreview';
 
 export default function DistributorDetails() {
   const { user } = useAuth();
+  const isStockist = user?.role === 'STOCKIST' || window.location.pathname.startsWith('/stockist');
+  const entitySingular = isStockist ? 'Outlet' : 'Distributor';
+  const entityPlural = isStockist ? 'Outlets' : 'Distributors';
+
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -47,11 +51,11 @@ export default function DistributorDetails() {
       setAllProducts(meta.data.data.products);
       setDistCheques(cRes.data.data);
     } catch (err) {
-      setError('Failed to load distributor details');
+      setError(`Failed to load ${entitySingular.toLowerCase()} details`);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, entitySingular]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -205,7 +209,7 @@ export default function DistributorDetails() {
     csvRows.push(`"Company:",${JSON.stringify(user?.company?.name || '')}`);
     csvRows.push(`"Address:",${JSON.stringify(user?.company?.address || '')}`);
     csvRows.push("");
-    csvRows.push(`"DISTRIBUTOR DETAILS"`);
+    csvRows.push(`"${entitySingular.toUpperCase()} DETAILS"`);
     csvRows.push(`"Name:",${JSON.stringify(data?.distributor?.name)}`);
     csvRows.push(`"Outstanding Balance:",${JSON.stringify(formatMoney(data?.distributor?.outstandingBalance))}`);
     csvRows.push("");
@@ -298,7 +302,7 @@ export default function DistributorDetails() {
   };
 
   const deleteInv = async (invId) => {
-    if (!window.confirm('Are you sure you want to delete this invoice? This will adjust the distributor outstanding balance.')) return;
+    if (!window.confirm(`Are you sure you want to delete this invoice? This will adjust the ${entitySingular.toLowerCase()} outstanding balance.`)) return;
     try {
       await api.delete(`/sales-invoices/${invId}`);
       load();
@@ -308,7 +312,7 @@ export default function DistributorDetails() {
   };
 
   const deletePayment = async (payId) => {
-    if (!window.confirm('Are you sure you want to remove this payment record? This will increase the distributor outstanding balance.')) return;
+    if (!window.confirm(`Are you sure you want to remove this payment record? This will increase the ${entitySingular.toLowerCase()} outstanding balance.`)) return;
     try {
       await api.delete(`/payments/${payId}`);
       load();
@@ -368,7 +372,7 @@ export default function DistributorDetails() {
   };
 
   const downloadTemplate = () => {
-    downloadFile('/reports/bulk-upload-sample?type=TRANSACTION', 'Distributor_Bulk_Template.xlsx');
+    downloadFile('/reports/bulk-upload-sample?type=TRANSACTION', `${entitySingular}_Bulk_Template.xlsx`);
   };
 
   const addEditRow = () => {
@@ -437,7 +441,7 @@ export default function DistributorDetails() {
   };
 
   if (loading) return <Spinner />;
-  if (!data) return <div className="p-8 text-center text-red-500">{error || 'Distributor not found'}</div>;
+  if (!data) return <div className="p-8 text-center text-red-500">{error || `${entitySingular} not found`}</div>;
 
   const { distributor, invoices, payments, aging, history } = data;
 
@@ -813,7 +817,7 @@ export default function DistributorDetails() {
         <form onSubmit={submitNewInvoice} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end bg-slate-50 dark:bg-slate-900/30 p-4 rounded-xl border">
             <div className="space-y-4">
-               <Input label="Distributor" value={distributor.name} disabled className="bg-slate-100" />
+               <Input label={entitySingular} value={distributor.name} disabled className="bg-slate-100" />
                <DatePicker label="Due Date" value={newInvForm.dueDate} onChange={(val) => setNewInvForm({...newInvForm, dueDate: val})} required />
             </div>
 
@@ -1079,7 +1083,7 @@ export default function DistributorDetails() {
             value={chequeForm.status}
             onChange={e => setChequeForm({...chequeForm, status: e.target.value})}
             options={[
-              { value: 'ISSUED', label: 'Issued (by distributor)' },
+              { value: 'ISSUED', label: `Issued (by ${entitySingular.toLowerCase()})` },
               { value: 'COLLECTED', label: 'Collected (at company)' },
               { value: 'DEPOSITED', label: 'Deposited (in bank)' },
               { value: 'CASHED', label: 'Cashed (payment received)' },
@@ -1163,7 +1167,7 @@ export default function DistributorDetails() {
           <div className="mx-auto w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <p className="font-semibold text-slate-800 text-lg">Distributor Due is above credit limit</p>
+          <p className="font-semibold text-slate-800 text-lg">{entitySingular} Due is above credit limit</p>
           <p className="text-sm text-slate-500">The current outstanding balance exceeds the assigned credit limit. Do you want to proceed with issuing a new invoice?</p>
           <div className="flex gap-3 justify-center pt-4 border-t">
             <Button variant="outline" className="flex-1" onClick={() => setModal(null)}>Cancel</Button>
