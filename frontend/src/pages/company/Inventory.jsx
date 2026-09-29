@@ -249,6 +249,72 @@ export default function InventoryPage() {
   const [bulkData, setBulkData] = useState([]);
   const [bulkResults, setBulkResults] = useState(null);
 
+  // Download Report State
+  const [downloadFilterType, setDownloadFilterType] = useState('ALL');
+  const [downloadVendorId, setDownloadVendorId] = useState('');
+
+  const handleDownloadInventoryReport = async () => {
+    if (downloadFilterType === 'VENDOR' && !downloadVendorId) {
+      setError('Please select a vendor');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const { data: resData } = await api.get('/inventory', { params: { limit: 10000 } });
+      let items = resData.data.items || [];
+
+      let vendorName = 'All Vendors';
+      if (downloadFilterType === 'VENDOR') {
+        const selectedVendor = vendors.find(v => v._id === downloadVendorId);
+        vendorName = selectedVendor?.name || 'Selected Vendor';
+        items = items.filter(item => {
+          const vId = typeof item.vendor === 'object' ? item.vendor?._id : item.vendor;
+          return vId === downloadVendorId;
+        });
+      }
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString();
+      const timeStr = now.toLocaleTimeString();
+
+      const wsData = [
+        ['Inventory Report'],
+        [`Generated On: ${dateStr} ${timeStr}`],
+        [`Vendor: ${vendorName}`],
+        [],
+        ['S.N', 'Product Name', 'Cost Price', 'Total Cost Amount']
+      ];
+
+      items.forEach((item, index) => {
+        const costPrice = Number(item.costPrice) || 0;
+        const qty = Number(item.quantity) || 0;
+        const totalCostAmount = costPrice * qty;
+        wsData.push([
+          index + 1,
+          item.productName,
+          costPrice,
+          totalCostAmount
+        ]);
+      });
+
+      const totalValuation = items.reduce((sum, item) => sum + ((Number(item.costPrice) || 0) * (Number(item.quantity) || 0)), 0);
+      wsData.push([]);
+      wsData.push(['Total Valuation', '', '', totalValuation]);
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+      XLSX.writeFile(wb, `Inventory_Report_${downloadFilterType === 'VENDOR' ? vendorName.replace(/\s+/g, '_') : 'All'}_${Date.now()}.xlsx`);
+
+      setModal(null);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to download inventory report');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const load = useCallback(async () => {
     try {
       const { data } = await api.get('/inventory', {
@@ -382,6 +448,9 @@ export default function InventoryPage() {
           </Button>
           <Button variant="outline" className="justify-start sm:justify-center" onClick={() => setModal('bulk')}>
             <FileUp className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Bulk</span>
+          </Button>
+          <Button variant="outline" className="justify-start sm:justify-center" onClick={() => setModal('download')}>
+            <Download className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Download</span>
           </Button>
           <Button className="col-span-2 sm:col-auto" onClick={() => {
             setEditing(null);
@@ -1104,6 +1173,43 @@ export default function InventoryPage() {
             <Button type="submit" loading={saving} className="px-8">Submit Invoice</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Download Inventory Report Modal */}
+      <Modal open={modal === 'download'} onClose={() => setModal(null)} title="Download Inventory Report">
+        {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{error}</div>}
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Filter Type</label>
+            <Select
+              value={downloadFilterType}
+              onChange={(e) => setDownloadFilterType(e.target.value)}
+              options={[
+                { value: 'ALL', label: 'All Inventory' },
+                { value: 'VENDOR', label: 'Vendor Wise' }
+              ]}
+            />
+          </div>
+
+          {downloadFilterType === 'VENDOR' && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Select Vendor</label>
+              <Select
+                value={downloadVendorId}
+                onChange={(e) => setDownloadVendorId(e.target.value)}
+                options={[
+                  { value: '', label: 'Select vendor...' },
+                  ...vendors.map(v => ({ value: v._id, label: v.name }))
+                ]}
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+            <Button onClick={handleDownloadInventoryReport} loading={saving}>Download Excel</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
