@@ -243,7 +243,6 @@ export default function VendorDetails() {
           amount: Number(i.amount) || ((Number(i.price) || 0) * (Number(i.quantity) || 1)),
           expiryDate: i.expiryDate ? String(i.expiryDate).split('T')[0] : ''
         })));
-        })));
         setPurchaseDiscountPct(Number(p.discountPct) || 0);
         setPurchaseVatPct(Number(p.vatPct) || 0);
         const cDate = p.createdAt || item.date || item.createdAt;
