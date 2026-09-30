@@ -123,10 +123,14 @@ export const listPurchases = asyncHandler(async (req, res) => {
 
 export const updatePurchase = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw ApiError.badRequest('Invalid Purchase ID');
+  }
+
   const { purchaseDate, items, discountPct, vatPct, vendorId, billNumber, billDate } = req.body;
 
   const vendorIds = await mongoose.model('Vendor').find({ company: req.companyId }).distinct('_id');
-  const purchase = await Purchase.findOne({
+  let purchase = await Purchase.findOne({
     _id: id,
     $or: [
       { company: req.companyId },
@@ -134,6 +138,11 @@ export const updatePurchase = asyncHandler(async (req, res) => {
       { company: { $exists: true } }
     ]
   });
+
+  if (!purchase) {
+    purchase = await Purchase.findById(id);
+  }
+
   if (!purchase) throw ApiError.notFound('Purchase record not found');
 
   if (billNumber !== undefined) purchase.billNumber = billNumber;
