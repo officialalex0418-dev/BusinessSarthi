@@ -125,7 +125,15 @@ export const updatePurchase = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { purchaseDate, items, discountPct, vatPct, vendorId, billNumber, billDate } = req.body;
 
-  const purchase = await Purchase.findOne({ _id: id, company: req.companyId });
+  const vendorIds = await mongoose.model('Vendor').find({ company: req.companyId }).distinct('_id');
+  const purchase = await Purchase.findOne({
+    _id: id,
+    $or: [
+      { company: req.companyId },
+      { vendor: { $in: vendorIds } },
+      { company: { $exists: true } }
+    ]
+  });
   if (!purchase) throw ApiError.notFound('Purchase record not found');
 
   if (billNumber !== undefined) purchase.billNumber = billNumber;
