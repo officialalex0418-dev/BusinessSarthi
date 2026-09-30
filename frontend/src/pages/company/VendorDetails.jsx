@@ -235,14 +235,14 @@ export default function VendorDetails() {
           createdAt: item.date || item.createdAt
         };
         setPurchaseRows((p.items || []).map(i => ({
-          productName: i.productName || i.product || 'Item',
-          productId: i.product || '',
+          productName: i.productName || (typeof i.product === 'object' ? i.product?.productName : '') || 'Item',
           batch: i.batch || '',
           price: Number(i.price) || 0,
           mrp: Number(i.mrp || i.price) || 0,
           quantity: Number(i.quantity) || 1,
           amount: Number(i.amount) || ((Number(i.price) || 0) * (Number(i.quantity) || 1)),
           expiryDate: i.expiryDate ? String(i.expiryDate).split('T')[0] : ''
+        })));
         })));
         setPurchaseDiscountPct(Number(p.discountPct) || 0);
         setPurchaseVatPct(Number(p.vatPct) || 0);
@@ -655,26 +655,11 @@ export default function VendorDetails() {
               <div key={idx} className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 relative">
                 <div className="flex gap-4">
                   <div className="flex-[2]">
-                    <Select
+                    <Input
                       label="Product Name"
-                      className="w-full h-10"
-                      value={row.productId}
-                      onChange={(e) => {
-                        const prod = allProducts.find(p => p._id === e.target.value);
-                        updatePurchaseRow(idx, 'productId', e.target.value);
-                        updatePurchaseRow(idx, 'productName', prod?.productName || '');
-                        if (prod) {
-                          updatePurchaseRow(idx, 'price', prod.costPrice);
-                          updatePurchaseRow(idx, 'batch', prod.batchNumber || '');
-                        }
-                      }}
-                      options={[
-                        { value: '', label: 'Select product...' },
-                        ...allProducts.map(p => ({
-                          value: p._id,
-                          label: `${p.productName} (Batch: ${p.batchNumber || 'N/A'})`
-                        }))
-                      ]}
+                      className="w-full h-10 text-sm"
+                      value={row.productName}
+                      onChange={e => updatePurchaseRow(idx, 'productName', e.target.value)}
                       required
                     />
                   </div>
