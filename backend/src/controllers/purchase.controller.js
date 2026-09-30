@@ -14,45 +14,52 @@ export const createPurchase = asyncHandler(async (req, res) => {
   let totalAmount = 0;
   const processedItems = [];
 
-  for (const item of items) {
-    const itemAmount = (Number(item.price) || 0) * (Number(item.quantity) || 0);
+  for (const rawItem of items) {
+    const item = {
+      productName: String(rawItem.productName || rawItem.product || 'Product').trim(),
+      batch: String(rawItem.batch || 'GENERAL').trim(),
+      price: Number(rawItem.price) || 0,
+      mrp: Number(rawItem.mrp || rawItem.price || 0),
+      quantity: Number(rawItem.quantity) || 1,
+      expiryDate: rawItem.expiryDate || null
+    };
+
+    const itemAmount = item.price * item.quantity;
     totalAmount += itemAmount;
 
-    // Requirement 2: Match by Name AND Batch for inventory update
     let product = await Inventory.findOne({
-      productName: item.productName.trim(),
-      batchNumber: (item.batch || '').trim(),
+      productName: item.productName,
+      batchNumber: item.batch,
       company: companyId
     }).select('+movements');
 
     if (product) {
-      product.quantity += Number(item.quantity);
-      product.costPrice = Number(item.price); // Update cost price to latest purchase price
-      product.mrp = Number(item.mrp || product.mrp || 0);
-      product.sellingPrice = product.mrp; // Update selling price to MRP
+      product.quantity += item.quantity;
+      product.costPrice = item.price;
+      product.mrp = item.mrp || product.mrp || 0;
+      product.sellingPrice = product.mrp;
       if (item.expiryDate) product.expiryDate = item.expiryDate;
       if (vendorId) product.vendor = vendorId;
 
       product.movements.push({
         type: 'IN',
         quantity: item.quantity,
-        note: `Purchase Entry - Restock Batch: ${item.batch || 'N/A'}`,
+        note: `Purchase Entry - Restock Batch: ${item.batch}`,
         by: req.user._id
       });
       await product.save();
     } else {
-      // If Name + Batch doesn't match, create a separate listing
       product = await Inventory.create({
         company: companyId,
-        productName: item.productName.trim(),
+        productName: item.productName,
         sku: `AUTO-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-        batchNumber: (item.batch || '').trim(),
-        quantity: Number(item.quantity),
-        costPrice: Number(item.price),
-        mrp: Number(item.mrp || 0),
-        sellingPrice: Number(item.mrp || 0), // Default selling price to MRP
+        batchNumber: item.batch,
+        quantity: item.quantity,
+        costPrice: item.price,
+        mrp: item.mrp,
+        sellingPrice: item.mrp,
         vendor: vendorId || null,
-        expiryDate: item.expiryDate || null,
+        expiryDate: item.expiryDate,
         movements: [{
           type: 'IN',
           quantity: item.quantity,
@@ -66,9 +73,9 @@ export const createPurchase = asyncHandler(async (req, res) => {
       product: product._id,
       productName: item.productName,
       batch: item.batch,
-      price: Number(item.price),
-      mrp: Number(item.mrp || 0),
-      quantity: Number(item.quantity),
+      price: item.price,
+      mrp: item.mrp,
+      quantity: item.quantity,
       amount: itemAmount,
       expiryDate: item.expiryDate
     });
@@ -148,21 +155,29 @@ export const updatePurchase = asyncHandler(async (req, res) => {
     let totalAmount = 0;
     const processedItems = [];
 
-    for (const item of items) {
-      const itemAmount = (Number(item.price) || 0) * (Number(item.quantity) || 0);
+    for (const rawItem of items) {
+      const item = {
+        productName: String(rawItem.productName || rawItem.product || 'Product').trim(),
+        batch: String(rawItem.batch || 'GENERAL').trim(),
+        price: Number(rawItem.price) || 0,
+        mrp: Number(rawItem.mrp || rawItem.price || 0),
+        quantity: Number(rawItem.quantity) || 1,
+        expiryDate: rawItem.expiryDate || null
+      };
+
+      const itemAmount = item.price * item.quantity;
       totalAmount += itemAmount;
 
-      // Match by Name AND Batch to update or find product
       let product = await Inventory.findOne({
-        productName: item.productName.trim(),
-        batchNumber: (item.batch || '').trim(),
+        productName: item.productName,
+        batchNumber: item.batch,
         company: req.companyId
       }).select('+movements');
 
       if (product) {
-        product.quantity += Number(item.quantity);
-        product.costPrice = Number(item.price);
-        product.mrp = Number(item.mrp || product.mrp || 0);
+        product.quantity += item.quantity;
+        product.costPrice = item.price;
+        product.mrp = item.mrp || product.mrp || 0;
         product.sellingPrice = product.mrp;
         if (item.expiryDate) product.expiryDate = item.expiryDate;
 
@@ -174,18 +189,17 @@ export const updatePurchase = asyncHandler(async (req, res) => {
         });
         await product.save();
       } else {
-        // Create new if doesn't exist
         product = await Inventory.create({
           company: req.companyId,
-          productName: item.productName.trim(),
+          productName: item.productName,
           sku: `AUTO-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-          batchNumber: (item.batch || '').trim(),
-          quantity: Number(item.quantity),
-          costPrice: Number(item.price),
-          mrp: Number(item.mrp || 0),
-          sellingPrice: Number(item.mrp || 0),
+          batchNumber: item.batch,
+          quantity: item.quantity,
+          costPrice: item.price,
+          mrp: item.mrp,
+          sellingPrice: item.mrp,
           vendor: vendorId || purchase.vendor,
-          expiryDate: item.expiryDate || null,
+          expiryDate: item.expiryDate,
           movements: [{
             type: 'IN',
             quantity: item.quantity,
@@ -199,9 +213,9 @@ export const updatePurchase = asyncHandler(async (req, res) => {
         product: product._id,
         productName: item.productName,
         batch: item.batch,
-        price: Number(item.price),
-        mrp: Number(item.mrp || 0),
-        quantity: Number(item.quantity),
+        price: item.price,
+        mrp: item.mrp,
+        quantity: item.quantity,
         amount: itemAmount,
         expiryDate: item.expiryDate
       });

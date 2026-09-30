@@ -2,12 +2,12 @@ import mongoose from 'mongoose';
 
 const purchaseItemSchema = new mongoose.Schema({
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Inventory' },
-  productName: { type: String, required: true },
-  batch: { type: String, required: true },
-  price: { type: Number, required: true, min: 0 },
-  mrp: { type: Number, required: true, min: 0 },
-  quantity: { type: Number, required: true, min: 1 },
-  amount: { type: Number, required: true, min: 0 },
+  productName: { type: String, required: true, default: 'Product' },
+  batch: { type: String, default: 'GENERAL' },
+  price: { type: Number, required: true, min: 0, default: 0 },
+  mrp: { type: Number, required: true, min: 0, default: 0 },
+  quantity: { type: Number, required: true, min: 1, default: 1 },
+  amount: { type: Number, required: true, min: 0, default: 0 },
   expiryDate: { type: Date }
 });
 
