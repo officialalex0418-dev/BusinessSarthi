@@ -903,7 +903,7 @@ export default function DistributorDetails() {
               <span className="font-bold text-right">{formatMoney(calculateNewInvTotals().totalAmount)}</span>
 
               <span className="text-slate-500 flex items-center">Discount %:</span>
-              <Input type="number" min="0" max="100" className="h-8 text-right" value={newInvForm.discountPct} onChange={e => setNewInvForm({...newInvForm, discountPct: Number(e.target.value)})} />
+              <Input type="number" min="0" max="100" step="0.001" className="h-8 text-right" value={newInvForm.discountPct} onChange={e => setNewInvForm({...newInvForm, discountPct: Number(e.target.value)})} />
 
               <span className="text-slate-500">Discount:</span>
               <span className="font-semibold text-right text-red-500">-{formatMoney(calculateNewInvTotals().discount)}</span>
@@ -912,7 +912,7 @@ export default function DistributorDetails() {
               <span className="font-bold text-right">{formatMoney(calculateNewInvTotals().taxableAmount)}</span>
 
               <span className="text-slate-500 flex items-center">VAT %:</span>
-              <Input type="number" min="0" max="100" className="h-8 text-right" value={newInvForm.vatPct} onChange={e => setNewInvForm({...newInvForm, vatPct: Number(e.target.value)})} />
+              <Input type="number" min="0" max="100" step="0.001" className="h-8 text-right" value={newInvForm.vatPct} onChange={e => setNewInvForm({...newInvForm, vatPct: Number(e.target.value)})} />
 
               <span className="text-slate-500">VAT:</span>
               <span className="font-semibold text-right">+{formatMoney(calculateNewInvTotals().vat)}</span>
@@ -1014,7 +1014,7 @@ export default function DistributorDetails() {
               <span className="font-bold text-right">{formatMoney(calculateEditTotals().totalAmount)}</span>
 
               <span className="text-slate-500 flex items-center">Discount %:</span>
-              <Input type="number" min="0" max="100" className="h-8 text-right" value={editingInvoice?.discountPct || 0} onChange={e => setEditingInvoice({...editingInvoice, discountPct: Number(e.target.value)})} />
+              <Input type="number" min="0" max="100" step="0.001" className="h-8 text-right" value={editingInvoice?.discountPct || 0} onChange={e => setEditingInvoice({...editingInvoice, discountPct: Number(e.target.value)})} />
 
               <span className="text-slate-500">Discount:</span>
               <span className="font-semibold text-right text-red-500">-{formatMoney(calculateEditTotals().discount)}</span>
@@ -1023,7 +1023,7 @@ export default function DistributorDetails() {
               <span className="font-bold text-right">{formatMoney(calculateEditTotals().taxableAmount)}</span>
 
               <span className="text-slate-500 flex items-center">VAT %:</span>
-              <Input type="number" min="0" max="100" className="h-8 text-right" value={editingInvoice?.vatPct || 0} onChange={e => setEditingInvoice({...editingInvoice, vatPct: Number(e.target.value)})} />
+              <Input type="number" min="0" max="100" step="0.001" className="h-8 text-right" value={editingInvoice?.vatPct || 0} onChange={e => setEditingInvoice({...editingInvoice, vatPct: Number(e.target.value)})} />
 
               <span className="text-slate-500">VAT:</span>
               <span className="font-semibold text-right">+{formatMoney(calculateEditTotals().vat)}</span>

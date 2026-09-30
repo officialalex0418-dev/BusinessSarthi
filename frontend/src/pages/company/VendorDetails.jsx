@@ -213,26 +213,30 @@ export default function VendorDetails() {
   const startEdit = (item) => {
     setEditingItem(item);
     if (item.type === 'PAYMENT') {
-      const p = payments.find(p => p._id === item.id);
-      setPayForm({
-        amount: p.amount,
-        method: p.method,
-        remarks: p.remarks || '',
-        paymentDate: p.paymentDate.split('T')[0]
-      });
+      const p = payments.find(p => p._id?.toString() === item.id?.toString());
+      if (p) {
+        setPayForm({
+          amount: p.amount,
+          method: p.method,
+          remarks: p.remarks || '',
+          paymentDate: p.paymentDate ? p.paymentDate.split('T')[0] : ''
+        });
+      }
       setModal('edit-payment');
     } else {
-      const p = purchases.find(p => p._id === item.id);
-      setPurchaseRows(p.items.map(i => ({
-        ...i,
-        productId: i.product || '',
-        amount: i.amount || (i.price * i.quantity),
-        expiryDate: i.expiryDate ? i.expiryDate.split('T')[0] : ''
-      })));
-      setPurchaseDiscountPct(p.discountPct || 0);
-      setPurchaseVatPct(p.vatPct || 0);
-      setPayForm({ paymentDate: p.createdAt.split('T')[0] });
-      setModal('edit-purchase');
+      const p = purchases.find(p => p._id?.toString() === item.id?.toString());
+      if (p) {
+        setPurchaseRows((p.items || []).map(i => ({
+          ...i,
+          productId: i.product || '',
+          amount: i.amount || (i.price * i.quantity),
+          expiryDate: i.expiryDate ? i.expiryDate.split('T')[0] : ''
+        })));
+        setPurchaseDiscountPct(p.discountPct || 0);
+        setPurchaseVatPct(p.vatPct || 0);
+        setPayForm({ paymentDate: p.createdAt ? p.createdAt.split('T')[0] : '' });
+        setModal('edit-purchase');
+      }
     }
   };
 
@@ -699,9 +703,9 @@ export default function VendorDetails() {
                   <span className="text-slate-500">Total Amount:</span>
                   <span className="font-bold text-right">{formatMoney(calculatePurchaseTotals().totalAmount)}</span>
                   <span className="text-slate-500 flex items-center">Discount %:</span>
-                  <Input type="number" className="h-8 text-right" value={purchaseDiscountPct} onChange={e => setPurchaseDiscountPct(Number(e.target.value))} />
+                  <Input type="number" min="0" max="100" step="0.001" className="h-8 text-right" value={purchaseDiscountPct} onChange={e => setPurchaseDiscountPct(Number(e.target.value))} />
                   <span className="text-slate-500 flex items-center">VAT %:</span>
-                  <Input type="number" className="h-8 text-right" value={purchaseVatPct} onChange={e => setPurchaseVatPct(Number(e.target.value))} />
+                  <Input type="number" min="0" max="100" step="0.001" className="h-8 text-right" value={purchaseVatPct} onChange={e => setPurchaseVatPct(Number(e.target.value))} />
                   <div className="col-span-2 border-t mt-2 pt-2 grid grid-cols-2">
                      <span className="text-base font-bold">Net Total:</span>
                      <span className="text-base font-bold text-right text-primary-600">{formatMoney(calculatePurchaseTotals().netTotal)}</span>

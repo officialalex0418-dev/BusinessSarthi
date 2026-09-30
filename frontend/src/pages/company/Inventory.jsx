@@ -969,7 +969,7 @@ export default function InventoryPage() {
 
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-slate-500 font-medium shrink-0">Discount %:</span>
-                <Input type="number" min="0" max="100" className="h-9 w-24 text-right" value={purchaseDiscountPct} onChange={e => setPurchaseDiscountPct(Number(e.target.value))} />
+                <Input type="number" min="0" max="100" step="0.001" className="h-9 w-24 text-right" value={purchaseDiscountPct} onChange={e => setPurchaseDiscountPct(Number(e.target.value))} />
               </div>
 
               <div className="flex justify-between text-sm">
@@ -984,7 +984,7 @@ export default function InventoryPage() {
 
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-slate-500 font-medium shrink-0">VAT %:</span>
-                <Input type="number" min="0" max="100" className="h-9 w-24 text-right" value={purchaseVatPct} onChange={e => setPurchaseVatPct(Number(e.target.value))} />
+                <Input type="number" min="0" max="100" step="0.001" className="h-9 w-24 text-right" value={purchaseVatPct} onChange={e => setPurchaseVatPct(Number(e.target.value))} />
               </div>
 
               <div className="flex justify-between text-sm">
@@ -1138,7 +1138,7 @@ export default function InventoryPage() {
 
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-slate-500 font-medium shrink-0">Discount %:</span>
-                <Input type="number" min="0" max="100" className="h-9 w-24 text-right" value={invoiceDiscountPct} onChange={e => setInvoiceDiscountPct(Number(e.target.value))} />
+                <Input type="number" min="0" max="100" step="0.001" className="h-9 w-24 text-right" value={invoiceDiscountPct} onChange={e => setInvoiceDiscountPct(Number(e.target.value))} />
               </div>
 
               <div className="flex justify-between text-sm">
@@ -1153,7 +1153,7 @@ export default function InventoryPage() {
 
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-slate-500 font-medium shrink-0">VAT %:</span>
-                <Input type="number" min="0" max="100" className="h-9 w-24 text-right" value={invoiceVatPct} onChange={e => setInvoiceVatPct(Number(e.target.value))} />
+                <Input type="number" min="0" max="100" step="0.001" className="h-9 w-24 text-right" value={invoiceVatPct} onChange={e => setInvoiceVatPct(Number(e.target.value))} />
               </div>
 
               <div className="flex justify-between text-sm">
