@@ -211,32 +211,48 @@ export default function VendorDetails() {
   };
 
   const startEdit = (item) => {
-    setEditingItem(item);
-    if (item.type === 'PAYMENT') {
-      const p = payments.find(p => p._id?.toString() === item.id?.toString());
-      if (p) {
+    try {
+      setEditingItem(item);
+      if (item.type === 'PAYMENT') {
+        const p = payments.find(p => p._id?.toString() === item.id?.toString()) || {
+          amount: item.amount,
+          method: item.method || 'CASH',
+          remarks: item.ref || '',
+          paymentDate: item.date || item.createdAt
+        };
         setPayForm({
-          amount: p.amount,
-          method: p.method,
+          amount: p.amount ?? item.amount,
+          method: p.method || 'CASH',
           remarks: p.remarks || '',
-          paymentDate: p.paymentDate ? p.paymentDate.split('T')[0] : ''
+          paymentDate: p.paymentDate ? String(p.paymentDate).split('T')[0] : ''
         });
-      }
-      setModal('edit-payment');
-    } else {
-      const p = purchases.find(p => p._id?.toString() === item.id?.toString());
-      if (p) {
+        setModal('edit-payment');
+      } else {
+        const p = purchases.find(p => p._id?.toString() === item.id?.toString()) || {
+          items: [{ productName: item.ref || 'Purchase', price: item.amount, quantity: 1, amount: item.amount }],
+          discountPct: 0,
+          vatPct: 0,
+          createdAt: item.date || item.createdAt
+        };
         setPurchaseRows((p.items || []).map(i => ({
-          ...i,
+          productName: i.productName || i.product || 'Item',
           productId: i.product || '',
-          amount: i.amount || (i.price * i.quantity),
-          expiryDate: i.expiryDate ? i.expiryDate.split('T')[0] : ''
+          batch: i.batch || '',
+          price: Number(i.price) || 0,
+          mrp: Number(i.mrp || i.price) || 0,
+          quantity: Number(i.quantity) || 1,
+          amount: Number(i.amount) || ((Number(i.price) || 0) * (Number(i.quantity) || 1)),
+          expiryDate: i.expiryDate ? String(i.expiryDate).split('T')[0] : ''
         })));
-        setPurchaseDiscountPct(p.discountPct || 0);
-        setPurchaseVatPct(p.vatPct || 0);
-        setPayForm({ paymentDate: p.createdAt ? p.createdAt.split('T')[0] : '' });
+        setPurchaseDiscountPct(Number(p.discountPct) || 0);
+        setPurchaseVatPct(Number(p.vatPct) || 0);
+        const cDate = p.createdAt || item.date || item.createdAt;
+        setPayForm({ paymentDate: cDate ? String(cDate).split('T')[0] : '' });
         setModal('edit-purchase');
       }
+    } catch (err) {
+      console.error('Failed to open edit modal:', err);
+      alert('Failed to load purchase entry to edit. Please try again.');
     }
   };
 
@@ -393,11 +409,11 @@ export default function VendorDetails() {
                 </td>
                 <td className="table-td no-print">
                   <div className="flex gap-1">
-                    <button onClick={() => startEdit(item)} className="text-blue-500 hover:bg-blue-50 p-1.5 rounded">
+                    <button type="button" onClick={() => startEdit(item)} className="text-blue-500 hover:bg-blue-50 p-1.5 rounded">
                       <Edit className="h-4 w-4" />
                     </button>
                     {item.type === 'PAYMENT' && (
-                      <button onClick={() => deletePayment(item.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded">
+                      <button type="button" onClick={() => deletePayment(item.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     )}
