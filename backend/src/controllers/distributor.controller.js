@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import ExcelJS from 'exceljs';
-import { Distributor, Invoice, Payment, SalesInvoice, Cheque, Company, Inventory } from '../models/index.js';
+import { Distributor, Invoice, Payment, SalesInvoice, Cheque, Company, Stockist, Inventory } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
@@ -382,7 +382,10 @@ export const deletePayment = asyncHandler(async (req, res) => {
 /** GET /distributors/analytics */
 export const distributorAnalytics = asyncHandler(async (req, res) => {
   const companyId = new mongoose.Types.ObjectId(req.companyId);
-  const company = await Company.findById(companyId).select('settings');
+  let company = await Company.findById(companyId).select('settings').lean();
+  if (!company) {
+    company = await Stockist.findById(companyId).select('settings').lean();
+  }
   const now = new Date();
 
   let startOfMonth, endOfMonth;

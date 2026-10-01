@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Target, User, Sale, SalesInvoice, Company } from '../models/index.js';
+import { Target, User, Sale, SalesInvoice, Company, Stockist } from '../models/index.js';
 import { asyncHandler, ApiError } from '../utils/ApiError.js';
 import { bsToAd, bsMapping, adToBs, getBsMonthRange } from '../utils/nepaliDate.js';
 import { rangeFromPeriod } from '../utils/dates.js';
@@ -67,8 +67,9 @@ export const getAchievementReport = asyncHandler(async (req, res) => {
     from = range.start;
     to = range.end;
   } else {
-    // Default to "monthly" using Company's calendar type
-    const company = await Company.findById(companyId).select('settings').lean();
+    // Default to "monthly" using Company's / Stockist's calendar type
+    let company = await Company.findById(companyId).select('settings').lean();
+    if (!company) company = await Stockist.findById(companyId).select('settings').lean();
     const effectiveCalendar = calendarType || company?.settings?.dateFormat || 'AD';
     const effectiveMonth = month || (effectiveCalendar === 'BS' ? (bs => `${bs.year}-${String(bs.month).padStart(2, '0')}`)(adToBs(new Date())) : new Date().toISOString().slice(0, 7));
 

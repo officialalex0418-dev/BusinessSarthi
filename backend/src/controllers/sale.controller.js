@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Sale, User, Inventory, Customer, Company, Target } from '../models/index.js';
+import { Sale, User, Inventory, Customer, Company, Stockist, Target } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
@@ -146,7 +146,8 @@ export const listSales = asyncHandler(async (req, res) => {
     filter.saleDate = { $gte: new Date(startDate), $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) };
   } else if (period) {
     if (period === 'monthly') {
-      const company = await Company.findById(req.companyId).select('settings').lean();
+      let company = await Company.findById(req.companyId).select('settings').lean();
+      if (!company) company = await Stockist.findById(req.companyId).select('settings').lean();
       const dateFormat = company?.settings?.dateFormat || 'AD';
       if (dateFormat === 'BS') {
         const bs = adToBs(new Date());
@@ -232,7 +233,8 @@ export const salesAnalytics = asyncHandler(async (req, res) => {
 /** GET /sales/me/summary — staff target progress */
 export const mySalesSummary = asyncHandler(async (req, res) => {
   const companyId = req.companyId;
-  const company = await Company.findById(companyId).select('settings').lean();
+  let company = await Company.findById(companyId).select('settings').lean();
+  if (!company) company = await Stockist.findById(companyId).select('settings').lean();
   const dateFormat = company?.settings?.dateFormat || 'AD';
 
   let start, end, targetMonth;
