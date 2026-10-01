@@ -31,6 +31,8 @@ export default function VendorDetails() {
   const [purchaseVendorId, setPurchaseVendorId] = useState('');
   const [purchaseDiscountPct, setPurchaseDiscountPct] = useState(0);
   const [purchaseVatPct, setPurchaseVatPct] = useState(0);
+  const [billNumber, setBillNumber] = useState('');
+  const [billDate, setBillDate] = useState('');
   const dateFormat = user?.company?.settings?.dateFormat || 'BS';
 
   const loadProducts = useCallback(async () => {
@@ -214,7 +216,7 @@ export default function VendorDetails() {
     try {
       setEditingItem(item);
       if (item.type === 'PAYMENT') {
-        const p = payments.find(p => p._id?.toString() === item.id?.toString()) || {
+        const p = (payments || []).find(p => p._id?.toString() === item.id?.toString()) || {
           amount: item.amount,
           method: item.method || 'CASH',
           remarks: item.ref || '',
@@ -228,10 +230,12 @@ export default function VendorDetails() {
         });
         setModal('edit-payment');
       } else {
-        const p = purchases.find(p => p._id?.toString() === item.id?.toString()) || {
+        const p = (purchases || []).find(p => p._id?.toString() === item.id?.toString()) || {
           items: [{ productName: item.ref || 'Purchase', price: item.amount, quantity: 1, amount: item.amount }],
           discountPct: 0,
           vatPct: 0,
+          billNumber: '',
+          billDate: '',
           createdAt: item.date || item.createdAt
         };
         setPurchaseRows((p.items || []).map(i => ({
@@ -245,6 +249,8 @@ export default function VendorDetails() {
         })));
         setPurchaseDiscountPct(Number(p.discountPct) || 0);
         setPurchaseVatPct(Number(p.vatPct) || 0);
+        setBillNumber(p.billNumber || '');
+        setBillDate(p.billDate ? String(p.billDate).split('T')[0] : '');
         const cDate = p.createdAt || item.date || item.createdAt;
         setPayForm({ paymentDate: cDate ? String(cDate).split('T')[0] : '' });
         setModal('edit-purchase');
@@ -265,10 +271,10 @@ export default function VendorDetails() {
   };
 
   const calculatePurchaseTotals = () => {
-    const totalAmount = purchaseRows.reduce((sum, row) => sum + row.amount, 0);
-    const discount = (totalAmount * purchaseDiscountPct) / 100;
+    const totalAmount = (purchaseRows || []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+    const discount = (totalAmount * (Number(purchaseDiscountPct) || 0)) / 100;
     const taxableAmount = totalAmount - discount;
-    const vat = (taxableAmount * purchaseVatPct) / 100;
+    const vat = (taxableAmount * (Number(purchaseVatPct) || 0)) / 100;
     const netTotal = taxableAmount + vat;
     return { totalAmount, discount, taxableAmount, vat, netTotal };
   };
@@ -282,6 +288,8 @@ export default function VendorDetails() {
       } else {
         await api.patch(`/purchases/${editingItem.id}`, {
           purchaseDate: payForm.paymentDate,
+          billNumber,
+          billDate,
           items: purchaseRows,
           discountPct: purchaseDiscountPct,
           vatPct: purchaseVatPct
@@ -301,7 +309,10 @@ export default function VendorDetails() {
   if (loading) return <Spinner />;
   if (!data) return <EmptyState title="Vendor not found" />;
 
-  const { vendor, purchases, payments, history } = data;
+  const vendor = data?.vendor || {};
+  const purchases = data?.purchases || [];
+  const payments = data?.payments || [];
+  const history = data?.history || [];
 
   return (
     <div className="space-y-6 pb-20">
@@ -311,7 +322,7 @@ export default function VendorDetails() {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold sm:text-2xl">{vendor.name}</h1>
+            <h1 className="text-xl font-bold sm:text-2xl">{vendor.name || 'Vendor'}</h1>
             <p className="text-xs text-slate-500 sm:text-sm">Vendor Account Details</p>
           </div>
         </div>
@@ -343,7 +354,7 @@ export default function VendorDetails() {
 
         <Card className="p-4 sm:p-6 bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30">
           <p className="text-xs font-bold text-red-600 uppercase tracking-wider">Total Outstanding (Payable)</p>
-          <p className="text-2xl sm:text-3xl font-black text-red-700 dark:text-red-400 mt-1">{formatMoney(vendor.outstandingBalance)}</p>
+          <p className="text-2xl sm:text-3xl font-black text-red-700 dark:text-red-400 mt-1">{formatMoney(vendor.outstandingBalance || 0)}</p>
           <p className="text-[10px] sm:text-xs text-red-500 mt-2 italic">How much you owe to this vendor.</p>
         </Card>
 
@@ -352,8 +363,8 @@ export default function VendorDetails() {
              <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Business Summary</p>
                 <div className="mt-4 space-y-2">
-                   <p className="text-sm">Total Purchases: <span className="font-bold">{formatMoney(purchases.reduce((s, p) => s + p.netTotal, 0))}</span></p>
-                   <p className="text-sm">Total Paid: <span className="font-bold">{formatMoney(payments.reduce((s, p) => s + p.amount, 0))}</span></p>
+                   <p className="text-sm">Total Purchases: <span className="font-bold">{formatMoney((purchases || []).reduce((s, p) => s + (Number(p.netTotal) || 0), 0))}</span></p>
+                   <p className="text-sm">Total Paid: <span className="font-bold">{formatMoney((payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0))}</span></p>
                 </div>
              </div>
              <History className="h-8 w-8 text-slate-700" />
@@ -641,11 +652,22 @@ export default function VendorDetails() {
                Note: If stock has already been sold, changing quantities may result in negative inventory balances.
             </div>
 
-            <div className="flex gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end bg-slate-50 dark:bg-slate-900/30 p-4 rounded-xl border">
                <DatePicker
                  label="Purchase Date"
                  value={payForm.paymentDate}
                  onChange={val => setPayForm({...payForm, paymentDate: val})}
+               />
+               <Input
+                 label="Bill Number"
+                 value={billNumber}
+                 onChange={e => setBillNumber(e.target.value)}
+                 placeholder="e.g. BILL-1002"
+               />
+               <DatePicker
+                 label="Bill Date"
+                 value={billDate}
+                 onChange={val => setBillDate(val)}
                />
             </div>
 
@@ -669,12 +691,7 @@ export default function VendorDetails() {
 
                 <div className="grid grid-cols-2 xs:grid-cols-5 gap-3">
                   <Input label="Cost Price" type="number" min="0" step="0.01" value={row.price} onChange={e => updatePurchaseRow(idx, 'price', e.target.value)} required className="h-10 text-sm" />
-                  <div className="space-y-1.5">
-                    <span className="block text-xs font-bold text-slate-400 uppercase">MRP</span>
-                    <div className="h-10 px-3 flex items-center bg-slate-50 dark:bg-slate-800 rounded-lg border text-sm font-semibold">
-                      {formatMoney(row.mrp || 0)}
-                    </div>
-                  </div>
+                  <Input label="MRP" type="number" min="0" step="0.01" value={row.mrp} onChange={e => updatePurchaseRow(idx, 'mrp', e.target.value)} required className="h-10 text-sm" />
                   <Input label="QTY" type="number" min="1" value={row.quantity} onChange={e => updatePurchaseRow(idx, 'quantity', e.target.value)} required className="h-10 text-sm" />
                   <div className="space-y-1.5">
                     <span className="block text-xs font-bold text-slate-400 uppercase">Amount</span>
@@ -694,7 +711,7 @@ export default function VendorDetails() {
             ))}
           </div>
 
-          <Button type="button" variant="outline" size="sm" onClick={() => setPurchaseRows([...purchaseRows, { productName: '', productId: '', batch: '', price: 0, quantity: 1, amount: 0, expiryDate: '' }])} className="w-full sm:w-auto">
+          <Button type="button" variant="outline" size="sm" onClick={() => setPurchaseRows([...purchaseRows, { productName: '', productId: '', batch: '', price: 0, mrp: 0, quantity: 1, amount: 0, expiryDate: '' }])} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-1" /> Add Item
           </Button>
 
@@ -702,10 +719,22 @@ export default function VendorDetails() {
                <div className="grid grid-cols-2 gap-x-8 gap-y-2 w-full max-w-xs text-sm">
                   <span className="text-slate-500">Total Amount:</span>
                   <span className="font-bold text-right">{formatMoney(calculatePurchaseTotals().totalAmount)}</span>
+
                   <span className="text-slate-500 flex items-center">Discount %:</span>
                   <Input type="number" min="0" max="100" step="0.001" className="h-8 text-right" value={purchaseDiscountPct} onChange={e => setPurchaseDiscountPct(Number(e.target.value))} />
+
+                  <span className="text-slate-500">Discount:</span>
+                  <span className="font-semibold text-right text-red-500">-{formatMoney(calculatePurchaseTotals().discount)}</span>
+
+                  <span className="text-slate-500">Taxable Amount:</span>
+                  <span className="font-bold text-right">{formatMoney(calculatePurchaseTotals().taxableAmount)}</span>
+
                   <span className="text-slate-500 flex items-center">VAT %:</span>
                   <Input type="number" min="0" max="100" step="0.001" className="h-8 text-right" value={purchaseVatPct} onChange={e => setPurchaseVatPct(Number(e.target.value))} />
+
+                  <span className="text-slate-500">VAT:</span>
+                  <span className="font-semibold text-right">+{formatMoney(calculatePurchaseTotals().vat)}</span>
+
                   <div className="col-span-2 border-t mt-2 pt-2 grid grid-cols-2">
                      <span className="text-base font-bold">Net Total:</span>
                      <span className="text-base font-bold text-right text-primary-600">{formatMoney(calculatePurchaseTotals().netTotal)}</span>
