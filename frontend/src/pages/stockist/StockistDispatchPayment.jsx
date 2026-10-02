@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '@/lib/api';
+import { api } from '@/api/client';
 import { Card, Button, Input, Select, Modal, Badge, DatePicker, Textarea, Spinner, Table, EmptyState } from '@/components/ui';
 import { Truck, CreditCard, Plus, Search, FileText, CheckCircle2, PackageCheck } from 'lucide-react';
 import { formatMoney, formatDateTime, cn } from '@/lib/utils';
