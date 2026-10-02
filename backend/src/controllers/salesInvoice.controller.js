@@ -120,8 +120,9 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
   if (!invoice) throw ApiError.notFound('Invoice not found');
 
   const oldNetTotal = invoice.netTotal;
+  const updateData = {};
 
-  if (items !== undefined) {
+  if (items !== undefined && Array.isArray(items)) {
     // 1. Reverse Inventory Changes from Old Items
     for (const item of invoice.items) {
       if (item.product) {
@@ -181,34 +182,49 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
       });
     }
 
-    invoice.items = processedItems;
-    invoice.totalAmount = totalAmount;
+    updateData.items = processedItems;
+    updateData.totalAmount = totalAmount;
+    const dPct = discountPct !== undefined ? Number(discountPct) : invoice.discountPct;
+    const vPct = vatPct !== undefined ? Number(vatPct) : invoice.vatPct;
+    updateData.discountPct = dPct;
+    updateData.vatPct = vPct;
+    updateData.discountAmount = (totalAmount * dPct) / 100;
+    updateData.taxableAmount = totalAmount - updateData.discountAmount;
+    updateData.vatAmount = (updateData.taxableAmount * vPct) / 100;
+    updateData.netTotal = updateData.taxableAmount + updateData.vatAmount;
+  } else {
+    if (discountPct !== undefined) updateData.discountPct = Number(discountPct);
+    if (vatPct !== undefined) updateData.vatPct = Number(vatPct);
+    if (customerName !== undefined) updateData.customerName = customerName;
+    if (remarks !== undefined) updateData.remarks = remarks;
+    if (dueDate !== undefined) updateData.dueDate = dueDate;
+
+    if (discountPct !== undefined || vatPct !== undefined) {
+      const dPct = discountPct !== undefined ? Number(discountPct) : invoice.discountPct;
+      const vPct = vatPct !== undefined ? Number(vatPct) : invoice.vatPct;
+      updateData.discountAmount = (invoice.totalAmount * dPct) / 100;
+      updateData.taxableAmount = invoice.totalAmount - updateData.discountAmount;
+      updateData.vatAmount = (updateData.taxableAmount * vPct) / 100;
+      updateData.netTotal = updateData.taxableAmount + updateData.vatAmount;
+    }
   }
 
-  if (discountPct !== undefined) invoice.discountPct = Number(discountPct);
-  if (vatPct !== undefined) invoice.vatPct = Number(vatPct);
-  if (customerName !== undefined) invoice.customerName = customerName;
-  if (remarks !== undefined) invoice.remarks = remarks;
-  if (dueDate !== undefined) invoice.dueDate = dueDate;
-
-  // Recalculate Totals
-  invoice.discountAmount = (invoice.totalAmount * invoice.discountPct) / 100;
-  invoice.taxableAmount = invoice.totalAmount - invoice.discountAmount;
-  invoice.vatAmount = (invoice.taxableAmount * invoice.vatPct) / 100;
-  invoice.netTotal = invoice.taxableAmount + invoice.vatAmount;
-
-  await invoice.save();
+  const updatedInvoice = await SalesInvoice.findOneAndUpdate(
+    { _id: id, company: companyId },
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
 
   // 3. Sync Distributor Balance
-  if (invoice.distributor && Math.abs(invoice.netTotal - oldNetTotal) > 0.01) {
-    const diff = invoice.netTotal - oldNetTotal;
-    await mongoose.model('Distributor').findByIdAndUpdate(invoice.distributor, {
+  if (updatedInvoice.distributor && Math.abs(updatedInvoice.netTotal - oldNetTotal) > 0.01) {
+    const diff = updatedInvoice.netTotal - oldNetTotal;
+    await mongoose.model('Distributor').findByIdAndUpdate(updatedInvoice.distributor, {
       $inc: { outstandingBalance: diff }
     });
   }
 
-  audit({ req, action: 'UPDATE_SALES_INVOICE', entity: 'SalesInvoice', entityId: invoice._id });
-  res.json({ success: true, data: invoice });
+  audit({ req, action: 'UPDATE_SALES_INVOICE', entity: 'SalesInvoice', entityId: updatedInvoice._id });
+  res.json({ success: true, data: updatedInvoice });
 });
 
 export const deleteSalesInvoice = asyncHandler(async (req, res) => {
