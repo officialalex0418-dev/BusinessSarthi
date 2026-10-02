@@ -7,7 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import {
   LayoutDashboard, Building2, Users, Package, Wallet, Settings, ShieldCheck,
   MapPin, Boxes, Truck, TrendingUp, FileText, CalendarCheck, CalendarOff, User,
-  MessageSquare, LayoutGrid, Inbox, LifeBuoy, Store
+  MessageSquare, LayoutGrid, Inbox, LifeBuoy, Store, PackageCheck
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
@@ -53,6 +53,7 @@ import Vendors from '@/pages/company/Vendors';
 import VendorDetails from '@/pages/company/VendorDetails';
 import CompanyPayroll from '@/pages/company/Payroll';
 import SalesTracker from '@/pages/company/SalesTracker';
+import StockistDispatchPayment from '@/pages/stockist/StockistDispatchPayment';
 import Reports from '@/pages/company/Reports';
 import Leaves from '@/pages/company/Leaves';
 import AttendancePage from '@/pages/company/Attendance';
@@ -149,6 +150,7 @@ const stockistNav = [
   { to: '/stockist/attendance', label: 'Attendance', icon: CalendarCheck },
   { to: '/stockist/leaves', label: 'Leave Management', icon: CalendarOff },
   { to: '/stockist/sales', label: 'Sales Tracker', icon: TrendingUp },
+  { to: '/stockist/dispatch-payment', label: 'Dispatch and Payment', icon: PackageCheck },
   { to: '/stockist/inventory', label: 'Inventory', icon: Boxes },
   { to: '/stockist/outlets', label: 'Outlets', icon: Truck },
   { to: '/stockist/vendors', label: 'Vendors', icon: Building2 },
@@ -432,6 +434,7 @@ export default function App() {
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="sales" element={<SalesTracker />} />
+        <Route path="dispatch-payment" element={<StockistDispatchPayment />} />
         <Route path="customers" element={<CompanyCustomers />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="distributors" element={<Distributors />} />
@@ -515,6 +518,7 @@ export default function App() {
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="sales" element={<SalesTracker />} />
+        <Route path="dispatch-payment" element={<StockistDispatchPayment />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="outlets" element={<Distributors />} />
         <Route path="outlets/:id" element={<DistributorDetails />} />
