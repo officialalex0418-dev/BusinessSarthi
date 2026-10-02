@@ -250,6 +250,7 @@ export const schemas = {
     discountPct: Joi.number().min(0).max(100),
     vatPct: Joi.number().min(0).max(100),
     paymentMethod: Joi.string().valid('Cash', 'Online/QR', 'Cheque', 'Credit'),
+    remarks: Joi.string().max(500).allow(''),
     items: Joi.array().items(Joi.object({
       product: objectId,
       productName: Joi.string(),
