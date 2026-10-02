@@ -1,39 +1,47 @@
 import mongoose from 'mongoose';
-import { SalesInvoice, Inventory } from '../models/index.js';
+import { SalesInvoice, Inventory, Distributor } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { audit } from '../utils/audit.js';
 
 export const createSalesInvoice = asyncHandler(async (req, res) => {
-  const { items, discountPct, vatPct, paymentMethod, customerName, distributorId, saleDate, dueDate } = req.body;
+  const { distributorId, customerName, items, discountPct, vatPct, paymentMethod, dueDate, remarks } = req.body;
   const companyId = req.companyId;
 
   if (!items || !items.length) {
     throw ApiError.badRequest('Invoice items are required');
   }
 
+  let distributor = null;
+  if (distributorId) {
+    distributor = await Distributor.findOne({ _id: distributorId, company: companyId });
+    if (!distributor) throw ApiError.notFound('Distributor not found');
+  }
+
   let totalAmount = 0;
   const processedItems = [];
 
   for (const item of items) {
-    const itemAmount = (Number(item.price) || 0) * (Number(item.quantity) || 0);
-    totalAmount += itemAmount;
+    const price = Number(item.price) || 0;
+    const quantity = Number(item.quantity) || 0;
+    const amount = price * quantity;
+    totalAmount += amount;
 
     let product = null;
-    if (item.productId) {
-      product = await Inventory.findOne({ _id: item.productId, company: companyId }).select('+movements');
-    } else {
-      product = await Inventory.findOne({ productName: item.productName, company: companyId }).select('+movements');
+    if (item.product || item.productId) {
+      product = await Inventory.findOne({ _id: item.product || item.productId, company: companyId }).select('+movements');
+    } else if (item.productName) {
+      product = await Inventory.findOne({ productName: item.productName.trim(), company: companyId }).select('+movements');
     }
 
     if (product) {
-      if (product.quantity < Number(item.quantity)) {
+      if (product.quantity < quantity) {
         throw ApiError.badRequest(`Insufficient stock for ${product.productName}. Available: ${product.quantity}`);
       }
-      product.quantity -= Number(item.quantity);
+      product.quantity -= quantity;
       product.movements.push({
         type: 'OUT',
-        quantity: item.quantity,
-        note: `Invoice Entry - ${paymentMethod}`,
+        quantity: quantity,
+        note: `Sales Invoice - Sold to ${distributor?.name || customerName || 'Walk-in'}`,
         by: req.user._id
       });
       await product.save();
@@ -41,12 +49,12 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
 
     processedItems.push({
       product: product?._id,
-      productName: item.productName,
-      batch: item.batch,
-      price: Number(item.price),
-      mrp: Number(item.mrp || 0),
-      quantity: Number(item.quantity),
-      amount: itemAmount
+      productName: item.productName || product?.productName || 'Product',
+      batch: item.batch || product?.batchNumber || 'GENERAL',
+      price,
+      mrp: Number(item.mrp || product?.mrp || 0),
+      quantity,
+      amount
     });
   }
 
@@ -55,21 +63,16 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
   const vatAmount = (taxableAmount * (Number(vatPct) || 0)) / 100;
   const netTotal = taxableAmount + vatAmount;
 
-  // SBXXXXX format logic
-  const lastInvoice = await SalesInvoice.findOne({ company: companyId, invoiceNumber: /^SB/ }).sort('-createdAt');
-  let nextNum = 1;
-  if (lastInvoice) {
-    const match = lastInvoice.invoiceNumber.match(/SB(\d+)/);
-    if (match) nextNum = parseInt(match[1]) + 1;
-  }
-  const invoiceNumber = `SB${String(nextNum).padStart(5, '0')}`;
+  // Generate invoice number
+  const count = await SalesInvoice.countDocuments({ company: companyId });
+  const invoiceNumber = `INV-${String(count + 1).padStart(5, '0')}`;
 
   const invoice = await SalesInvoice.create({
     company: companyId,
     staff: req.user._id,
     invoiceNumber,
     distributor: distributorId || null,
-    customerName,
+    customerName: customerName || distributor?.name || 'Walk-in',
     items: processedItems,
     totalAmount,
     discountPct: Number(discountPct) || 0,
@@ -79,20 +82,17 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
     vatAmount,
     netTotal,
     paymentMethod,
-    saleDate: saleDate || Date.now(),
-    dueDate: dueDate || (saleDate ? new Date(new Date(saleDate).getTime() + 30*24*60*60*1000) : new Date(Date.now() + 30*24*60*60*1000))
+    dueDate,
+    remarks: remarks || ''
   });
 
-  if (distributorId) {
-    // Every invoice affects outstanding balance until paid
-    await mongoose.model('Distributor').findByIdAndUpdate(distributorId, {
-      $inc: { outstandingBalance: netTotal }
-    });
+  if (distributor) {
+    distributor.outstandingBalance += netTotal;
+    await distributor.save();
   }
 
-  audit({ req, action: 'CREATE_SALES_INVOICE', entity: 'SalesInvoice', entityId: invoice._id, meta: { netTotal } });
-
-  res.status(201).json({ success: true, data: invoice });
+  audit({ req, action: 'CREATE_SALES_INVOICE', entity: 'SalesInvoice', entityId: invoice._id, company: companyId });
+  res.status(201).json({ success: true, data: { invoice } });
 });
 
 export const listSalesInvoices = asyncHandler(async (req, res) => {
@@ -121,24 +121,24 @@ export const updateSalesInvoice = asyncHandler(async (req, res) => {
 
   const oldNetTotal = invoice.netTotal;
 
-  // 1. Reverse Inventory Changes from Old Items
-  for (const item of invoice.items) {
-    if (item.product) {
-      await Inventory.findByIdAndUpdate(item.product, {
-        $inc: { quantity: Number(item.quantity) },
-        $push: {
-          movements: {
-            type: 'IN',
-            quantity: item.quantity,
-            note: `Invoice Correction (Reversing Old Items) - ID: ${invoice.invoiceNumber}`,
-            by: req.user._id
-          }
-        }
-      });
-    }
-  }
-
   if (items !== undefined) {
+    // 1. Reverse Inventory Changes from Old Items
+    for (const item of invoice.items) {
+      if (item.product) {
+        await Inventory.findByIdAndUpdate(item.product, {
+          $inc: { quantity: Number(item.quantity) },
+          $push: {
+            movements: {
+              type: 'IN',
+              quantity: item.quantity,
+              note: `Invoice Correction (Reversing Old Items) - ID: ${invoice.invoiceNumber}`,
+              by: req.user._id
+            }
+          }
+        });
+      }
+    }
+
     // 2. Process New Items and Apply to Inventory
     let totalAmount = 0;
     const processedItems = [];
@@ -228,5 +228,6 @@ export const deleteSalesInvoice = asyncHandler(async (req, res) => {
   await SalesInvoice.findByIdAndDelete(id);
 
   audit({ req, action: 'DELETE_SALES_INVOICE', entity: 'SalesInvoice', entityId: id, meta: { invoiceNumber: invoice.invoiceNumber } });
+
   res.json({ success: true, message: 'Invoice deleted successfully' });
 });
