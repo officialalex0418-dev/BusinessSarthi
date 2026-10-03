@@ -63,9 +63,14 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
   const vatAmount = (taxableAmount * (Number(vatPct) || 0)) / 100;
   const netTotal = taxableAmount + vatAmount;
 
-  // Generate invoice number
-  const count = await SalesInvoice.countDocuments({ company: companyId });
-  const invoiceNumber = `INV-${String(count + 1).padStart(5, '0')}`;
+  // Generate SBXXXXX invoice number
+  const lastInvoice = await SalesInvoice.findOne({ company: companyId, invoiceNumber: /^SB/ }).sort('-createdAt');
+  let nextNum = 1;
+  if (lastInvoice) {
+    const match = lastInvoice.invoiceNumber.match(/SB(\d+)/);
+    if (match) nextNum = parseInt(match[1], 10) + 1;
+  }
+  const invoiceNumber = `SB${String(nextNum).padStart(5, '0')}`;
 
   const invoice = await SalesInvoice.create({
     company: companyId,
