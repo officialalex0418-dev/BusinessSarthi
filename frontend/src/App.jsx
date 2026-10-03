@@ -13,7 +13,7 @@ import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { useAppPermissions } from '@/hooks/useAppPermissions';
 import { Spinner } from '@/components/ui';
-import { ROLE_HOME } from '@/lib/utils';
+import { ROLE_HOME, getRoleHome } from '@/lib/utils';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import SplashScreen from '@/components/SplashScreen/SplashScreen';
 import { useState } from 'react';
@@ -92,7 +92,10 @@ function Protected({ roles, children }) {
   if (user.needsPasswordChange) return <Navigate to="/change-password" replace />;
 
   if (roles && !roles.includes(user.role)) {
-    return <Navigate to={ROLE_HOME[user.role]} replace />;
+    if (roles.includes('STOCKIST') && user.stockist && ['STOCKIST', 'COMPANY_MANAGER', 'STAFF'].includes(user.role)) {
+      return children;
+    }
+    return <Navigate to={getRoleHome(user)} replace />;
   }
 
   return children;
@@ -217,6 +220,26 @@ export default function App() {
     }
 
     return user?.role === 'COMPANY_MANAGER';
+  });
+
+  const filteredStockistNav = stockistNav.filter(item => {
+    if (user?.role === 'STOCKIST') return true;
+    if (!user?.designation?.permissions) return item.to === '/stockist' || item.to === '/stockist/support' || item.to === '/stockist/settings';
+
+    const perms = user.designation.permissions;
+    if (item.to === '/stockist') return true;
+    if (item.to === '/stockist/staff') return perms.staff;
+    if (item.to === '/stockist/attendance') return perms.attendance;
+    if (item.to === '/stockist/leaves') return perms.leaves;
+    if (item.to === '/stockist/sales') return perms.salesTracker;
+    if (item.to === '/stockist/dispatch-payment') return perms.dispatchPayment || perms.distributors;
+    if (item.to === '/stockist/inventory') return perms.inventory;
+    if (item.to === '/stockist/outlets') return perms.distributors;
+    if (item.to === '/stockist/vendors') return perms.vendors;
+    if (item.to === '/stockist/payroll') return perms.payroll;
+    if (item.to === '/stockist/reports') return perms.reports;
+    if (item.to === '/stockist/configuration') return perms.configuration;
+    return true;
   });
 
   const finalStaffNav = [...staffNavBase];
@@ -386,7 +409,7 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to={ROLE_HOME[user.role]} /> : <Login />} />
+      <Route path="/login" element={user ? <Navigate to={getRoleHome(user)} /> : <Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
@@ -508,8 +531,8 @@ export default function App() {
       <Route
         path="/stockist"
         element={
-          <Protected roles={['STOCKIST']}>
-            <DashboardLayout title="Stockist Panel" nav={stockistNav} />
+          <Protected roles={['STOCKIST', 'COMPANY_MANAGER', 'STAFF']}>
+            <DashboardLayout title="Stockist Panel" nav={filteredStockistNav} />
           </Protected>
         }
       >
@@ -542,7 +565,7 @@ export default function App() {
         <Route path="settings/edit" element={<CompanyEditProfile />} />
       </Route>
 
-      <Route path="*" element={<Navigate to={user ? ROLE_HOME[user.role] : '/login'} replace />} />
+      <Route path="*" element={<Navigate to={user ? getRoleHome(user) : '/login'} replace />} />
     </Routes>
   );
 }

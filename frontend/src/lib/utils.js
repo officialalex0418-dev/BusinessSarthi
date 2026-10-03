@@ -155,6 +155,14 @@ export const ROLE_LABELS = {
   STOCKIST: 'Stockist',
 };
 
+export const getRoleHome = (user) => {
+  if (!user) return '/login';
+  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN_EMPLOYEE') return '/admin';
+  if (user.role === 'COMPANY_OWNER') return '/company';
+  if (user.role === 'STOCKIST' || user.stockist) return '/stockist';
+  return '/staff';
+};
+
 export const ROLE_HOME = {
   SUPER_ADMIN: '/admin',
   ADMIN_EMPLOYEE: '/admin',

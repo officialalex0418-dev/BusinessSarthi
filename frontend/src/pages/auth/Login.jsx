@@ -4,7 +4,7 @@ import { MapPin } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { Button, Input, Card } from '@/components/ui';
-import { ROLE_HOME } from '@/lib/utils';
+import { ROLE_HOME, getRoleHome } from '@/lib/utils';
 
 export default function Login() {
   const { login } = useAuth();
@@ -19,7 +19,7 @@ export default function Login() {
     setError(''); setLoading(true);
     try {
       const user = await login(form.email, form.password);
-      navigate(ROLE_HOME[user.role] || '/login');
+      navigate(getRoleHome(user));
     } catch (err) {
       console.error('Login error:', err);
       const msg = err.response?.data?.message?.toLowerCase() || '';
