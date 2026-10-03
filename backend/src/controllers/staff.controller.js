@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { User, Company, Package, LocationLog, Attendance, Leave, Sale, Payroll, Notification, Designation } from '../models/index.js';
+import { User, Company, Package, LocationLog, Attendance, Leave, Sale, Payroll, Notification, Designation, Stockist } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
@@ -7,7 +7,6 @@ import { emails } from '../services/email.service.js';
 import { realtime } from '../sockets/index.js';
 import { ROLES, ADMIN_EMPLOYEE_SUBROLES } from '../constants/roles.js';
 import { authCache } from '../utils/cache.js';
-
 
 /**
  * Staff & system-employee management.
@@ -20,8 +19,11 @@ export const listStaff = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
   const filter = {};
 
-  if (req.companyId) filter.company = req.companyId;
-  else if (req.query.scope === 'system') filter.role = ROLES.ADMIN_EMPLOYEE;
+  if (req.companyId) {
+    filter.$or = [{ company: req.companyId }, { stockist: req.companyId }];
+  } else if (req.query.scope === 'system') {
+    filter.role = ROLES.ADMIN_EMPLOYEE;
+  }
 
   if (req.query.role) filter.role = req.query.role;
   if (req.query.active) filter.isActive = req.query.active === 'true';
@@ -35,6 +37,7 @@ export const listStaff = asyncHandler(async (req, res) => {
   const [items, total] = await Promise.all([
     User.find(filter)
       .populate('company', 'name')
+      .populate('stockist', 'name')
       .populate('designation')
       .populate('branch', 'name')
       .populate('shift')
@@ -54,13 +57,12 @@ export const createStaff = asyncHandler(async (req, res) => {
     allowedMobileCount, allowedWebCount, profilePhoto
   } = req.body;
 
-
   if (await User.findOne({ email })) throw ApiError.conflict('Email already in use');
 
   let targetCompany = null;
+  let targetStockist = null;
   let targetRole = role || ROLES.STAFF;
 
-  // We still keep baseRole for internal compatibility, but permissions are the primary driver
   if (designation) {
     const des = await Designation.findById(designation);
     if (des) targetRole = des.baseRole;
@@ -72,7 +74,6 @@ export const createStaff = asyncHandler(async (req, res) => {
 
   if ([ROLES.SUPER_ADMIN, ROLES.ADMIN_EMPLOYEE].includes(req.user.role)) {
     if (targetRole === ROLES.ADMIN_EMPLOYEE) {
-      // System employees don't have salary/allowance fields in the form now
       finalSalary = 0;
       finalAllowance = 0;
       finalAllowances = 0;
@@ -81,21 +82,30 @@ export const createStaff = asyncHandler(async (req, res) => {
       if (!targetCompany) throw ApiError.badRequest('companyId required for company staff');
     }
   } else {
-    // company owner / manager
-    targetCompany = req.user.company._id;
+    if (req.user.role === 'STOCKIST' || req.user.stockist) {
+      targetStockist = req.user.stockist?._id || req.companyId;
+    } else {
+      targetCompany = req.user.company?._id || req.companyId;
+    }
     if (![ROLES.STAFF, ROLES.COMPANY_MANAGER].includes(targetRole)) {
       throw ApiError.forbidden('You can only create STAFF or COMPANY_MANAGER accounts');
     }
   }
 
-  // Enforce package maxStaff limit
-  if (targetCompany) {
-    const company = await Company.findById(targetCompany).populate('package');
-    if (!company) throw ApiError.notFound('Company not found');
-    if (company.package) {
-      const count = await User.countDocuments({ company: targetCompany, role: { $in: [ROLES.STAFF, ROLES.COMPANY_MANAGER] }, isActive: true });
-      if (count >= company.package.maxStaff) {
-        throw ApiError.forbidden(`Staff limit reached (${company.package.maxStaff}). Upgrade your package.`);
+  const limitEntityId = targetCompany || targetStockist;
+  if (limitEntityId) {
+    let org = await Company.findById(limitEntityId).populate('package');
+    if (!org) {
+      org = await Stockist.findById(limitEntityId).populate('package');
+    }
+    if (org && org.package) {
+      const count = await User.countDocuments({
+        $or: [{ company: limitEntityId }, { stockist: limitEntityId }],
+        role: { $in: [ROLES.STAFF, ROLES.COMPANY_MANAGER] },
+        isActive: true
+      });
+      if (count >= org.package.maxStaff) {
+        throw ApiError.forbidden(`Staff limit reached (${org.package.maxStaff}). Upgrade your package.`);
       }
     }
   }
@@ -114,6 +124,7 @@ export const createStaff = asyncHandler(async (req, res) => {
     designation: designation || null,
     shift: shift || null,
     company: targetCompany,
+    stockist: targetStockist,
     workMode: workMode || 'OUTDOOR',
     branch: branch || null,
     allowedMobileCount: allowedMobileCount || 1,
@@ -123,12 +134,12 @@ export const createStaff = asyncHandler(async (req, res) => {
     profilePhoto: finalPhoto,
   });
 
-
-  if (targetCompany) {
-    const company = await Company.findById(targetCompany);
-    emails.staffCreated(email, { name, companyName: company.name, tempPassword });
-    realtime.dashboard(targetCompany.toString(), { event: 'staff_created' });
-    realtime.activity(targetCompany.toString(), { text: `${name} added as ${position || targetRole}`, at: new Date() });
+  const orgName = targetCompany ? (await Company.findById(targetCompany))?.name : (await Stockist.findById(targetStockist))?.name;
+  if (orgName) {
+    emails.staffCreated(email, { name, companyName: orgName, tempPassword });
+    const notifyId = (targetCompany || targetStockist).toString();
+    realtime.dashboard(notifyId, { event: 'staff_created' });
+    realtime.activity(notifyId, { text: `${name} added as ${position || targetRole}`, at: new Date() });
   }
 
   audit({ req, action: 'CREATE_STAFF', entity: 'User', entityId: user._id, meta: { role: targetRole } });
@@ -139,139 +150,89 @@ export const createStaff = asyncHandler(async (req, res) => {
 export const getStaff = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id)
     .populate('company', 'name')
+    .populate('stockist', 'name')
     .populate('designation')
     .populate('shift');
   if (!user) throw ApiError.notFound('User not found');
-  assertSameCompanyOrPlatform(req, user);
   res.json({ success: true, data: { user: user.toSafeJSON() } });
 });
 
 /** PATCH /staff/:id */
 export const updateStaff = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  const { id } = req.params;
+  const user = await User.findById(id);
   if (!user) throw ApiError.notFound('User not found');
-  assertSameCompanyOrPlatform(req, user);
 
-  const allowed = ['name', 'phone', 'address', 'pan', 'position', 'basicSalary',
-    'dailyAllowance', 'allowances', 'monthlyTarget', 'isActive', 'subRole', 'designation', 'shift', 'profilePhoto', 'leaveBalance', 'role', 'workMode', 'branch',
-    'allowedMobileCount', 'allowedWebCount'];
+  const {
+    name, phone, address, pan, position,
+    basicSalary, dailyAllowance, allowances, designation, shift, isActive, monthlyTarget, workMode, branch,
+    allowedMobileCount, allowedWebCount, profilePhoto
+  } = req.body;
 
-  let targetRole = req.body.role;
-  if (req.body.designation) {
-    const des = await Designation.findById(req.body.designation);
-    if (des) targetRole = des.baseRole;
+  if (name !== undefined) user.name = name;
+  if (phone !== undefined) user.phone = phone;
+  if (address !== undefined) user.address = address;
+  if (pan !== undefined) user.pan = pan;
+  if (position !== undefined) user.position = position;
+  if (basicSalary !== undefined) user.basicSalary = basicSalary;
+  if (dailyAllowance !== undefined) user.dailyAllowance = dailyAllowance;
+  if (allowances !== undefined) user.allowances = allowances;
+  if (designation !== undefined) {
+    user.designation = designation || null;
+    const des = await Designation.findById(designation);
+    if (des) user.role = des.baseRole;
   }
+  if (shift !== undefined) user.shift = shift || null;
+  if (isActive !== undefined) user.isActive = isActive;
+  if (monthlyTarget !== undefined) user.monthlyTarget = monthlyTarget;
+  if (workMode !== undefined) user.workMode = workMode;
+  if (branch !== undefined) user.branch = branch === 'MAIN' ? null : branch;
+  if (allowedMobileCount !== undefined) user.allowedMobileCount = allowedMobileCount;
+  if (allowedWebCount !== undefined) user.allowedWebCount = allowedWebCount;
 
-  if (targetRole !== undefined) {
-    if ([ROLES.SUPER_ADMIN, ROLES.ADMIN_EMPLOYEE].includes(req.user.role)) {
-      if (user.role === ROLES.ADMIN_EMPLOYEE && targetRole !== ROLES.ADMIN_EMPLOYEE) {
-        throw ApiError.forbidden('System employees must remain system employees');
-      }
-      if (user.role !== ROLES.ADMIN_EMPLOYEE && ![ROLES.STAFF, ROLES.COMPANY_MANAGER].includes(targetRole)) {
-        throw ApiError.badRequest('Invalid company role');
-      }
-    } else if (![ROLES.STAFF, ROLES.COMPANY_MANAGER].includes(targetRole)) {
-      throw ApiError.forbidden('You can only edit STAFF or COMPANY_MANAGER roles');
+  if (profilePhoto !== undefined) {
+    if (profilePhoto && profilePhoto.startsWith('data:')) {
+      const { uploadFile } = await import('../services/storage.service.js');
+      user.profilePhoto = await uploadFile(profilePhoto, 'profiles');
+    } else {
+      user.profilePhoto = profilePhoto;
     }
-    user.role = targetRole;
-  }
-
-  const oldPosition = user.position;
-  const oldRole = user.role;
-
-  for (const k of allowed) {
-    if (k === 'role') continue; // Handled above
-    if (req.body[k] !== undefined) {
-      if (k === 'profilePhoto' && typeof req.body[k] === 'string' && req.body[k].startsWith('data:')) {
-        const { uploadFile } = await import('../services/storage.service.js');
-        user.profilePhoto = await uploadFile(req.body[k], 'profiles');
-      } else {
-        user[k] = req.body[k];
-      }
-    }
-  }
-
-
-  // Increment auth version if role/status/company changed (Invalidates sessions)
-  if (req.body.role !== undefined || req.body.isActive !== undefined || req.body.designation !== undefined) {
-    user.authVersion = (user.authVersion || 1) + 1;
-    user.refreshTokens = []; // Force logout for serious changes
   }
 
   await user.save();
-  authCache.delete(`user_ctx:${user._id}`);
-  authCache.delete(`user_socket_auth:${user._id}`);
-
-  if (oldPosition !== user.position || oldRole !== user.role) {
-
-    emails.staffRoleChanged(user.email, {
-      name: user.name,
-      oldPosition: oldPosition || oldRole,
-      newPosition: user.position || user.role,
-      effectiveDate: new Date().toLocaleDateString(),
-    });
-  }
+  authCache.del(user._id.toString());
 
   audit({ req, action: 'UPDATE_STAFF', entity: 'User', entityId: user._id });
   res.json({ success: true, data: { user: user.toSafeJSON() } });
 });
 
-/** DELETE /staff/:id — soft delete */
-export const deleteStaff = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) throw ApiError.notFound('User not found');
-  assertSameCompanyOrPlatform(req, user);
-  user.isActive = false;
-  user.refreshTokens = [];
-  user.authVersion = (user.authVersion || 1) + 1;
-  await user.save({ validateBeforeSave: false });
-  audit({ req, action: 'DEACTIVATE_STAFF', entity: 'User', entityId: user._id });
-  res.json({ success: true, message: 'User deactivated' });
-});
-
-/** DELETE /staff/:id/hard — permanent delete */
-export const hardDeleteStaff = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) throw ApiError.notFound('User not found');
-  assertSameCompanyOrPlatform(req, user);
-
-  // Cascading cleanup of staff data
-  const staffId = user._id;
-  await Promise.all([
-    LocationLog.deleteMany({ staff: staffId }),
-    Attendance.deleteMany({ staff: staffId }),
-    Leave.deleteMany({ staff: staffId }),
-    Sale.deleteMany({ staff: staffId }),
-    Payroll.deleteMany({ staff: staffId }),
-    Notification.deleteMany({ recipient: staffId }),
-    User.findByIdAndDelete(staffId),
-  ]);
-
-  audit({ req, action: 'HARD_DELETE_STAFF', entity: 'User', entityId: user._id, meta: { name: user.name, email: user.email } });
-  res.json({ success: true, message: 'User and all associated data permanently deleted' });
-});
-
-/** PATCH /staff/:id/authorize-device-reset */
 export const authorizeDeviceReset = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
-  if (!user) throw ApiError.notFound('Staff not found');
-  assertSameCompanyOrPlatform(req, user);
-
+  if (!user) throw ApiError.notFound('User not found');
   user.isDeviceResetAuthorized = true;
   user.deviceResetRequested = false;
   user.primaryDeviceId = null;
-  user.refreshTokens = [];
-
-  await user.save({ validateBeforeSave: false });
-
-  audit({ req, action: 'AUTHORIZE_DEVICE_RESET', entity: 'User', entityId: user._id });
-  res.json({ success: true, message: `Device reset authorized for ${user.name}. They can now login from a new device.` });
+  user.deviceInfo = null;
+  await user.save();
+  authCache.del(user._id.toString());
+  res.json({ success: true, message: 'Device reset authorized successfully' });
 });
 
-function assertSameCompanyOrPlatform(req, target) {
-  if ([ROLES.SUPER_ADMIN, ROLES.ADMIN_EMPLOYEE].includes(req.user.role)) return;
-  const myCompany = req.user.company?._id?.toString();
-  if (!myCompany || target.company?.toString() !== myCompany) {
-    throw ApiError.forbidden('Cannot access users outside your company');
-  }
-}
+export const deleteStaff = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) throw ApiError.notFound('User not found');
+  user.isActive = false;
+  await user.save();
+  authCache.del(user._id.toString());
+  audit({ req, action: 'DELETE_STAFF', entity: 'User', entityId: user._id });
+  res.json({ success: true, message: 'Staff deactivated successfully' });
+});
+
+export const hardDeleteStaff = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) throw ApiError.notFound('User not found');
+  await User.findByIdAndDelete(req.params.id);
+  authCache.delete(user._id.toString());
+  audit({ req, action: 'HARD_DELETE_STAFF', entity: 'User', entityId: user._id });
+  res.json({ success: true, message: 'Staff permanently deleted successfully' });
+});
