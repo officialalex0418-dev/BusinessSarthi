@@ -3,7 +3,24 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/api/client';
 import { Card, Button, Input, Modal, Badge, Spinner, Table, Select } from '@/components/ui';
 
-const PERMISSIONS = [
+const COMPANY_PERMISSIONS = [
+  { key: 'staff', label: 'Staff Management' },
+  { key: 'liveTracking', label: 'Live Tracking' },
+  { key: 'attendance', label: 'Attendance' },
+  { key: 'leaves', label: 'Leaves' },
+  { key: 'salesTracker', label: 'Sales Management' },
+  { key: 'salesEntry', label: 'Sales Entry' },
+  { key: 'customerMasterList', label: 'Customer Master List' },
+  { key: 'inventory', label: 'Inventory' },
+  { key: 'distributors', label: 'Distributors' },
+  { key: 'vendors', label: 'Vendors' },
+  { key: 'payroll', label: 'Payroll' },
+  { key: 'complaints', label: 'Complaints' },
+  { key: 'reports', label: 'Reports' },
+  { key: 'configuration', label: 'Configuration' },
+];
+
+const STOCKIST_PERMISSIONS = [
   { key: 'staff', label: 'Staff Management' },
   { key: 'leaves', label: 'Leave Management' },
   { key: 'vendors', label: 'Vendor Management' },
@@ -15,14 +32,16 @@ const PERMISSIONS = [
   { key: 'dispatchPayment', label: 'Dispatch & Payments' },
 ];
 
-const emptyForm = {
-  name: '',
-  department: '',
-  baseRole: 'STAFF',
-  permissions: PERMISSIONS.reduce((acc, p) => ({ ...acc, [p.key]: false }), {}),
-};
-
 export default function Designations() {
+  const isStockist = typeof window !== 'undefined' && window.location.pathname.startsWith('/stockist');
+  const PERMISSIONS = isStockist ? STOCKIST_PERMISSIONS : COMPANY_PERMISSIONS;
+
+  const emptyForm = {
+    name: '',
+    department: '',
+    baseRole: 'STAFF',
+    permissions: PERMISSIONS.reduce((acc, p) => ({ ...acc, [p.key]: false }), {}),
+  };
   const [items, setItems] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [modal, setModal] = useState(false);
