@@ -239,7 +239,24 @@ export const deleteSalesInvoice = asyncHandler(async (req, res) => {
   const invoice = await SalesInvoice.findOne({ _id: id, company: companyId });
   if (!invoice) throw ApiError.notFound('Invoice not found');
 
-  // Adjust distributor balance if needed
+  // 1. Restore Inventory Quantities from the Deleted Invoice Items
+  for (const item of invoice.items) {
+    if (item.product) {
+      await Inventory.findByIdAndUpdate(item.product, {
+        $inc: { quantity: Number(item.quantity) },
+        $push: {
+          movements: {
+            type: 'IN',
+            quantity: item.quantity,
+            note: `Sales Invoice Deleted - Restored Stock: ${invoice.invoiceNumber}`,
+            by: req.user._id
+          }
+        }
+      });
+    }
+  }
+
+  // 2. Adjust distributor balance if needed
   if (invoice.distributor) {
     await mongoose.model('Distributor').findByIdAndUpdate(invoice.distributor, {
       $inc: { outstandingBalance: -invoice.netTotal }
