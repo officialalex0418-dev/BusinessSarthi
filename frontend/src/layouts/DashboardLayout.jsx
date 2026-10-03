@@ -143,10 +143,11 @@ export default function DashboardLayout({ title, nav }) {
     const isOwner = role === 'COMPANY_OWNER';
     const isManager = role === 'COMPANY_MANAGER';
     const isStaff = role === 'STAFF';
+    const isStockistUser = role === 'STOCKIST' || !!user?.stockist;
 
     // Base paths based on role
-    const mgmtPrefix = isOwner ? '/company' : (isManager ? '/staff/management' : '');
-    const staffPrefix = '/staff';
+    const mgmtPrefix = isStockistUser ? '/stockist' : (isOwner ? '/company' : (isManager ? '/staff/management' : ''));
+    const staffPrefix = isStockistUser ? '/stockist' : '/staff';
 
     if (n.type === 'CHAT_MESSAGE' || n.type === 'COMPLAINT_NEW' || n.type === 'COMPLAINT_REPLY') {
       navigate(isOwner ? '/company/complaints' : '/staff/complaints');
