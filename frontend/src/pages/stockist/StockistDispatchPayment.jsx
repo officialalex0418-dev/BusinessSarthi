@@ -7,7 +7,7 @@ import { formatMoney, formatDateTime, cn } from '@/lib/utils';
 const emptyPayment = {
   distributorId: '',
   amount: 0,
-  method: 'Cash',
+  method: 'CASH',
   paymentDate: new Date().toISOString().split('T')[0],
   remarks: ''
 };
@@ -216,9 +216,9 @@ export default function StockistDispatchPayment() {
             value={payForm.method}
             onChange={e => setPayForm({ ...payForm, method: e.target.value })}
             options={[
-              { value: 'Cash', label: 'Cash' },
-              { value: 'Online/QR', label: 'QR / Online' },
-              { value: 'Cheque', label: 'Cheque' }
+              { value: 'CASH', label: 'Cash' },
+              { value: 'BANK_TRANSFER', label: 'QR / Online / Bank Transfer' },
+              { value: 'CHEQUE', label: 'Cheque' }
             ]}
           />
 
