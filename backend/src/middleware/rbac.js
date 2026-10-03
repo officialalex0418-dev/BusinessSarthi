@@ -90,7 +90,7 @@ export const authorize = (...roles) => (req, _res, next) => {
         permissionGranted = permissions.inventory;
       } else if (path.startsWith('/distributors') || path.startsWith('/outlets') || path.startsWith('/invoices') || path.startsWith('/payments') || path.startsWith('/sales-invoices')) {
         permissionChecked = true;
-        permissionGranted = permissions.distributors;
+        permissionGranted = permissions.distributors || permissions.dispatchPayment;
       } else if (path.startsWith('/vendors') || path.startsWith('/purchases') || path.startsWith('/vendor-payments')) {
         permissionChecked = true;
         permissionGranted = permissions.vendors;

@@ -5,19 +5,14 @@ import { Card, Button, Input, Modal, Badge, Spinner, Table, Select } from '@/com
 
 const PERMISSIONS = [
   { key: 'staff', label: 'Staff Management' },
-  { key: 'liveTracking', label: 'Live Tracking' },
-  { key: 'attendance', label: 'Attendance' },
-  { key: 'leaves', label: 'Leaves' },
+  { key: 'leaves', label: 'Leave Management' },
+  { key: 'vendors', label: 'Vendor Management' },
   { key: 'salesTracker', label: 'Sales Management' },
-  { key: 'salesEntry', label: 'Sales Entry' },
-  { key: 'customerMasterList', label: 'Customer Master List' },
   { key: 'inventory', label: 'Inventory' },
-  { key: 'distributors', label: 'Distributors' },
-  { key: 'vendors', label: 'Vendors' },
-  { key: 'payroll', label: 'Payroll' },
-  { key: 'complaints', label: 'Complaints' },
-  { key: 'reports', label: 'Reports' },
+  { key: 'payroll', label: 'Payroll Management' },
   { key: 'configuration', label: 'Configuration' },
+  { key: 'distributors', label: 'Outlets Management' },
+  { key: 'dispatchPayment', label: 'Dispatch & Payments' },
 ];
 
 const emptyForm = {
