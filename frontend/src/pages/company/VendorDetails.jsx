@@ -231,20 +231,24 @@ export default function VendorDetails() {
           amount: p.amount ?? item.amount,
           method: p.method || 'CASH',
           remarks: p.remarks || '',
-          paymentDate: p.paymentDate ? String(p.paymentDate).split('T')[0] : ''
+          paymentDate: p.paymentDate ? String(p.paymentDate).split('T')[0] : '',
+          chequeNumber: p.chequeDetails?.number || p.chequeNumber || '',
+          bankName: p.chequeDetails?.bankName || p.bankName || '',
+          maturityDate: p.maturityDate ? String(p.maturityDate).split('T')[0] : ''
         });
         setModal('edit-payment');
       } else {
         const p = (purchases || []).find(p => p._id?.toString() === item.id?.toString()) || {
-          items: [{ productName: item.ref || 'Purchase', price: item.amount, quantity: 1, amount: item.amount }],
+          items: [{ productName: item.ref || 'Purchase', price: item.amount || 0, quantity: 1, amount: item.amount || 0 }],
           discountPct: 0,
           vatPct: 0,
           billNumber: '',
           billDate: '',
           createdAt: item.date || item.createdAt
         };
-        setPurchaseRows((p.items || []).map(i => ({
-          productName: i.productName || (typeof i.product === 'object' ? i.product?.productName : '') || 'Item',
+        const itemsList = (p.items && p.items.length > 0) ? p.items : [{ productName: item.ref || 'Purchase', price: item.amount || 0, quantity: 1, amount: item.amount || 0 }];
+        setPurchaseRows(itemsList.map(i => ({
+          productName: i.productName || (i.product && typeof i.product === 'object' ? i.product.productName : '') || 'Item',
           batch: i.batch || '',
           price: Number(i.price) || 0,
           mrp: Number(i.mrp || i.price) || 0,
@@ -257,12 +261,15 @@ export default function VendorDetails() {
         setBillNumber(p.billNumber || '');
         setBillDate(p.billDate ? String(p.billDate).split('T')[0] : '');
         const cDate = p.createdAt || item.date || item.createdAt;
-        setPayForm({ paymentDate: cDate ? String(cDate).split('T')[0] : '' });
+        setPayForm(prev => ({
+          ...prev,
+          paymentDate: cDate ? String(cDate).split('T')[0] : ''
+        }));
         setModal('edit-purchase');
       }
     } catch (err) {
       console.error('Failed to open edit modal:', err);
-      alert('Failed to load purchase entry to edit. Please try again.');
+      alert('Failed to load purchase entry to edit: ' + err.message);
     }
   };
 
