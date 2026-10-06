@@ -33,7 +33,12 @@ export default function VendorDetails() {
   const [purchaseVatPct, setPurchaseVatPct] = useState(0);
   const [billNumber, setBillNumber] = useState('');
   const [billDate, setBillDate] = useState('');
-  const dateFormat = user?.company?.settings?.dateFormat || 'BS';
+  const dateFormat = user?.company?.settings?.dateFormat || user?.stockist?.settings?.dateFormat || 'BS';
+
+  const vendor = data?.vendor || {};
+  const purchases = data?.purchases || [];
+  const payments = data?.payments || [];
+  const history = data?.history || [];
 
   const loadProducts = useCallback(async () => {
     try {
@@ -308,11 +313,6 @@ export default function VendorDetails() {
 
   if (loading) return <Spinner />;
   if (!data) return <EmptyState title="Vendor not found" />;
-
-  const vendor = data?.vendor || {};
-  const purchases = data?.purchases || [];
-  const payments = data?.payments || [];
-  const history = data?.history || [];
 
   return (
     <div className="space-y-6 pb-20">
