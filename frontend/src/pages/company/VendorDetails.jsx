@@ -12,9 +12,43 @@ import {
 import { formatMoney, formatDate, formatDateTime, fixFileUrl, cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
+import React from 'react';
+
+class VendorErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("VendorDetails Error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center space-y-4">
+          <div className="bg-red-50 text-red-700 p-6 rounded-xl border border-red-200 text-sm max-w-xl mx-auto space-y-2">
+            <p className="font-bold text-base">An error occurred in Vendor Details:</p>
+            <p className="font-mono text-xs bg-white p-3 rounded border text-left overflow-auto max-h-40">{this.state.error?.toString()}</p>
+            <button onClick={() => window.location.reload()} className="btn-primary mt-2">Reload Page</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const emptyPayment = { amount: 0, method: 'CASH', remarks: '', paymentDate: '', chequeNumber: '', bankName: '', maturityDate: '' };
 
 export default function VendorDetails() {
+  return (
+    <VendorErrorBoundary>
+      <VendorDetailsInner />
+    </VendorErrorBoundary>
+  );
+}
+
+function VendorDetailsInner() {
   const { id } = useParams();
   const { user } = useAuth();
   const [data, setData] = useState(null);
