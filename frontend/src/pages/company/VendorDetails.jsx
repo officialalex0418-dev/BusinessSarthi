@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, ShoppingCart, CreditCard, History, Phone, Mail,
-  MapPin, Hash, Plus, Printer, Download, Trash2, Edit, FileUp, FileDown, AlertCircle, FileText
+  MapPin, Hash, Plus, Printer, Download, Trash2, Edit, FileUp, FileDown, AlertCircle, FileText, X
 } from 'lucide-react';
 import { api, downloadFile } from '@/api/client';
 import {
