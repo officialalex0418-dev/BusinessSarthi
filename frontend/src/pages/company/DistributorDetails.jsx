@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Receipt, History, AlertCircle, Pencil, Save, X, Phone, MapPin, Hash, Trash2, Plus, User, Printer, Download, Eye, FileText, ShoppingCart, FileUp, FileDown } from 'lucide-react';
+import { ArrowLeft, CreditCard, Receipt, History, AlertCircle, Pencil, Edit, Save, X, Phone, MapPin, Hash, Trash2, Plus, User, Printer, Download, Eye, FileText, ShoppingCart, FileUp, FileDown } from 'lucide-react';
 import { api, downloadFile } from '@/api/client';
 import { Card, Button, Input, Modal, Table, Spinner, Badge, Select, Textarea, DatePicker, Checkbox } from '@/components/ui';
 import { formatMoney, formatDate, toLocalDateString, cn } from '@/lib/utils';
@@ -321,6 +321,44 @@ export default function DistributorDetails() {
     }
   };
 
+  const openEditInvoice = (h) => {
+    const inv = invoices.find(i => i._id?.toString() === h.id?.toString());
+    if (inv) {
+      setEditingInvoice({
+        ...inv,
+        dueDate: inv.dueDate ? String(inv.dueDate).split('T')[0] : ''
+      });
+      setModal('edit-invoice');
+    }
+  };
+
+  const openEditPayment = (h) => {
+    const pay = payments.find(p => p._id?.toString() === h.id?.toString());
+    if (pay) {
+      setEditingPayment(pay);
+      setPayForm({
+        amount: pay.amount,
+        method: pay.method || 'CASH',
+        remarks: pay.remarks || '',
+        paymentDate: pay.paymentDate ? String(pay.paymentDate).split('T')[0] : ''
+      });
+      setModal('edit-payment-record');
+    }
+  };
+
+  const updatePaymentRecord = async (e) => {
+    e.preventDefault();
+    setSaving(true); setError('');
+    try {
+      await api.patch(`/payments/${editingPayment._id}`, payForm);
+      setModal(null); setEditingPayment(null);
+      setPayForm({ amount: 0, method: 'CASH', remarks: '', paymentDate: '' });
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Update failed');
+    } finally { setSaving(false); }
+  };
+
   const submitCheque = async (e) => {
     e.preventDefault();
     setSaving(true); setError('');
@@ -591,29 +629,46 @@ export default function DistributorDetails() {
                 </div>
              </div>
              <Table
-                columns={['Date', 'Type', 'Ref / Method', 'Amount']}
+                columns={['Date', 'Type', 'Ref / Method', 'Amount', 'Actions']}
                 data={history}
                 renderRow={(h, idx) => (
-                  <tr key={idx}>
+                  <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
                     <td className="table-td text-xs">{formatDate(h.date, dateFormat)}</td>
                     <td className="table-td">
                       <Badge color={h.type === 'INVOICE' ? 'blue' : 'green'}>{h.type}</Badge>
                     </td>
                     <td className="table-td">
-                      <div className="flex items-center justify-between group">
-                        <div>
-                          <p className="font-medium text-xs">{h.ref}</p>
-                          <p className="text-[10px] text-slate-400">{h.method}</p>
-                        </div>
-                        {h.type === 'PAYMENT' && (
-                          <button onClick={() => deletePayment(h.id)} className="opacity-0 group-hover:opacity-100 text-red-500 p-1 hover:bg-red-50 rounded transition-all">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                      <div>
+                        <p className="font-medium text-xs">{h.ref}</p>
+                        <p className="text-[10px] text-slate-400">{h.method}</p>
                       </div>
                     </td>
                     <td className={`table-td font-bold ${h.type === 'INVOICE' ? 'text-red-600' : 'text-emerald-600'}`}>
                       {h.type === 'INVOICE' ? '+' : '-'}{formatMoney(h.amount)}
+                    </td>
+                    <td className="table-td no-print">
+                      <div className="flex gap-1">
+                        {h.type === 'INVOICE' && (
+                          <>
+                            <button type="button" onClick={() => openEditInvoice(h)} className="text-blue-500 hover:bg-blue-50 p-1.5 rounded" title="Edit Invoice">
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button type="button" onClick={() => deleteInv(h.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded" title="Delete Invoice">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                        {h.type === 'PAYMENT' && (
+                          <>
+                            <button type="button" onClick={() => openEditPayment(h)} className="text-blue-500 hover:bg-blue-50 p-1.5 rounded" title="Edit Payment">
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button type="button" onClick={() => deletePayment(h.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded" title="Delete Payment">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -1099,6 +1154,30 @@ export default function DistributorDetails() {
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => setModal(null)}>Cancel</Button>
             <Button type="submit" loading={saving}>{editingCheque ? 'Update Cheque' : 'Add Cheque'}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Payment Record Modal */}
+      <Modal open={modal === 'edit-payment-record'} onClose={() => setModal(null)} title="Edit Payment Record">
+        {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{error}</div>}
+        <form onSubmit={updatePaymentRecord} className="space-y-4">
+          <Input label="Amount *" type="number" required value={payForm.amount} onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} />
+          <Select
+            label="Method *"
+            value={payForm.method}
+            onChange={(e) => setPayForm({ ...payForm, method: e.target.value })}
+            options={[
+              { value: 'CASH', label: 'Cash' },
+              { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+              { value: 'CHEQUE', label: 'Cheque' }
+            ]}
+          />
+          <DatePicker label="Payment Date" value={payForm.paymentDate} onChange={(val) => setPayForm({ ...payForm, paymentDate: val })} />
+          <Textarea label="Remarks" value={payForm.remarks} onChange={(e) => setPayForm({ ...payForm, remarks: e.target.value })} />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Save Changes</Button>
           </div>
         </form>
       </Modal>

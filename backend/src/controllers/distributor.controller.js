@@ -372,6 +372,35 @@ export const bulkUploadTransactions = asyncHandler(async (req, res) => {
   });
 });
 
+/** PATCH /payments/:id */
+export const updatePayment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { amount, method, remarks, paymentDate } = req.body;
+
+  const payment = await Payment.findOne({ _id: id, company: req.companyId });
+  if (!payment) throw ApiError.notFound('Payment record not found');
+
+  const oldAmount = payment.amount;
+  const newAmount = amount !== undefined ? Number(amount) : oldAmount;
+  const diff = newAmount - oldAmount;
+
+  if (amount !== undefined) payment.amount = newAmount;
+  if (method !== undefined) payment.method = method;
+  if (remarks !== undefined) payment.remarks = remarks;
+  if (paymentDate !== undefined) payment.paymentDate = paymentDate;
+
+  await payment.save();
+
+  if (diff !== 0) {
+    await Distributor.findByIdAndUpdate(payment.distributor, {
+      $inc: { outstandingBalance: -diff }
+    });
+  }
+
+  audit({ req, action: 'UPDATE_PAYMENT', entity: 'Payment', entityId: id });
+  res.json({ success: true, data: payment });
+});
+
 /** DELETE /payments/:id */
 export const deletePayment = asyncHandler(async (req, res) => {
   const { id } = req.params;
