@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { SalesInvoice, Inventory, Distributor } from '../models/index.js';
+import { SalesInvoice, Inventory, Distributor, Payment } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { audit } from '../utils/audit.js';
 
@@ -91,9 +91,32 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
     remarks: remarks || ''
   });
 
+  const isCredit = !paymentMethod || paymentMethod.toUpperCase() === 'CREDIT';
+
   if (distributor) {
-    distributor.outstandingBalance += netTotal;
+    if (isCredit) {
+      distributor.outstandingBalance += netTotal;
+    }
     await distributor.save();
+  }
+
+  if (!isCredit && distributorId) {
+    const normalizedMethod = (paymentMethod || 'CASH').toUpperCase();
+    let paymentMethodEnum = 'CASH';
+    if (normalizedMethod.includes('CHEQUE')) paymentMethodEnum = 'CHEQUE';
+    else if (normalizedMethod.includes('BANK') || normalizedMethod.includes('ONLINE') || normalizedMethod.includes('QR') || normalizedMethod.includes('TRANSFER')) paymentMethodEnum = 'BANK_TRANSFER';
+    else paymentMethodEnum = 'CASH';
+
+    await Payment.create({
+      company: companyId,
+      distributor: distributorId,
+      amount: netTotal,
+      method: paymentMethodEnum,
+      paymentDate: new Date(),
+      remarks: `Auto-recorded payment for cash invoice ${invoiceNumber} (${paymentMethod})`,
+      adjustedInvoices: [{ invoice: invoice._id, amount: netTotal }],
+      createdBy: req.user._id
+    });
   }
 
   audit({ req, action: 'CREATE_SALES_INVOICE', entity: 'SalesInvoice', entityId: invoice._id, company: companyId });
