@@ -52,11 +52,21 @@ export const getDistributorDetails = asyncHandler(async (req, res) => {
 
   const aging = [];
   const processedInvoices = invoices.map(inv => {
-    const dueForThis = Math.max(0, inv.netTotal - totalPaymentsReceived);
-    const paidForThis = inv.netTotal - dueForThis;
+    const isPaidImmediately = inv.paymentMethod && inv.paymentMethod.toUpperCase() !== 'CREDIT';
 
-    // Reduce the pool of available payments
-    totalPaymentsReceived = Math.max(0, totalPaymentsReceived - inv.netTotal);
+    let dueForThis = 0;
+    let paidForThis = 0;
+
+    if (isPaidImmediately) {
+      paidForThis = inv.netTotal;
+      dueForThis = 0;
+    } else {
+      dueForThis = Math.max(0, inv.netTotal - totalPaymentsReceived);
+      paidForThis = inv.netTotal - dueForThis;
+
+      // Reduce the pool of available payments
+      totalPaymentsReceived = Math.max(0, totalPaymentsReceived - inv.netTotal);
+    }
 
     const days = Math.floor((now - new Date(inv.saleDate)) / (1000 * 60 * 60 * 24));
 
