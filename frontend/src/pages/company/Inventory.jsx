@@ -283,24 +283,30 @@ export default function InventoryPage() {
         [`Generated On: ${dateStr} ${timeStr}`],
         [`Vendor: ${vendorName}`],
         [],
-        ['S.N', 'Product Name', 'Cost Price', 'Total Cost Amount']
+        ['S.N', 'Product Name', 'Quantity', 'Cost Price', 'Total Cost Amount', 'Total Value']
       ];
 
       items.forEach((item, index) => {
-        const costPrice = Number(item.costPrice) || 0;
         const qty = Number(item.quantity) || 0;
+        const costPrice = Number(item.costPrice) || 0;
         const totalCostAmount = costPrice * qty;
+        const sellingPrice = Number(item.mrp || item.sellingPrice || costPrice) || 0;
+        const totalValue = sellingPrice * qty;
+
         wsData.push([
           index + 1,
           item.productName,
+          qty,
           costPrice,
-          totalCostAmount
+          totalCostAmount,
+          totalValue
         ]);
       });
 
-      const totalValuation = items.reduce((sum, item) => sum + ((Number(item.costPrice) || 0) * (Number(item.quantity) || 0)), 0);
+      const totalCostSum = items.reduce((sum, item) => sum + ((Number(item.costPrice) || 0) * (Number(item.quantity) || 0)), 0);
+      const totalValuationSum = items.reduce((sum, item) => sum + ((Number(item.mrp || item.sellingPrice || item.costPrice) || 0) * (Number(item.quantity) || 0)), 0);
       wsData.push([]);
-      wsData.push(['Total Valuation', '', '', totalValuation]);
+      wsData.push(['Total', '', '', '', totalCostSum, totalValuationSum]);
 
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       const wb = XLSX.utils.book_new();
