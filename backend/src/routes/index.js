@@ -194,6 +194,7 @@ r.patch('/cheques/:id', protect, authorize(...ALL_STAFF), scopeCompany, validate
 r.delete('/cheques/:id', protect, authorize(...OWNERS), scopeCompany, cheque.deleteCheque);
 
 // ============ BILLING & PAYMENTS ============
+r.get('/payments', protect, authorize(...MANAGERS), scopeCompany, distributor.listPayments);
 r.post('/invoices', protect, authorize(...MANAGERS), scopeCompany, distributor.createInvoice);
 r.post('/payments', protect, authorize(...MANAGERS), scopeCompany, distributor.recordPayment);
 r.patch('/payments/:id', protect, authorize(...MANAGERS), scopeCompany, distributor.updatePayment);

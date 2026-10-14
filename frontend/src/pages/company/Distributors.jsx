@@ -5,6 +5,7 @@ import { api } from '@/api/client';
 import { Card, Button, Input, Modal, Table, Spinner, Pagination, EmptyState, Badge, Select, Textarea, DatePicker } from '@/components/ui';
 import { formatMoney, formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import * as XLSX from 'xlsx';
 
 const emptyDistributor = { name: '', phone: '', email: '', address: '', panVat: '', registrationNumber: '', creditLimit: 0 };
 const emptyPayment = { distributorId: '', amount: 0, method: 'CASH', remarks: '', chequeDetails: { number: '', bankName: '', issueDate: '', depositDate: '', maturityDate: '' } };
@@ -33,6 +34,14 @@ export default function Distributors() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [featureBlocked, setFeatureBlocked] = useState(false);
+
+  // Report Download State
+  const [reportModal, setReportModal] = useState(false);
+  const [reportType, setReportType] = useState('OUTSTANDING'); // 'OUTSTANDING' | 'PAYMENT' | 'SALES'
+  const [reportFromDate, setReportFromDate] = useState('');
+  const [reportToDate, setReportToDate] = useState('');
+  const [reportDownloading, setReportDownloading] = useState(false);
+  const [reportError, setReportError] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -128,6 +137,161 @@ export default function Distributors() {
       load();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete');
+    }
+  };
+
+  const removeOutlet = async (v) => {
+    if (!confirm(`Are you sure you want to delete ${entitySingular.toLowerCase()} "${v.name}"?`)) return;
+    try {
+      await api.delete(`/distributors/${v._id}`);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete');
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if ((reportType === 'PAYMENT' || reportType === 'SALES') && (!reportFromDate || !reportToDate)) {
+      setReportError('Please select both From Date and To Date');
+      return;
+    }
+
+    setReportDownloading(true);
+    setReportError('');
+
+    try {
+      if (reportType === 'OUTSTANDING') {
+        // Outstanding Report: SN, Outlet Name, Due Amount, Due Age
+        const [distRes, invRes] = await Promise.all([
+          api.get('/distributors', { params: { limit: 10000 } }),
+          api.get('/sales-invoices', { params: { limit: 10000 } })
+        ]);
+
+        const items = distRes.data.data?.items || [];
+        const allInvoices = invRes.data.data?.items || [];
+
+        const now = new Date();
+        const outletOldestInvoiceMap = {};
+        allInvoices.forEach(inv => {
+          const distId = inv.distributor?._id || inv.distributor;
+          if (distId && inv.paymentMethod?.toUpperCase() === 'CREDIT') {
+            const invDate = new Date(inv.saleDate || inv.createdAt);
+            if (!outletOldestInvoiceMap[distId] || invDate < outletOldestInvoiceMap[distId]) {
+              outletOldestInvoiceMap[distId] = invDate;
+            }
+          }
+        });
+
+        const wsData = [
+          [`${entitySingular} Outstanding Report`],
+          [`Generated On: ${new Date().toLocaleString()}`],
+          [],
+          ['SN', `${entitySingular} Name`, 'Due Amount', 'Due Age']
+        ];
+
+        let sn = 1;
+        items.forEach((item) => {
+          const due = Number(item.outstandingBalance) || 0;
+          if (due > 0) {
+            const oldestDate = outletOldestInvoiceMap[item._id];
+            const dueAgeDays = oldestDate ? Math.floor((now - oldestDate) / (1000 * 60 * 60 * 24)) : 0;
+            wsData.push([
+              sn++,
+              item.name || 'Outlet',
+              due,
+              `${dueAgeDays} days`
+            ]);
+          }
+        });
+
+        const totalDue = items.reduce((s, i) => s + (Number(i.outstandingBalance) || 0), 0);
+        wsData.push([]);
+        wsData.push(['Total Outstanding', '', totalDue, '']);
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Outstanding');
+        XLSX.writeFile(wb, `${entitySingular}_Outstanding_Report_${Date.now()}.xlsx`);
+
+      } else if (reportType === 'PAYMENT') {
+        // Payment Report: SN, Outlet Name, Paid Amount, Payment Date
+        const res = await api.get('/payments', {
+          params: {
+            fromDate: reportFromDate || undefined,
+            toDate: reportToDate || undefined,
+            limit: 10000
+          }
+        });
+        const paymentsList = res.data.data?.items || [];
+
+        const wsData = [
+          [`${entitySingular} Payment Report`],
+          [`Date Range: ${reportFromDate} to ${reportToDate}`],
+          [],
+          ['SN', `${entitySingular} Name`, 'Paid Amount', 'Payment Date']
+        ];
+
+        paymentsList.forEach((p, idx) => {
+          wsData.push([
+            idx + 1,
+            p.distributor?.name || 'Outlet',
+            Number(p.amount) || 0,
+            formatDate(p.paymentDate, dateFormat)
+          ]);
+        });
+
+        const totalPaidSum = paymentsList.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+        wsData.push([]);
+        wsData.push(['Total Paid', '', totalPaidSum, '']);
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Payments');
+        XLSX.writeFile(wb, `${entitySingular}_Payment_Report_${reportFromDate}_to_${reportToDate}.xlsx`);
+
+      } else if (reportType === 'SALES') {
+        // Sales Report: SN, Outlet Name, Invoice No/Salesbill No, Invoice Date, Invoice Amount
+        const res = await api.get('/sales-invoices', {
+          params: {
+            fromDate: reportFromDate || undefined,
+            toDate: reportToDate || undefined,
+            limit: 10000
+          }
+        });
+        const salesList = res.data.data?.items || [];
+
+        const wsData = [
+          [`${entitySingular} Sales Report`],
+          [`Date Range: ${reportFromDate} to ${reportToDate}`],
+          [],
+          ['SN', `${entitySingular} Name`, 'Invoice No / Salesbill No', 'Invoice Date', 'Invoice Amount']
+        ];
+
+        salesList.forEach((inv, idx) => {
+          wsData.push([
+            idx + 1,
+            inv.distributor?.name || inv.customerName || 'Outlet',
+            inv.invoiceNumber || '—',
+            formatDate(inv.saleDate || inv.createdAt, dateFormat),
+            Number(inv.netTotal || inv.totalAmount) || 0
+          ]);
+        });
+
+        const totalSalesSum = salesList.reduce((s, inv) => s + (Number(inv.netTotal || inv.totalAmount) || 0), 0);
+        wsData.push([]);
+        wsData.push(['Total Sales', '', '', '', totalSalesSum]);
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Sales');
+        XLSX.writeFile(wb, `${entitySingular}_Sales_Report_${reportFromDate}_to_${reportToDate}.xlsx`);
+      }
+
+      setReportModal(false);
+    } catch (err) {
+      setReportError(err.response?.data?.message || 'Failed to download report');
+    } finally {
+      setReportDownloading(false);
     }
   };
 
@@ -308,6 +472,9 @@ export default function Distributors() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{entityPlural}</h1>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { setReportError(''); setReportModal(true); }}>
+            <Download className="h-4 w-4 mr-1.5" /> Download
+          </Button>
           <Button variant="outline" onClick={() => { setEditingCheque(null); setChequeForm(emptyCheque); setModal('cheque'); }}>
             Add Cheque
           </Button>
@@ -371,17 +538,21 @@ export default function Distributors() {
               <td className="table-td"><Badge color={v.status === 'ACTIVE' ? 'green' : 'red'}>{v.status}</Badge></td>
               <td className="table-td">
                 <div className="flex gap-1">
-                  <button title="Record Payment" className="rounded p-1.5 text-emerald-600 hover:bg-emerald-50"
+                  <button title="Record Payment" className="rounded p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
                     onClick={() => { setPayForm({ ...emptyPayment, distributorId: v._id }); setModal('payment'); }}>
                     <CreditCard className="h-4 w-4" />
                   </button>
-                  <button title="Ledger" className="rounded p-1.5 text-slate-600 hover:bg-slate-100"
+                  <button title="Ledger" className="rounded p-1.5 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => viewLedger(v)}>
                     <History className="h-4 w-4" />
                   </button>
-                  <button title="Edit" className="rounded p-1.5 hover:bg-slate-100"
+                  <button title="Edit" className="rounded p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => { setEditing(v); setForm({ ...emptyDistributor, ...v }); setModal('form'); }}>
                     <Pencil className="h-4 w-4" />
+                  </button>
+                  <button title={`Delete ${entitySingular}`} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
+                    onClick={() => removeOutlet(v)}>
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </td>
@@ -403,15 +574,18 @@ export default function Distributors() {
                   <p>Limit: <span className="font-bold text-slate-700 dark:text-slate-300">{formatMoney(v.creditLimit)}</span></p>
                   <p>{v.phone || 'No Phone'}</p>
                </div>
-               <div className="grid grid-cols-3 gap-2 pt-2">
-                  <Button variant="outline" className="h-9 w-full shadow-sm active:scale-95 transition-all" onClick={() => { setPayForm({ ...emptyPayment, distributorId: v._id }); setModal('payment'); }}>
+               <div className="grid grid-cols-4 gap-2 pt-2">
+                  <Button variant="outline" className="h-9 w-full shadow-sm active:scale-95 transition-all" title="Record Payment" onClick={() => { setPayForm({ ...emptyPayment, distributorId: v._id }); setModal('payment'); }}>
                     <CreditCard className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" className="h-9 w-full shadow-sm active:scale-95 transition-all" onClick={() => viewLedger(v)}>
+                  <Button variant="outline" className="h-9 w-full shadow-sm active:scale-95 transition-all" title="Ledger" onClick={() => viewLedger(v)}>
                     <History className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" className="h-9 w-full shadow-sm active:scale-95 transition-all" onClick={() => { setEditing(v); setForm({ ...emptyDistributor, ...v }); setModal('form'); }}>
+                  <Button variant="outline" className="h-9 w-full shadow-sm active:scale-95 transition-all" title="Edit" onClick={() => { setEditing(v); setForm({ ...emptyDistributor, ...v }); setModal('form'); }}>
                     <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="danger" className="h-9 w-full shadow-sm active:scale-95 transition-all" title="Delete" onClick={() => removeOutlet(v)}>
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                </div>
             </div>
@@ -644,6 +818,49 @@ export default function Distributors() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Download Outlet Report Modal */}
+      <Modal open={reportModal} onClose={() => setReportModal(false)} title={`Download ${entitySingular} Reports`}>
+        {reportError && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{reportError}</div>}
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-medium mb-2">Select Report Type *</p>
+            <Select
+              value={reportType}
+              onChange={(e) => setReportType(e.target.value)}
+              options={[
+                { value: 'OUTSTANDING', label: 'Outstanding Report' },
+                { value: 'PAYMENT', label: 'Payment Report' },
+                { value: 'SALES', label: 'Sales Report' }
+              ]}
+            />
+          </div>
+
+          {(reportType === 'PAYMENT' || reportType === 'SALES') && (
+            <div className="grid grid-cols-2 gap-4">
+              <DatePicker
+                label="From Date *"
+                value={reportFromDate}
+                onChange={setReportFromDate}
+                required
+              />
+              <DatePicker
+                label="To Date *"
+                value={reportToDate}
+                onChange={setReportToDate}
+                required
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => setReportModal(false)}>Cancel</Button>
+            <Button onClick={handleDownloadReport} loading={reportDownloading}>
+              <Download className="h-4 w-4 mr-1.5" /> Download Excel
+            </Button>
           </div>
         </div>
       </Modal>

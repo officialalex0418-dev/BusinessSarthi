@@ -125,9 +125,19 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
 
 export const listSalesInvoices = asyncHandler(async (req, res) => {
   const filter = { company: req.companyId };
+
+  if (req.query.distributorId) filter.distributor = req.query.distributorId;
+
+  if (req.query.fromDate || req.query.toDate) {
+    filter.createdAt = {};
+    if (req.query.fromDate) filter.createdAt.$gte = new Date(req.query.fromDate + 'T00:00:00');
+    if (req.query.toDate) filter.createdAt.$lte = new Date(req.query.toDate + 'T23:59:59.999');
+  }
+
   const items = await SalesInvoice.find(filter).sort('-createdAt')
     .populate('staff', 'name')
-    .populate('distributor', 'name panVat registrationNumber phone address');
+    .populate('distributor', 'name panVat registrationNumber phone address')
+    .limit(Number(req.query.limit) || 10000);
   res.json({ success: true, data: { items } });
 });
 

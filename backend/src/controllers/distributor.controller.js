@@ -372,6 +372,26 @@ export const bulkUploadTransactions = asyncHandler(async (req, res) => {
   });
 });
 
+/** GET /payments - List payments with date range filtering for reports */
+export const listPayments = asyncHandler(async (req, res) => {
+  const filter = { company: req.companyId };
+
+  if (req.query.distributorId) filter.distributor = req.query.distributorId;
+
+  if (req.query.fromDate || req.query.toDate) {
+    filter.paymentDate = {};
+    if (req.query.fromDate) filter.paymentDate.$gte = new Date(req.query.fromDate + 'T00:00:00');
+    if (req.query.toDate) filter.paymentDate.$lte = new Date(req.query.toDate + 'T23:59:59.999');
+  }
+
+  const items = await Payment.find(filter)
+    .populate('distributor', 'name phone address')
+    .sort('-paymentDate')
+    .limit(Number(req.query.limit) || 10000);
+
+  res.json({ success: true, data: { items } });
+});
+
 /** PATCH /payments/:id */
 export const updatePayment = asyncHandler(async (req, res) => {
   const { id } = req.params;
