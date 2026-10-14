@@ -673,16 +673,40 @@ export default function DistributorDetails() {
                   </tr>
                 )}
                 mobileRender={(h, idx) => (
-                  <div key={idx} className="p-3 border-b flex justify-between items-center text-xs">
+                  <div key={idx} className="p-3 border-b flex items-center justify-between text-xs">
                     <div>
                       <p className="font-semibold">{formatDate(h.date, dateFormat)}</p>
                       <p className="text-slate-400">{h.ref} {h.method && `· ${h.method}`}</p>
                     </div>
-                    <div className="text-right">
-                      <p className={`font-bold ${h.type === 'INVOICE' ? 'text-red-600' : 'text-emerald-600'}`}>
-                         {h.type === 'INVOICE' ? '+' : '-'}{formatMoney(h.amount)}
-                      </p>
-                      <Badge color={h.type === 'INVOICE' ? 'blue' : 'green'}>{h.type}</Badge>
+                    <div className="text-right flex items-center gap-2">
+                      <div>
+                        <p className={`font-bold ${h.type === 'INVOICE' ? 'text-red-600' : 'text-emerald-600'}`}>
+                           {h.type === 'INVOICE' ? '+' : '-'}{formatMoney(h.amount)}
+                        </p>
+                        <Badge color={h.type === 'INVOICE' ? 'blue' : 'green'} className="mt-0.5">{h.type}</Badge>
+                      </div>
+                      <div className="flex gap-1 ml-1 no-print">
+                        {h.type === 'INVOICE' && (
+                          <>
+                            <button type="button" onClick={() => openEditInvoice(h)} className="text-blue-500 hover:bg-blue-50 p-1.5 rounded" title="Edit Invoice">
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button type="button" onClick={() => deleteInv(h.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded" title="Delete Invoice">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                        {h.type === 'PAYMENT' && (
+                          <>
+                            <button type="button" onClick={() => openEditPayment(h)} className="text-blue-500 hover:bg-blue-50 p-1.5 rounded" title="Edit Payment">
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button type="button" onClick={() => deletePayment(h.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded" title="Delete Payment">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -690,13 +714,13 @@ export default function DistributorDetails() {
           </Card>
 
           <Card className="p-0 overflow-hidden" id="cheque-report">
-             <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b flex justify-between items-center">
-                <h3 className="font-bold flex items-center gap-2"><History className="h-4 w-4 text-purple-500" /> Pending & Cashed Cheques</h3>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={(e) => handlePrintSection(e, 'Cheque Report')}>
+             <div className="bg-slate-50 dark:bg-slate-900/50 p-3 sm:p-4 border-b flex justify-between items-center">
+                <h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><History className="h-4 w-4 text-purple-500" /> Pending & Cashed Cheques</h3>
+                <div className="flex gap-1 sm:gap-2">
+                  <Button size="sm" variant="ghost" className="p-1.5 h-8 w-8" onClick={(e) => handlePrintSection(e, 'Cheque Report')}>
                     <Printer className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => exportToCSV(distCheques, `Cheques_${distributor.name}`, [
+                  <Button size="sm" variant="ghost" className="p-1.5 h-8 w-8" onClick={() => exportToCSV(distCheques, `Cheques_${distributor.name}`, [
                     { label: 'Issue Date', key: (r) => r.issueDate ? formatDate(r.issueDate, dateFormat) : '' },
                     { label: 'Cash Date', key: (r) => formatDate(r.cashDate, dateFormat) },
                     { label: 'Cheque #', key: 'chequeNumber' },
@@ -745,6 +769,18 @@ export default function DistributorDetails() {
                       </div>
                     </td>
                   </tr>
+                )}
+                mobileRender={(c) => (
+                  <div key={c._id} className="p-3 border-b flex items-center justify-between text-xs">
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-slate-100">{c.chequeNumber} · {c.bankName}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Cash Date: {formatDate(c.cashDate, dateFormat)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-slate-900 dark:text-white">{formatMoney(c.amount)}</p>
+                      <Badge color={c.status === 'CASHED' ? 'green' : c.status === 'BOUNCED' ? 'red' : 'blue'} className="mt-0.5">{c.status}</Badge>
+                    </div>
+                  </div>
                 )}
              />
           </Card>

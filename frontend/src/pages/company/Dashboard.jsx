@@ -29,6 +29,7 @@ const StatSparkline = ({ data, color }) => (
 export default function CompanyDashboard() {
   const [data, setData] = useState(null);
   const [currentMonth, setCurrentMonth] = useState('');
+  const isStockist = typeof window !== 'undefined' && window.location.pathname.startsWith('/stockist');
 
   const load = useCallback(async () => {
     try {
@@ -70,43 +71,43 @@ export default function CompanyDashboard() {
     <div className="space-y-6 pb-10">
       {/* Header Section */}
       <Card className="overflow-hidden border-none shadow-sm">
-        <div className="flex flex-col items-center justify-between gap-6 p-6 sm:flex-row">
-          <div className="flex items-center gap-5">
-            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 shadow-inner dark:bg-slate-800/50">
+        <div className="flex flex-col items-center justify-between gap-4 p-4 text-center sm:p-6 sm:flex-row sm:text-left">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-5">
+            <div className="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 shadow-inner dark:bg-slate-800/50">
               {data.company?.logo ? (
                 <img src={fixFileUrl(data.company.logo)} alt="Logo" className="h-full w-full object-cover" />
               ) : (
-                <Building2 className="h-10 w-10 text-primary-600" />
+                <Building2 className="h-8 w-8 sm:h-10 sm:w-10 text-primary-600" />
               )}
             </div>
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{data.company?.name}</h1>
-              <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-sm text-slate-500">
-                <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {data.company?.address || 'Nepal'}</span>
-                <span className="flex items-center gap-1.5"><FileText className="h-4 w-4" /> Reg: {data.company?.registrationNumber || '—'}</span>
-                <span className="flex items-center gap-1.5"><CreditCard className="h-4 w-4" /> PAN: {data.company?.panVat || '—'}</span>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{data.company?.name}</h1>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-y-1.5 gap-x-3 text-xs sm:text-sm text-slate-500">
+                <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {data.company?.address || 'Nepal'}</span>
+                <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5" /> Reg: {data.company?.registrationNumber || '—'}</span>
+                <span className="flex items-center gap-1"><CreditCard className="h-3.5 w-3.5" /> PAN: {data.company?.panVat || '—'}</span>
               </div>
             </div>
           </div>
-          <div className="rounded-2xl bg-blue-50/50 p-4 px-6 text-center dark:bg-blue-900/10 sm:text-right">
+          <div className="w-full sm:w-auto rounded-2xl bg-blue-50/50 p-3 sm:p-4 px-4 sm:px-6 text-center dark:bg-blue-900/10 sm:text-right">
              <LiveClock className="text-slate-900 dark:text-white" showIcon={false} />
           </div>
         </div>
       </Card>
 
       {/* Top Stats Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Today's Sales */}
-        <Card className="p-5">
+        <Card className="p-4 sm:p-5">
           <div className="flex items-start justify-between">
-            <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600 dark:bg-emerald-900/20">
-              <TrendingUp className="h-6 w-6" />
+            <div className="rounded-xl bg-emerald-50 p-2 sm:p-2.5 text-emerald-600 dark:bg-emerald-900/20">
+              <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <StatSparkline color="#10b981" data={[{value: 10}, {value: 25}, {value: 15}, {value: 30}]} />
           </div>
-          <div className="mt-4 space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Today's Sales</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatMoney(data.todaySales)}</p>
+          <div className="mt-3 sm:mt-4 space-y-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Today's Sales</p>
+            <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white truncate">{formatMoney(data.todaySales)}</p>
             <div className="flex items-center gap-1 text-xs font-medium">
               <span className={cn(data.salesTrend >= 0 ? "text-emerald-600" : "text-rose-600")}>
                 {data.salesTrend >= 0 ? '↑' : '↓'} {Math.abs(data.salesTrend)}%
@@ -117,49 +118,49 @@ export default function CompanyDashboard() {
         </Card>
 
         {/* Present Staff */}
-        <Card className="p-5">
+        <Card className="p-4 sm:p-5">
           <div className="flex items-start justify-between">
-            <div className="rounded-xl bg-blue-50 p-2.5 text-blue-600 dark:bg-blue-900/20">
-              <Users className="h-6 w-6" />
+            <div className="rounded-xl bg-blue-50 p-2 sm:p-2.5 text-blue-600 dark:bg-blue-900/20">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <StatSparkline color="#3b82f6" data={[{value: 20}, {value: 28}, {value: 22}, {value: 35}]} />
           </div>
-          <div className="mt-4 space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Present Staff</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{data.checkedInToday}</p>
-            <p className="text-xs font-medium text-slate-400">of {data.totalStaff} total staff</p>
+          <div className="mt-3 sm:mt-4 space-y-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Present Staff</p>
+            <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">{data.checkedInToday}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-400">of {data.totalStaff} total staff</p>
           </div>
         </Card>
 
         {/* Absent Staff */}
-        <Card className="p-5">
+        <Card className="p-4 sm:p-5">
           <div className="flex items-start justify-between">
-            <div className="rounded-xl bg-orange-50 p-2.5 text-orange-600 dark:bg-orange-900/20">
-              <UserMinus className="h-6 w-6" />
+            <div className="rounded-xl bg-orange-50 p-2 sm:p-2.5 text-orange-600 dark:bg-orange-900/20">
+              <UserMinus className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <StatSparkline color="#f59e0b" data={[{value: 5}, {value: 2}, {value: 8}, {value: 4}]} />
           </div>
-          <div className="mt-4 space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Absent Staff</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{data.absentToday}</p>
-            <p className="text-xs font-medium text-slate-400">
+          <div className="mt-3 sm:mt-4 space-y-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Absent Staff</p>
+            <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">{data.absentToday}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-400">
               {data.totalStaff > 0 ? ((data.absentToday / data.totalStaff) * 100).toFixed(1) : 0}% of total staff
             </p>
           </div>
         </Card>
 
         {/* On Leave */}
-        <Card className="p-5">
+        <Card className="p-4 sm:p-5">
           <div className="flex items-start justify-between">
-            <div className="rounded-xl bg-purple-50 p-2.5 text-purple-600 dark:bg-purple-900/20">
-              <Calendar className="h-6 w-6" />
+            <div className="rounded-xl bg-purple-50 p-2 sm:p-2.5 text-purple-600 dark:bg-purple-900/20">
+              <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <StatSparkline color="#8b5cf6" data={[{value: 2}, {value: 3}, {value: 1}, {value: 3}]} />
           </div>
-          <div className="mt-4 space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">On Leave</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{data.onLeaveToday}</p>
-            <p className="text-xs font-medium text-slate-400">
+          <div className="mt-3 sm:mt-4 space-y-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">On Leave</p>
+            <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">{data.onLeaveToday}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-400">
               {data.totalStaff > 0 ? ((data.onLeaveToday / data.totalStaff) * 100).toFixed(1) : 0}% of total staff
             </p>
           </div>
@@ -252,7 +253,7 @@ export default function CompanyDashboard() {
                 <div className="w-full space-y-4">
                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b pb-2">
                       <span>Product</span>
-                      <div className="flex gap-10">
+                      <div className="flex gap-4 xs:gap-10">
                          <span>Sales (NPR)</span>
                          <span className="w-6 text-right">%</span>
                       </div>
@@ -260,18 +261,18 @@ export default function CompanyDashboard() {
                    <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                       {data.productSales.map((p, i) => (
                         <div key={i} className="flex items-center justify-between group">
-                           <div className="flex items-center gap-3 min-w-0">
+                           <div className="flex items-center gap-2 xs:gap-3 min-w-0 pr-2">
                               <div className="h-2 w-2 shrink-0 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
                               <p className="truncate text-xs font-semibold text-slate-700 dark:text-slate-300 group-hover:text-primary-600 transition-colors">{p.name}</p>
                            </div>
-                           <div className="flex items-center gap-8 font-mono">
+                           <div className="flex items-center gap-3 xs:gap-8 font-mono shrink-0">
                               <p className="text-xs font-bold text-slate-900 dark:text-white">{p.amount.toLocaleString()}</p>
                               <p className="w-6 text-right text-xs font-bold text-slate-500">{p.percent}%</p>
                            </div>
                         </div>
                       ))}
                    </div>
-                   <Button variant="outline" size="sm" className="w-full text-xs font-bold group" onClick={() => window.location.href='/company/inventory'}>
+                   <Button variant="outline" size="sm" className="w-full text-xs font-bold group" onClick={() => window.location.href = isStockist ? '/stockist/inventory' : '/company/inventory'}>
                      View All Products <ChevronRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
                    </Button>
                 </div>
@@ -284,7 +285,7 @@ export default function CompanyDashboard() {
       <Card>
         <CardHeader
           title="Recent Activity Log"
-          action={<Button variant="outline" size="sm" className="text-xs font-bold" onClick={() => window.location.href='/company/reports'}>View All</Button>}
+          action={<Button variant="outline" size="sm" className="text-xs font-bold" onClick={() => window.location.href = isStockist ? '/stockist/reports' : '/company/reports'}>View All</Button>}
         />
         <CardBody className="p-0">
            <div className="overflow-x-auto">

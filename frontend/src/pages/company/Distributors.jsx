@@ -469,57 +469,57 @@ export default function Distributors() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">{entityPlural}</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { setReportError(''); setReportModal(true); }}>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" className="flex-1 sm:flex-none justify-center text-xs sm:text-sm" onClick={() => { setReportError(''); setReportModal(true); }}>
             <Download className="h-4 w-4 mr-1.5" /> Download
           </Button>
-          <Button variant="outline" onClick={() => { setEditingCheque(null); setChequeForm(emptyCheque); setModal('cheque'); }}>
+          <Button variant="outline" className="flex-1 sm:flex-none justify-center text-xs sm:text-sm" onClick={() => { setEditingCheque(null); setChequeForm(emptyCheque); setModal('cheque'); }}>
             Add Cheque
           </Button>
-          <Button onClick={() => { setEditing(null); setForm(emptyDistributor); setModal('form'); }}>
+          <Button className="flex-1 sm:flex-none justify-center text-xs sm:text-sm" onClick={() => { setEditing(null); setForm(emptyDistributor); setModal('form'); }}>
             <Plus className="h-4 w-4" /> Add {entitySingular}
           </Button>
         </div>
       </div>
 
       {analytics && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          <Card className="p-3 border-l-4 border-l-primary-500 bg-white dark:bg-slate-900">
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Monthly Sales</p>
-            <p className="text-lg font-bold text-slate-900 dark:text-white mt-1">{formatMoney(analytics.monthlySales)}</p>
+        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
+          <Card className="p-2.5 sm:p-3 border-l-4 border-l-primary-500 bg-white dark:bg-slate-900">
+            <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Monthly Sales</p>
+            <p className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white mt-1 truncate">{formatMoney(analytics.monthlySales)}</p>
           </Card>
-          <Card className="p-3 border-l-4 border-l-emerald-500 bg-white dark:bg-slate-900">
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Monthly Received</p>
-            <p className="text-lg font-bold text-emerald-600 mt-1">{formatMoney(analytics.monthlyPayments)}</p>
+          <Card className="p-2.5 sm:p-3 border-l-4 border-l-emerald-500 bg-white dark:bg-slate-900">
+            <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Monthly Received</p>
+            <p className="text-sm sm:text-lg font-bold text-emerald-600 mt-1 truncate">{formatMoney(analytics.monthlyPayments)}</p>
           </Card>
-          <Card className="p-3 border-l-4 border-l-orange-500 bg-white dark:bg-slate-900">
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Due</p>
-            <p className="text-lg font-bold text-orange-600 mt-1">{formatMoney(analytics.totalOutstanding)}</p>
+          <Card className="p-2.5 sm:p-3 border-l-4 border-l-orange-500 bg-white dark:bg-slate-900">
+            <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Due</p>
+            <p className="text-sm sm:text-lg font-bold text-orange-600 mt-1 truncate">{formatMoney(analytics.totalOutstanding)}</p>
           </Card>
-          <Card className="p-3 border-l-4 border-l-red-500 bg-white dark:bg-slate-900">
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Expired Due</p>
-            <p className="text-lg font-bold text-red-600 mt-1">{formatMoney(analytics.overdueOutstanding)}</p>
+          <Card className="p-2.5 sm:p-3 border-l-4 border-l-red-500 bg-white dark:bg-slate-900">
+            <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Expired Due</p>
+            <p className="text-sm sm:text-lg font-bold text-red-600 mt-1 truncate">{formatMoney(analytics.overdueOutstanding)}</p>
           </Card>
-          <Card className="p-3 border-l-4 border-l-blue-500 bg-white dark:bg-slate-900">
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{activeStatLabel}</p>
-            <p className="text-lg font-bold text-blue-600 mt-1">{analytics.activeDistributors}</p>
+          <Card className="p-2.5 sm:p-3 border-l-4 border-l-blue-500 bg-white dark:bg-slate-900">
+            <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">{activeStatLabel}</p>
+            <p className="text-sm sm:text-lg font-bold text-blue-600 mt-1">{analytics.activeDistributors}</p>
           </Card>
           <Card
-            className="p-3 border-l-4 border-l-purple-500 bg-white dark:bg-slate-900 cursor-pointer hover:bg-slate-50 transition"
+            className="p-2.5 sm:p-3 border-l-4 border-l-purple-500 bg-white dark:bg-slate-900 cursor-pointer hover:bg-slate-50 transition"
             onClick={loadCheques}
           >
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Upcoming Cheques</p>
-            <p className="text-lg font-bold text-purple-600 mt-1">{analytics.upcomingCheques}</p>
+            <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Upcoming Cheques</p>
+            <p className="text-sm sm:text-lg font-bold text-purple-600 mt-1">{analytics.upcomingCheques}</p>
           </Card>
         </div>
       )}
 
       <Card>
-        <div className="border-b border-slate-200 p-4 dark:border-slate-800">
+        <div className="border-b border-slate-200 p-3 sm:p-4 dark:border-slate-800">
           <Input placeholder={`Search ${entityPlural.toLowerCase()}...`} value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="max-w-xs" />
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="w-full sm:max-w-xs" />
         </div>
         <Table
           columns={[entitySingular, 'Contact', 'Outstanding', 'Credit Limit', 'Status', 'Actions']}
