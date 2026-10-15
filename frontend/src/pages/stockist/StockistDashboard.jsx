@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Users, UserCheck, UserMinus, Calendar, TrendingUp,
   Activity, Clock, Building2, MapPin, FileText, CreditCard,
-  ChevronRight, Wallet, ShoppingBag, Coins, Receipt
+  ChevronRight, Wallet, ShoppingBag, Coins, Receipt, RefreshCw
 } from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -28,14 +28,18 @@ const StatSparkline = ({ data, color }) => (
 
 export default function StockistDashboard() {
   const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [currentMonth, setCurrentMonth] = useState('');
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
       const { data: res } = await api.get('/dashboard/company');
       setData(res.data);
 
-      const dateFormat = res.data.company?.settings?.dateFormat || 'AD';
+      const dateFormat = res.data?.company?.settings?.dateFormat || 'AD';
       if (dateFormat === 'BS') {
          const bs = adToBs(new Date());
          setCurrentMonth(`${bs.year}-${String(bs.month).padStart(2, '0')}`);
@@ -44,6 +48,9 @@ export default function StockistDashboard() {
       }
     } catch (e) {
       console.error('Failed to load stockist dashboard', e);
+      setError(e.response?.data?.message || 'Failed to load dashboard data. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -64,7 +71,33 @@ export default function StockistDashboard() {
     return () => clearInterval(checkInterval);
   }, [load, currentMonth, data?.company?.settings?.dateFormat]);
 
-  if (!data) return <div className="flex h-[80vh] items-center justify-center"><Spinner className="h-10 w-10" /></div>;
+  if (loading && !data) {
+    return (
+      <div className="flex h-[75vh] flex-col items-center justify-center gap-3">
+        <Spinner className="h-10 w-10 text-primary-600" />
+        <p className="text-sm font-medium text-slate-500">Loading Stockist Dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <div className="flex h-[75vh] flex-col items-center justify-center gap-4 text-center px-4">
+        <div className="rounded-2xl bg-rose-50 p-4 text-rose-600 dark:bg-rose-900/20">
+          <Building2 className="h-8 w-8" />
+        </div>
+        <div className="space-y-1 max-w-sm">
+          <p className="font-bold text-slate-900 dark:text-white">Unable to load Stockist Dashboard</p>
+          <p className="text-xs text-slate-500">{error}</p>
+        </div>
+        <Button onClick={load} variant="outline" className="gap-2">
+          <RefreshCw className="h-4 w-4" /> Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  if (!data) return null;
 
   return (
     <div className="space-y-6 pb-10">
@@ -80,7 +113,7 @@ export default function StockistDashboard() {
               )}
             </div>
             <div className="space-y-1">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{data.company?.name}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{data.company?.name || 'Stockist Panel'}</h1>
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-y-1.5 gap-x-3 text-xs sm:text-sm text-slate-500">
                 <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {data.company?.address || 'Nepal'}</span>
                 <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5" /> Reg: {data.company?.registrationNumber || '—'}</span>
@@ -238,7 +271,7 @@ export default function StockistDashboard() {
             </div>
             <div className="h-72 w-full">
                <ResponsiveContainer width="100%" height="100%">
-                 <AreaChart data={data.monthlySalesGraph}>
+                 <AreaChart data={data.monthlySalesGraph || []}>
                    <defs>
                      <linearGradient id="colorStockistSales" x1="0" y1="0" x2="0" y2="1">
                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
@@ -251,7 +284,7 @@ export default function StockistDashboard() {
                      axisLine={false}
                      tickLine={false}
                      tick={{fontSize: 10, fill: '#94a3b8'}}
-                     tickFormatter={(val) => val.split('-').slice(1).join('/')}
+                     tickFormatter={(val) => val ? val.split('-').slice(1).join('/') : ''}
                    />
                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
                    <Tooltip
@@ -278,14 +311,14 @@ export default function StockistDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={data.productSales}
+                        data={data.productSales || []}
                         cx="50%" cy="50%"
                         innerRadius={60}
                         outerRadius={85}
                         paddingAngle={5}
                         dataKey="amount"
                       >
-                        {data.productSales.map((entry, index) => (
+                        {(data.productSales || []).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -308,14 +341,14 @@ export default function StockistDashboard() {
                       </div>
                    </div>
                    <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                      {data.productSales.map((p, i) => (
+                      {(data.productSales || []).map((p, i) => (
                         <div key={i} className="flex items-center justify-between group">
                            <div className="flex items-center gap-2 xs:gap-3 min-w-0 pr-2">
                               <div className="h-2 w-2 shrink-0 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
                               <p className="truncate text-xs font-semibold text-slate-700 dark:text-slate-300 group-hover:text-primary-600 transition-colors">{p.name}</p>
                            </div>
                            <div className="flex items-center gap-3 xs:gap-8 font-mono shrink-0">
-                              <p className="text-xs font-bold text-slate-900 dark:text-white">{p.amount.toLocaleString()}</p>
+                              <p className="text-xs font-bold text-slate-900 dark:text-white">{(p.amount || 0).toLocaleString()}</p>
                               <p className="w-6 text-right text-xs font-bold text-slate-500">{p.percent}%</p>
                            </div>
                         </div>
@@ -347,13 +380,13 @@ export default function StockistDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {data.recentActivities.map((act) => (
+                  {(data.recentActivities || []).map((act) => (
                     <tr key={act._id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-4 sm:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-3">
-                           <ActivityIcon action={act.action} />
+                           <ActivityIcon action={act.action || ''} />
                            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
-                             {act.action.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}
+                             {(act.action || '').split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}
                              <span className="ml-1 text-slate-400 font-normal">performed</span>
                            </p>
                         </div>
@@ -366,7 +399,7 @@ export default function StockistDashboard() {
                       </td>
                     </tr>
                   ))}
-                  {!data.recentActivities.length && (
+                  {(!data.recentActivities || !data.recentActivities.length) && (
                     <tr>
                       <td colSpan="3" className="px-6 py-10 text-center text-sm text-slate-400 italic">No recent activity logs available.</td>
                     </tr>
@@ -380,7 +413,7 @@ export default function StockistDashboard() {
   );
 }
 
-function ActivityIcon({ action }) {
+function ActivityIcon({ action = '' }) {
   const base = "h-7 w-7 sm:h-8 sm:w-8 rounded-lg flex items-center justify-center shrink-0";
   if (action.includes('SALE')) return <div className={cn(base, "bg-emerald-50 text-emerald-600")}><TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>;
   if (action.includes('STAFF') || action.includes('USER')) return <div className={cn(base, "bg-blue-50 text-blue-600")}><Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>;

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import {
   Company, User, Package, Attendance, Sale, SalesInvoice,
-  LocationLog, AuditLog, Leave, Holiday, Target, LeaveType
+  LocationLog, AuditLog, Leave, Holiday, Target, LeaveType, Payment
 } from '../models/index.js';
 
 import { asyncHandler } from '../utils/ApiError.js';
@@ -33,9 +33,22 @@ export const superDashboard = asyncHandler(async (_req, res) => {
   res.json({ success: true, data: dashboardData });
 });
 
-/** GET /dashboard/company — Company owner / manager dashboard */
+/** GET /dashboard/company — Company owner / manager / stockist dashboard */
 export const companyDashboard = asyncHandler(async (req, res) => {
   const companyId = req.companyId;
+  if (!companyId) {
+    return res.json({
+      success: true,
+      data: {
+        company: req.user.company || req.user.stockist || null,
+        totalStaff: 0, activeStaff: 0, checkedInToday: 0, onLeaveToday: 0, absentToday: 0,
+        todaySales: 0, yesterdaySales: 0, salesTrend: 0, monthlySales: 0, monthlyTrend: 0,
+        todayPayments: 0, monthlyPayments: 0, monthlyProfit: 0,
+        monthlySalesGraph: [], productSales: [], recentActivities: []
+      }
+    });
+  }
+
   const cachedData = statsCache.get(`company_dashboard:${companyId}`);
   if (cachedData) return res.json({ success: true, data: cachedData });
 
@@ -74,6 +87,8 @@ export const companyDashboard = asyncHandler(async (req, res) => {
     endOfLastMonth = new Date(startOfMonth); endOfLastMonth.setDate(0); endOfLastMonth.setHours(23, 59, 59, 999);
   }
 
+  const compOid = mongoose.Types.ObjectId.isValid(companyId) ? new mongoose.Types.ObjectId(companyId) : companyId;
+
   const [
     totalStaff, activeStaff, checkedInToday, onLeaveToday,
     todaySalesInvoiceAgg, yesterdaySalesInvoiceAgg, monthlySalesInvoiceAgg, lastMonthSalesInvoiceAgg,
@@ -81,68 +96,73 @@ export const companyDashboard = asyncHandler(async (req, res) => {
     monthlyInvoicesForProfit,
     monthlySalesGraph, productSalesAgg, recentActivities
   ] = await Promise.all([
-    User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] } }),
-    User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] }, isActive: true }),
-    Attendance.countDocuments({ company: companyId, date: today, 'checkIn.time': { $exists: true } }),
-    Attendance.countDocuments({ company: companyId, date: today, status: 'ON_LEAVE' }),
+    User.countDocuments({ $or: [{ company: companyId }, { stockist: companyId }], role: { $in: ['STAFF', 'COMPANY_MANAGER'] } }).catch(() => 0),
+    User.countDocuments({ $or: [{ company: companyId }, { stockist: companyId }], role: { $in: ['STAFF', 'COMPANY_MANAGER'] }, isActive: true }).catch(() => 0),
+    Attendance.countDocuments({ $or: [{ company: companyId }, { stockist: companyId }], date: today, 'checkIn.time': { $exists: true } }).catch(() => 0),
+    Attendance.countDocuments({ $or: [{ company: companyId }, { stockist: companyId }], date: today, status: 'ON_LEAVE' }).catch(() => 0),
 
     // SalesInvoices - Today
     SalesInvoice.aggregate([
-      { $match: { company: oid(companyId), saleDate: { $gte: startOfToday } } },
-      { $group: { _id: null, total: { $sum: '$netTotal' } } }
-    ]),
+      { $match: { company: compOid, saleDate: { $gte: startOfToday } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$netTotal', '$totalAmount'] } } } }
+    ]).catch(() => []),
+
     // SalesInvoices - Yesterday
     SalesInvoice.aggregate([
-      { $match: { company: oid(companyId), saleDate: { $gte: startOfYesterday, $lte: endOfYesterday } } },
-      { $group: { _id: null, total: { $sum: '$netTotal' } } }
-    ]),
+      { $match: { company: compOid, saleDate: { $gte: startOfYesterday, $lte: endOfYesterday } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$netTotal', '$totalAmount'] } } } }
+    ]).catch(() => []),
+
     // SalesInvoices - Monthly
     SalesInvoice.aggregate([
-      { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
-      { $group: { _id: null, total: { $sum: '$netTotal' } } }
-    ]),
+      { $match: { company: compOid, saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$netTotal', '$totalAmount'] } } } }
+    ]).catch(() => []),
+
     // SalesInvoices - Last Month
     SalesInvoice.aggregate([
-      { $match: { company: oid(companyId), saleDate: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
-      { $group: { _id: null, total: { $sum: '$netTotal' } } }
-    ]),
+      { $match: { company: compOid, saleDate: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$netTotal', '$totalAmount'] } } } }
+    ]).catch(() => []),
 
     // Payments - Today
     Payment.aggregate([
-      { $match: { company: oid(companyId), paymentDate: { $gte: startOfToday } } },
+      { $match: { company: compOid, paymentDate: { $gte: startOfToday } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]),
+    ]).catch(() => []),
+
     // Payments - Monthly
     Payment.aggregate([
-      { $match: { company: oid(companyId), paymentDate: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $match: { company: compOid, paymentDate: { $gte: startOfMonth, $lte: endOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]),
+    ]).catch(() => []),
 
     // Monthly Invoices populated with product cost prices for Profit Calculation
     SalesInvoice.find({ company: companyId, saleDate: { $gte: startOfMonth, $lte: endOfMonth } })
       .populate('items.product', 'costPrice sellingPrice price')
-      .lean(),
+      .lean()
+      .catch(() => []),
 
     // SalesInvoices Monthly Graph
     SalesInvoice.aggregate([
-      { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $match: { company: compOid, saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
       { $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$saleDate' } },
-          total: { $sum: '$netTotal' }
+          total: { $sum: { $ifNull: ['$netTotal', '$totalAmount'] } }
       }},
       { $sort: { _id: 1 } }
-    ]),
+    ]).catch(() => []),
 
     // Product Sales Performance from SalesInvoice
     SalesInvoice.aggregate([
-      { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $match: { company: compOid, saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
       { $unwind: '$items' },
       { $group: { _id: '$items.productName', total: { $sum: '$items.amount' }, quantity: { $sum: '$items.quantity' } } },
       { $sort: { total: -1 } },
       { $limit: 10 }
-    ]),
+    ]).catch(() => []),
 
-    AuditLog.find({ company: companyId }).populate('user', 'name').sort('-createdAt').limit(10).lean(),
+    AuditLog.find({ $or: [{ company: companyId }, { stockist: companyId }] }).populate('user', 'name').sort('-createdAt').limit(10).lean().catch(() => []),
   ]);
 
   const tSales = todaySalesInvoiceAgg[0]?.total || 0;
@@ -155,11 +175,11 @@ export const companyDashboard = asyncHandler(async (req, res) => {
 
   // Monthly Profit calculation: (soldPrice - purchaseCost) * quantity
   let mProfit = 0;
-  monthlyInvoicesForProfit.forEach((inv) => {
+  (monthlyInvoicesForProfit || []).forEach((inv) => {
     let invProfit = 0;
     (inv.items || []).forEach((item) => {
       const soldPrice = Number(item.price) || 0;
-      const purchaseCost = Number(item.product?.costPrice) || 0;
+      const purchaseCost = Number(item.product?.costPrice ?? item.mrp ?? 0);
       const qty = Number(item.quantity) || 1;
       invProfit += (soldPrice - purchaseCost) * qty;
     });
@@ -170,15 +190,15 @@ export const companyDashboard = asyncHandler(async (req, res) => {
   const salesTrend = ySales > 0 ? ((tSales - ySales) / ySales) * 100 : 0;
   const monthlyTrend = lmSales > 0 ? ((mSales - lmSales) / lmSales) * 100 : 0;
 
-  const productTotal = productSalesAgg.reduce((sum, p) => sum + p.total, 0);
+  const productTotal = productSalesAgg.reduce((sum, p) => sum + (p.total || 0), 0);
 
   const dashboardData = {
-    company,
-    totalStaff,
-    activeStaff,
-    checkedInToday,
-    onLeaveToday,
-    absentToday: Math.max(totalStaff - checkedInToday - onLeaveToday, 0),
+    company: company || { name: 'Stockist Dashboard' },
+    totalStaff: totalStaff || 0,
+    activeStaff: activeStaff || 0,
+    checkedInToday: checkedInToday || 0,
+    onLeaveToday: onLeaveToday || 0,
+    absentToday: Math.max((totalStaff || 0) - (checkedInToday || 0) - (onLeaveToday || 0), 0),
     todaySales: tSales,
     yesterdaySales: ySales,
     salesTrend: Math.round(salesTrend * 10) / 10,
@@ -187,22 +207,19 @@ export const companyDashboard = asyncHandler(async (req, res) => {
     todayPayments: tPayments,
     monthlyPayments: mPayments,
     monthlyProfit: Math.round(mProfit * 100) / 100,
-    monthlySalesGraph: monthlySalesGraph.map(i => ({ date: i._id, amount: i.total })),
-    productSales: productSalesAgg.map(i => ({
-      name: i._id,
-      amount: i.total,
-      quantity: i.quantity,
-      percent: productTotal > 0 ? Math.round((i.total / productTotal) * 100) : 0
+    monthlySalesGraph: (monthlySalesGraph || []).map(i => ({ date: i._id, amount: i.total })),
+    productSales: (productSalesAgg || []).map(i => ({
+      name: i._id || 'Unknown',
+      amount: i.total || 0,
+      quantity: i.quantity || 0,
+      percent: productTotal > 0 ? Math.round(((i.total || 0) / productTotal) * 100) : 0
     })),
-    recentActivities,
+    recentActivities: recentActivities || [],
   };
 
   statsCache.set(`company_dashboard:${companyId}`, dashboardData, 60);
   res.json({ success: true, data: dashboardData });
 });
-
-
-
 
 /** GET /dashboard/staff — Staff app dashboard */
 export const staffDashboard = asyncHandler(async (req, res) => {
@@ -210,8 +227,8 @@ export const staffDashboard = asyncHandler(async (req, res) => {
   const cachedData = statsCache.get(`staff_dashboard:${userId}`);
   if (cachedData) return res.json({ success: true, data: cachedData });
 
-  const companyId = req.user.company?._id;
-  const dateFormat = req.user.company?.settings?.dateFormat || 'AD';
+  const companyId = req.user.company?._id || req.user.stockist?._id;
+  const dateFormat = req.user.company?.settings?.dateFormat || req.user.stockist?.settings?.dateFormat || 'AD';
   const today = todayStr();
   const month = today.slice(0, 7);
 
@@ -235,8 +252,6 @@ export const staffDashboard = asyncHandler(async (req, res) => {
     leaveConfigs
   ] = await Promise.all([
     Attendance.findOne({ staff: userId, date: today }).lean(),
-    // Attendance uses string date (YYYY-MM-DD), range query is safer but regex works too.
-    // However, for consistency with calendar type, let's use range if possible or stay with month regex for AD.
     Attendance.find({
       staff: userId,
       date: { $gte: todayStr(startOfMonth), $lte: todayStr(endOfMonth) }
@@ -244,7 +259,7 @@ export const staffDashboard = asyncHandler(async (req, res) => {
     Sale.aggregate([
       { $match: { staff: userId, saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]),
+    ]).catch(() => []),
     Target.findOne({ staff: userId, month: targetMonth, calendarType: dateFormat }).lean(),
     Holiday.find({ company: companyId, startDate: { $gte: new Date() } })
       .sort('startDate').limit(3).lean(),
@@ -256,18 +271,14 @@ export const staffDashboard = asyncHandler(async (req, res) => {
     LeaveType.find({ company: companyId }).lean()
   ]);
 
-
   const presentDays = monthAttendance.filter((a) => ['PRESENT', 'HALF_DAY'].includes(a.status)).length;
   const leavesTaken = leavesThisMonth.reduce((sum, l) => sum + (l.days || 1), 0);
 
-  // Total allowed leaves per month (average)
   const totalAllowedLeaves = leaveConfigs.reduce((sum, c) => sum + (c.days / 12 || 1), 0);
-
 
   const achieved = salesAgg[0]?.total || 0;
   const target = monthlyTarget?.amount || 0;
 
-  // Simple Greeting Logic
   const hour = new Date().getHours();
   let greeting = 'Good Evening';
   if (hour < 12) greeting = 'Good Morning';
@@ -277,7 +288,7 @@ export const staffDashboard = asyncHandler(async (req, res) => {
     profile: {
       name: req.user.name,
       position: req.user.designation?.name || req.user.position || 'Staff',
-      company: req.user.company?.name,
+      company: req.user.company?.name || req.user.stockist?.name,
       profilePhoto: req.user.profilePhoto,
     },
     greeting,
@@ -293,7 +304,7 @@ export const staffDashboard = asyncHandler(async (req, res) => {
       },
       attendance: {
         present: presentDays,
-        totalDays: 26, // Standard working days
+        totalDays: 26,
         percent: Math.min(Math.round((presentDays / 26) * 100), 100)
       },
       targets: {
@@ -309,6 +320,3 @@ export const staffDashboard = asyncHandler(async (req, res) => {
   statsCache.set(`staff_dashboard:${userId}`, dashboardData, 60);
   res.json({ success: true, data: dashboardData });
 });
-
-
-
