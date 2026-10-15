@@ -76,50 +76,96 @@ export const companyDashboard = asyncHandler(async (req, res) => {
 
   const [
     totalStaff, activeStaff, checkedInToday, onLeaveToday,
-    todaySalesAgg, yesterdaySalesAgg, monthlySalesAgg, lastMonthSalesAgg,
+    todaySalesInvoiceAgg, yesterdaySalesInvoiceAgg, monthlySalesInvoiceAgg, lastMonthSalesInvoiceAgg,
+    todayPaymentsAgg, monthlyPaymentsAgg,
+    monthlyInvoicesForProfit,
     monthlySalesGraph, productSalesAgg, recentActivities
   ] = await Promise.all([
     User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] } }),
     User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] }, isActive: true }),
     Attendance.countDocuments({ company: companyId, date: today, 'checkIn.time': { $exists: true } }),
     Attendance.countDocuments({ company: companyId, date: today, status: 'ON_LEAVE' }),
-    Sale.aggregate([
+
+    // SalesInvoices - Today
+    SalesInvoice.aggregate([
       { $match: { company: oid(companyId), saleDate: { $gte: startOfToday } } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
+      { $group: { _id: null, total: { $sum: '$netTotal' } } }
     ]),
-    Sale.aggregate([
+    // SalesInvoices - Yesterday
+    SalesInvoice.aggregate([
       { $match: { company: oid(companyId), saleDate: { $gte: startOfYesterday, $lte: endOfYesterday } } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
+      { $group: { _id: null, total: { $sum: '$netTotal' } } }
     ]),
-    Sale.aggregate([
+    // SalesInvoices - Monthly
+    SalesInvoice.aggregate([
       { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
+      { $group: { _id: null, total: { $sum: '$netTotal' } } }
     ]),
-    Sale.aggregate([
+    // SalesInvoices - Last Month
+    SalesInvoice.aggregate([
       { $match: { company: oid(companyId), saleDate: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
+      { $group: { _id: null, total: { $sum: '$netTotal' } } }
+    ]),
+
+    // Payments - Today
+    Payment.aggregate([
+      { $match: { company: oid(companyId), paymentDate: { $gte: startOfToday } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]),
-    Sale.aggregate([
+    // Payments - Monthly
+    Payment.aggregate([
+      { $match: { company: oid(companyId), paymentDate: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]),
+
+    // Monthly Invoices populated with product cost prices for Profit Calculation
+    SalesInvoice.find({ company: companyId, saleDate: { $gte: startOfMonth, $lte: endOfMonth } })
+      .populate('items.product', 'costPrice sellingPrice price')
+      .lean(),
+
+    // SalesInvoices Monthly Graph
+    SalesInvoice.aggregate([
       { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
       { $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$saleDate' } },
-          total: { $sum: '$amount' }
+          total: { $sum: '$netTotal' }
       }},
       { $sort: { _id: 1 } }
     ]),
-    Sale.aggregate([
+
+    // Product Sales Performance from SalesInvoice
+    SalesInvoice.aggregate([
       { $match: { company: oid(companyId), saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
-      { $group: { _id: '$productName', total: { $sum: '$amount' }, quantity: { $sum: '$quantity' } } },
+      { $unwind: '$items' },
+      { $group: { _id: '$items.productName', total: { $sum: '$items.amount' }, quantity: { $sum: '$items.quantity' } } },
       { $sort: { total: -1 } },
       { $limit: 10 }
     ]),
+
     AuditLog.find({ company: companyId }).populate('user', 'name').sort('-createdAt').limit(10).lean(),
   ]);
 
-  const tSales = todaySalesAgg[0]?.total || 0;
-  const ySales = yesterdaySalesAgg[0]?.total || 0;
-  const mSales = monthlySalesAgg[0]?.total || 0;
-  const lmSales = lastMonthSalesAgg[0]?.total || 0;
+  const tSales = todaySalesInvoiceAgg[0]?.total || 0;
+  const ySales = yesterdaySalesInvoiceAgg[0]?.total || 0;
+  const mSales = monthlySalesInvoiceAgg[0]?.total || 0;
+  const lmSales = lastMonthSalesInvoiceAgg[0]?.total || 0;
+
+  const tPayments = todayPaymentsAgg[0]?.total || 0;
+  const mPayments = monthlyPaymentsAgg[0]?.total || 0;
+
+  // Monthly Profit calculation: (soldPrice - purchaseCost) * quantity
+  let mProfit = 0;
+  monthlyInvoicesForProfit.forEach((inv) => {
+    let invProfit = 0;
+    (inv.items || []).forEach((item) => {
+      const soldPrice = Number(item.price) || 0;
+      const purchaseCost = Number(item.product?.costPrice) || 0;
+      const qty = Number(item.quantity) || 1;
+      invProfit += (soldPrice - purchaseCost) * qty;
+    });
+    const discount = Number(inv.discountAmount) || 0;
+    mProfit += (invProfit - discount);
+  });
 
   const salesTrend = ySales > 0 ? ((tSales - ySales) / ySales) * 100 : 0;
   const monthlyTrend = lmSales > 0 ? ((mSales - lmSales) / lmSales) * 100 : 0;
@@ -138,6 +184,9 @@ export const companyDashboard = asyncHandler(async (req, res) => {
     salesTrend: Math.round(salesTrend * 10) / 10,
     monthlySales: mSales,
     monthlyTrend: Math.round(monthlyTrend * 10) / 10,
+    todayPayments: tPayments,
+    monthlyPayments: mPayments,
+    monthlyProfit: Math.round(mProfit * 100) / 100,
     monthlySalesGraph: monthlySalesGraph.map(i => ({ date: i._id, amount: i.total })),
     productSales: productSalesAgg.map(i => ({
       name: i._id,

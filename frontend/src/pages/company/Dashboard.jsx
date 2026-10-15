@@ -1,15 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Users, UserCheck, UserMinus, Calendar, TrendingUp,
-  Activity, Clock, Building2, ShieldCheck, MapPin,
-  FileText, CreditCard, ChevronRight, LayoutGrid
+  Activity, Clock, Building2, MapPin, FileText, CreditCard,
+  ChevronRight, Wallet, ShoppingBag, Coins, Receipt
 } from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, PieChart, Pie, Cell, Legend, LineChart, Line
+  Tooltip, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 import { api } from '@/api/client';
-import { Card, CardHeader, CardBody, Spinner, Badge, Button, Select } from '@/components/ui';
+import { Card, CardHeader, CardBody, Spinner, Button, Select } from '@/components/ui';
 import { formatMoney, formatDateTime, fixFileUrl, cn } from '@/lib/utils';
 import LiveClock from '@/components/Clock';
 import { adToBs } from '@/lib/nepaliDate';
@@ -95,8 +95,8 @@ export default function CompanyDashboard() {
         </div>
       </Card>
 
-      {/* Top Stats Grid */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Top Metrics Cards Grid */}
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
         {/* Today's Sales */}
         <Card className="p-4 sm:p-5">
           <div className="flex items-start justify-between">
@@ -117,13 +117,80 @@ export default function CompanyDashboard() {
           </div>
         </Card>
 
-        {/* Present Staff */}
+        {/* Monthly Sales */}
         <Card className="p-4 sm:p-5">
           <div className="flex items-start justify-between">
             <div className="rounded-xl bg-blue-50 p-2 sm:p-2.5 text-blue-600 dark:bg-blue-900/20">
-              <Users className="h-5 w-5 sm:h-6 sm:w-6" />
+              <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <StatSparkline color="#3b82f6" data={[{value: 20}, {value: 28}, {value: 22}, {value: 35}]} />
+            <StatSparkline color="#3b82f6" data={[{value: 15}, {value: 30}, {value: 25}, {value: 45}]} />
+          </div>
+          <div className="mt-3 sm:mt-4 space-y-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Monthly Sales</p>
+            <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white truncate">{formatMoney(data.monthlySales)}</p>
+            <div className="flex items-center gap-1 text-xs font-medium">
+              <span className={cn(data.monthlyTrend >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                {data.monthlyTrend >= 0 ? '↑' : '↓'} {Math.abs(data.monthlyTrend)}%
+              </span>
+              <span className="text-slate-400">vs last month</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Payment Received Today */}
+        <Card className="p-4 sm:p-5">
+          <div className="flex items-start justify-between">
+            <div className="rounded-xl bg-teal-50 p-2 sm:p-2.5 text-teal-600 dark:bg-teal-900/20">
+              <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" />
+            </div>
+            <StatSparkline color="#14b8a6" data={[{value: 5}, {value: 20}, {value: 18}, {value: 35}]} />
+          </div>
+          <div className="mt-3 sm:mt-4 space-y-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Payment Received Today</p>
+            <p className="text-lg sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 truncate">{formatMoney(data.todayPayments)}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-400">Received today across outlets</p>
+          </div>
+        </Card>
+
+        {/* Payment Received in a Month */}
+        <Card className="p-4 sm:p-5">
+          <div className="flex items-start justify-between">
+            <div className="rounded-xl bg-indigo-50 p-2 sm:p-2.5 text-indigo-600 dark:bg-indigo-900/20">
+              <Wallet className="h-5 w-5 sm:h-6 sm:w-6" />
+            </div>
+            <StatSparkline color="#6366f1" data={[{value: 10}, {value: 35}, {value: 40}, {value: 60}]} />
+          </div>
+          <div className="mt-3 sm:mt-4 space-y-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Payment Received (Month)</p>
+            <p className="text-lg sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400 truncate">{formatMoney(data.monthlyPayments)}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-400">Total received this month</p>
+          </div>
+        </Card>
+
+        {/* Monthly Profit */}
+        <Card className="p-4 sm:p-5 border-l-4 border-l-purple-500">
+          <div className="flex items-start justify-between">
+            <div className="rounded-xl bg-purple-50 p-2 sm:p-2.5 text-purple-600 dark:bg-purple-900/20">
+              <Coins className="h-5 w-5 sm:h-6 sm:w-6" />
+            </div>
+            <StatSparkline color="#a855f7" data={[{value: 12}, {value: 28}, {value: 32}, {value: 50}]} />
+          </div>
+          <div className="mt-3 sm:mt-4 space-y-1">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Monthly Profit</p>
+            <p className="text-lg sm:text-2xl font-bold text-purple-600 dark:text-purple-400 truncate">{formatMoney(data.monthlyProfit)}</p>
+            <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 flex items-center gap-1">
+              <span>(Sold Price - Purchase Cost) × Qty</span>
+            </p>
+          </div>
+        </Card>
+
+        {/* Present Staff */}
+        <Card className="p-4 sm:p-5">
+          <div className="flex items-start justify-between">
+            <div className="rounded-xl bg-sky-50 p-2 sm:p-2.5 text-sky-600 dark:bg-sky-900/20">
+              <UserCheck className="h-5 w-5 sm:h-6 sm:w-6" />
+            </div>
+            <StatSparkline color="#0284c7" data={[{value: 20}, {value: 28}, {value: 22}, {value: 35}]} />
           </div>
           <div className="mt-3 sm:mt-4 space-y-1">
             <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Present Staff</p>
@@ -135,7 +202,7 @@ export default function CompanyDashboard() {
         {/* Absent Staff */}
         <Card className="p-4 sm:p-5">
           <div className="flex items-start justify-between">
-            <div className="rounded-xl bg-orange-50 p-2 sm:p-2.5 text-orange-600 dark:bg-orange-900/20">
+            <div className="rounded-xl bg-amber-50 p-2 sm:p-2.5 text-amber-600 dark:bg-amber-900/20">
               <UserMinus className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <StatSparkline color="#f59e0b" data={[{value: 5}, {value: 2}, {value: 8}, {value: 4}]} />
@@ -145,23 +212,6 @@ export default function CompanyDashboard() {
             <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">{data.absentToday}</p>
             <p className="text-[11px] sm:text-xs font-medium text-slate-400">
               {data.totalStaff > 0 ? ((data.absentToday / data.totalStaff) * 100).toFixed(1) : 0}% of total staff
-            </p>
-          </div>
-        </Card>
-
-        {/* On Leave */}
-        <Card className="p-4 sm:p-5">
-          <div className="flex items-start justify-between">
-            <div className="rounded-xl bg-purple-50 p-2 sm:p-2.5 text-purple-600 dark:bg-purple-900/20">
-              <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
-            </div>
-            <StatSparkline color="#8b5cf6" data={[{value: 2}, {value: 3}, {value: 1}, {value: 3}]} />
-          </div>
-          <div className="mt-3 sm:mt-4 space-y-1">
-            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">On Leave</p>
-            <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">{data.onLeaveToday}</p>
-            <p className="text-[11px] sm:text-xs font-medium text-slate-400">
-              {data.totalStaff > 0 ? ((data.onLeaveToday / data.totalStaff) * 100).toFixed(1) : 0}% of total staff
             </p>
           </div>
         </Card>
@@ -181,8 +231,8 @@ export default function CompanyDashboard() {
             <div className="mb-6 space-y-1">
               <p className="text-xs font-medium text-slate-400 uppercase">Total Sales</p>
               <div className="flex items-end gap-3">
-                <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatMoney(data.monthlySales)}</p>
-                <div className="flex items-center gap-1 text-sm font-bold text-emerald-600 mb-1">
+                <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{formatMoney(data.monthlySales)}</p>
+                <div className="flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-600 mb-1">
                    ↑ {data.monthlyTrend}% <span className="text-[10px] font-medium text-slate-400 ml-1">vs last month</span>
                 </div>
               </div>
@@ -245,7 +295,7 @@ export default function CompanyDashboard() {
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Total Sales</p>
-                    <p className="text-lg font-bold text-slate-900 dark:text-white">{formatMoney(data.monthlySales)}</p>
+                    <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">{formatMoney(data.monthlySales)}</p>
                     <p className="text-[10px] font-medium text-slate-400 uppercase">NPR</p>
                   </div>
                 </div>
@@ -292,28 +342,28 @@ export default function CompanyDashboard() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-slate-50/50 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:bg-slate-800/30">
-                    <th className="px-6 py-4">Activity</th>
-                    <th className="px-6 py-4">User</th>
-                    <th className="px-6 py-4 text-right">Time</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4">Activity</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4">User</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-right">Time</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {data.recentActivities.map((act) => (
                     <tr key={act._id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-3">
                            <ActivityIcon action={act.action} />
-                           <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                           <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
                              {act.action.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}
                              <span className="ml-1 text-slate-400 font-normal">performed</span>
                            </p>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{act.user?.name || 'System'}</p>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4">
+                        <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">{act.user?.name || 'System'}</p>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <p className="text-sm text-slate-500">{formatDateTime(act.createdAt)}</p>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
+                        <p className="text-xs sm:text-sm text-slate-500">{formatDateTime(act.createdAt)}</p>
                       </td>
                     </tr>
                   ))}
@@ -332,11 +382,11 @@ export default function CompanyDashboard() {
 }
 
 function ActivityIcon({ action }) {
-  const base = "h-8 w-8 rounded-lg flex items-center justify-center";
-  if (action.includes('SALE')) return <div className={cn(base, "bg-emerald-50 text-emerald-600")}><TrendingUp className="h-4 w-4" /></div>;
-  if (action.includes('STAFF') || action.includes('USER')) return <div className={cn(base, "bg-blue-50 text-blue-600")}><Users className="h-4 w-4" /></div>;
-  if (action.includes('INVENTORY')) return <div className={cn(base, "bg-orange-50 text-orange-600")}><LayoutGrid className="h-4 w-4" /></div>;
-  if (action.includes('CHECK')) return <div className={cn(base, "bg-purple-50 text-purple-600")}><Clock className="h-4 w-4" /></div>;
-  if (action.includes('LEAVE')) return <div className={cn(base, "bg-rose-50 text-rose-600")}><Calendar className="h-4 w-4" /></div>;
-  return <div className={cn(base, "bg-slate-100 text-slate-600")}><Activity className="h-4 w-4" /></div>;
+  const base = "h-7 w-7 sm:h-8 sm:w-8 rounded-lg flex items-center justify-center shrink-0";
+  if (action.includes('SALE')) return <div className={cn(base, "bg-emerald-50 text-emerald-600")}><TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>;
+  if (action.includes('STAFF') || action.includes('USER')) return <div className={cn(base, "bg-blue-50 text-blue-600")}><Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>;
+  if (action.includes('INVENTORY')) return <div className={cn(base, "bg-orange-50 text-orange-600")}><Receipt className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>;
+  if (action.includes('CHECK')) return <div className={cn(base, "bg-purple-50 text-purple-600")}><Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>;
+  if (action.includes('LEAVE')) return <div className={cn(base, "bg-rose-50 text-rose-600")}><Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>;
+  return <div className={cn(base, "bg-slate-100 text-slate-600")}><Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></div>;
 }
