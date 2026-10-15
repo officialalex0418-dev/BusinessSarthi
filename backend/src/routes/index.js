@@ -35,6 +35,7 @@ import * as inquiry from '../controllers/inquiry.controller.js';
 import * as product from '../controllers/product.controller.js';
 import * as support from '../controllers/support.controller.js';
 import * as misc from '../controllers/misc.controller.js';
+import * as expense from '../controllers/expense.controller.js';
 
 const r = Router();
 
@@ -192,6 +193,13 @@ r.get('/cheques', protect, authorize(...ALL_STAFF), scopeCompany, cheque.listChe
 r.post('/cheques', protect, authorize(...ALL_STAFF), scopeCompany, validate({ body: schemas.chequeBody }), cheque.createCheque);
 r.patch('/cheques/:id', protect, authorize(...ALL_STAFF), scopeCompany, validate({ body: schemas.chequeUpdate }), cheque.updateCheque);
 r.delete('/cheques/:id', protect, authorize(...OWNERS), scopeCompany, cheque.deleteCheque);
+
+// ============ EXPENSES ============
+r.get('/expenses', protect, authorize(...MANAGERS), scopeCompany, expense.listExpenses);
+r.get('/expenses/analytics', protect, authorize(...MANAGERS), scopeCompany, expense.expenseAnalytics);
+r.post('/expenses', protect, authorize(...MANAGERS), scopeCompany, expense.createExpense);
+r.patch('/expenses/:id', protect, authorize(...MANAGERS), scopeCompany, expense.updateExpense);
+r.delete('/expenses/:id', protect, authorize(...OWNERS), scopeCompany, expense.deleteExpense);
 
 // ============ BILLING & PAYMENTS ============
 r.get('/payments', protect, authorize(...MANAGERS), scopeCompany, distributor.listPayments);

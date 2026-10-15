@@ -7,7 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import {
   LayoutDashboard, Building2, Users, Package, Wallet, Settings, ShieldCheck,
   MapPin, Boxes, Truck, TrendingUp, FileText, CalendarCheck, CalendarOff, User,
-  MessageSquare, LayoutGrid, Inbox, LifeBuoy, Store, PackageCheck
+  MessageSquare, LayoutGrid, Inbox, LifeBuoy, Store, PackageCheck, Calculator
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
@@ -74,6 +74,7 @@ import StaffDashboard from '@/pages/staff/Dashboard';
 
 // Stockist
 import StockistDashboard from '@/pages/stockist/StockistDashboard';
+import StockistAccountManager from '@/pages/stockist/StockistAccountManager';
 import StaffAttendance from '@/pages/staff/Attendance';
 import StaffLeaves from '@/pages/staff/Leaves';
 import StaffCustomers from '@/pages/staff/Customers';
@@ -149,6 +150,7 @@ const staffNavBase = [
 
 const stockistNav = [
   { to: '/stockist', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/stockist/accounts', label: 'Account Manager', icon: Calculator },
   { to: '/stockist/staff', label: 'Employee', icon: Users },
   { to: '/stockist/attendance', label: 'Attendance', icon: CalendarCheck },
   { to: '/stockist/leaves', label: 'Leave Management', icon: CalendarOff },
@@ -228,6 +230,7 @@ export default function App() {
 
     const perms = user.designation.permissions;
     if (item.to === '/stockist') return true;
+    if (item.to === '/stockist/accounts') return perms.distributors || perms.reports || perms.salesTracker;
     if (item.to === '/stockist/staff') return perms.staff;
     if (item.to === '/stockist/attendance') return perms.attendance;
     if (item.to === '/stockist/leaves') return perms.leaves;
@@ -537,6 +540,7 @@ export default function App() {
         }
       >
         <Route index element={<StockistDashboard />} />
+        <Route path="accounts" element={<StockistAccountManager />} />
         <Route path="staff" element={<StaffList />} />
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
