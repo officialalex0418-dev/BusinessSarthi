@@ -38,6 +38,7 @@ export default function StockistAccountManager() {
   const [payments, setPayments] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [payrolls, setPayrolls] = useState([]);
+  const [inventoryItems, setInventoryItems] = useState([]);
 
   // Modals & Forms
   const [modal, setModal] = useState(null); // 'payment' | 'expense'
@@ -57,13 +58,14 @@ export default function StockistAccountManager() {
         limit: 10000
       };
 
-      const [distRes, invRes, purRes, payRes, expRes, payrRes] = await Promise.all([
+      const [distRes, invRes, purRes, payRes, expRes, payrRes, stockRes] = await Promise.all([
         api.get('/distributors', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/sales-invoices', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/purchases', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/payments', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/expenses', { params }).catch(() => ({ data: { data: { items: [] } } })),
-        api.get('/payroll', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } }))
+        api.get('/payroll', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } })),
+        api.get('/inventory', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } }))
       ]);
 
       setOutlets(distRes.data?.data?.items || []);
@@ -72,6 +74,7 @@ export default function StockistAccountManager() {
       setPayments(payRes.data?.data?.items || []);
       setExpenses(expRes.data?.data?.items || []);
       setPayrolls(payrRes.data?.data?.items || payrRes.data?.data?.results || []);
+      setInventoryItems(stockRes.data?.data?.items || []);
     } catch (err) {
       console.error('Failed to load accounting data', err);
       setError('Failed to load accounting records. Please refresh.');
@@ -104,11 +107,39 @@ export default function StockistAccountManager() {
   // 1. Sales Amount: ∑ (unit sales price * quantity) sold goods
   const totalSalesAmount = invoices.reduce((sum, inv) => sum + (Number(inv.netTotal || inv.totalAmount) || 0), 0);
 
+  // 3-Tier Inventory Cost Price Maps for Fallback
+  const invMapById = {};
+  const invMapByName = {};
+  (inventoryItems || []).forEach(p => {
+    if (p._id) invMapById[p._id.toString()] = Number(p.costPrice) || 0;
+    if (p.productName) invMapByName[p.productName.trim().toLowerCase()] = Number(p.costPrice) || 0;
+  });
+
   // 2. Purchase Amount: cost price of sold goods ONLY
   let totalPurchaseCostOfSoldGoods = 0;
   invoices.forEach(inv => {
     (inv.items || []).forEach(item => {
-      const costPrice = Number(item.costPrice ?? item.product?.costPrice ?? item.mrp ?? 0);
+      let costPrice = Number(item.costPrice || 0);
+
+      if (!costPrice && item.product) {
+        if (typeof item.product === 'object' && item.product.costPrice) {
+          costPrice = Number(item.product.costPrice) || 0;
+        } else if (invMapById[item.product.toString()]) {
+          costPrice = invMapById[item.product.toString()];
+        }
+      }
+
+      if (!costPrice && item.productName) {
+        const norm = item.productName.trim().toLowerCase();
+        if (invMapByName[norm] !== undefined) {
+          costPrice = invMapByName[norm];
+        }
+      }
+
+      if (!costPrice && item.mrp) {
+        costPrice = Number(item.mrp) || 0;
+      }
+
       const qty = Number(item.quantity) || 1;
       totalPurchaseCostOfSoldGoods += (costPrice * qty);
     });

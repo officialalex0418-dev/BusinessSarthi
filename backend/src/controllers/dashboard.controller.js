@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import {
   Company, User, Package, Attendance, Sale, SalesInvoice,
-  LocationLog, AuditLog, Leave, Holiday, Target, LeaveType, Payment
+  LocationLog, AuditLog, Leave, Holiday, Target, LeaveType, Payment, Inventory
 } from '../models/index.js';
 
 import { asyncHandler } from '../utils/ApiError.js';
@@ -139,7 +139,13 @@ export const companyDashboard = asyncHandler(async (req, res) => {
 
     // Monthly Invoices populated with product cost prices for Profit Calculation
     SalesInvoice.find({ company: companyId, saleDate: { $gte: startOfMonth, $lte: endOfMonth } })
-      .populate('items.product', 'costPrice sellingPrice price')
+      .populate('items.product', 'costPrice sellingPrice price mrp')
+      .lean()
+      .catch(() => []),
+
+    // Inventory list for fallback cost price lookup
+    Inventory.find({ $or: [{ company: companyId }, { stockist: companyId }] })
+      .select('_id productName costPrice mrp')
       .lean()
       .catch(() => []),
 
@@ -173,14 +179,44 @@ export const companyDashboard = asyncHandler(async (req, res) => {
   const tPayments = todayPaymentsAgg[0]?.total || 0;
   const mPayments = monthlyPaymentsAgg[0]?.total || 0;
 
+  // Inventory Cost Price Maps for Fallback
+  const invMapById = {};
+  const invMapByName = {};
+  (allInventoryItems || []).forEach(p => {
+    if (p._id) invMapById[p._id.toString()] = Number(p.costPrice) || 0;
+    if (p.productName) invMapByName[p.productName.trim().toLowerCase()] = Number(p.costPrice) || 0;
+  });
+
   // Monthly Profit calculation: (soldPrice - purchaseCost) * quantity
   let mProfit = 0;
+  let mCOGS = 0;
   (monthlyInvoicesForProfit || []).forEach((inv) => {
     let invProfit = 0;
     (inv.items || []).forEach((item) => {
       const soldPrice = Number(item.price) || 0;
-      const purchaseCost = Number(item.costPrice ?? item.product?.costPrice ?? item.mrp ?? 0);
+      let purchaseCost = Number(item.costPrice || 0);
+
+      if (!purchaseCost && item.product) {
+        if (typeof item.product === 'object' && item.product.costPrice) {
+          purchaseCost = Number(item.product.costPrice) || 0;
+        } else if (invMapById[item.product.toString()]) {
+          purchaseCost = invMapById[item.product.toString()];
+        }
+      }
+
+      if (!purchaseCost && item.productName) {
+        const norm = item.productName.trim().toLowerCase();
+        if (invMapByName[norm] !== undefined) {
+          purchaseCost = invMapByName[norm];
+        }
+      }
+
+      if (!purchaseCost && item.mrp) {
+        purchaseCost = Number(item.mrp) || 0;
+      }
+
       const qty = Number(item.quantity) || 1;
+      mCOGS += (purchaseCost * qty);
       invProfit += (soldPrice - purchaseCost) * qty;
     });
     const discount = Number(inv.discountAmount) || 0;
