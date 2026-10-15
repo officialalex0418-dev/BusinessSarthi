@@ -2,10 +2,15 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Calculator, TrendingUp, CreditCard, Wallet, Coins, Plus, Download,
   Filter, Calendar, Building2, Trash2, Pencil, FileText, Receipt,
-  PieChart, DollarSign, CheckCircle2, ArrowUpRight, ArrowDownRight, Printer
+  PieChart, DollarSign, CheckCircle2, ArrowUpRight, ArrowDownRight, Printer,
+  ShoppingBag, Users, BarChart3, Layers
 } from 'lucide-react';
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, BarChart, Bar, Legend
+} from 'recharts';
 import { api } from '@/api/client';
-import { Card, Button, Input, Modal, Table, Spinner, Badge, Select, Textarea, DatePicker, Pagination } from '@/components/ui';
+import { Card, Button, Input, Modal, Table, Spinner, Badge, Select, Textarea, DatePicker } from '@/components/ui';
 import { formatMoney, formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import * as XLSX from 'xlsx';
@@ -17,7 +22,8 @@ export default function StockistAccountManager() {
   const { user } = useAuth();
   const dateFormat = user?.company?.settings?.dateFormat || user?.stockist?.settings?.dateFormat || 'BS';
 
-  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' | 'payments' | 'expenses'
+  // Tabs: 'dashboard' | 'analytics' | 'payments' | 'expenses'
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [reportType, setReportType] = useState('PROFIT_LOSS'); // 'PROFIT_LOSS' | 'SALES' | 'PURCHASE' | 'PAYMENTS' | 'EXPENSES'
 
   // Custom Date Range State
@@ -31,6 +37,7 @@ export default function StockistAccountManager() {
   const [purchases, setPurchases] = useState([]);
   const [payments, setPayments] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [payrolls, setPayrolls] = useState([]);
 
   // Modals & Forms
   const [modal, setModal] = useState(null); // 'payment' | 'expense'
@@ -50,19 +57,21 @@ export default function StockistAccountManager() {
         limit: 10000
       };
 
-      const [distRes, invRes, purRes, payRes, expRes] = await Promise.all([
+      const [distRes, invRes, purRes, payRes, expRes, payrRes] = await Promise.all([
         api.get('/distributors', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/sales-invoices', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/purchases', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/payments', { params }).catch(() => ({ data: { data: { items: [] } } })),
-        api.get('/expenses', { params }).catch(() => ({ data: { data: { items: [] } } }))
+        api.get('/expenses', { params }).catch(() => ({ data: { data: { items: [] } } })),
+        api.get('/payroll', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } }))
       ]);
 
-      setOutlets(distRes.data.data?.items || []);
-      setInvoices(invRes.data.data?.items || []);
-      setPurchases(purRes.data.data?.items || []);
-      setPayments(payRes.data.data?.items || []);
-      setExpenses(expRes.data.data?.items || []);
+      setOutlets(distRes.data?.data?.items || []);
+      setInvoices(invRes.data?.data?.items || []);
+      setPurchases(purRes.data?.data?.items || []);
+      setPayments(payRes.data?.data?.items || []);
+      setExpenses(expRes.data?.data?.items || []);
+      setPayrolls(payrRes.data?.data?.items || payrRes.data?.data?.results || []);
     } catch (err) {
       console.error('Failed to load accounting data', err);
       setError('Failed to load accounting records. Please refresh.');
@@ -92,27 +101,44 @@ export default function StockistAccountManager() {
     }
   };
 
-  // Financial Calculations
-  const totalRevenue = invoices.reduce((sum, inv) => sum + (Number(inv.netTotal || inv.totalAmount) || 0), 0);
-  const totalPurchases = purchases.reduce((sum, pur) => sum + (Number(pur.totalAmount || pur.amount) || 0), 0);
-  const totalPaymentsReceived = payments.reduce((sum, pay) => sum + (Number(pay.amount) || 0), 0);
-  const totalOfficeExpenses = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-  const totalOutstandingDues = outlets.reduce((sum, o) => sum + (Number(o.outstandingBalance) || 0), 0);
+  // 1. Sales Amount: ∑ (unit sales price * quantity) sold goods
+  const totalSalesAmount = invoices.reduce((sum, inv) => sum + (Number(inv.netTotal || inv.totalAmount) || 0), 0);
 
-  // COGS & Gross Profit Calculation
-  let totalCOGS = 0;
+  // 2. Purchase Amount: cost price of sold goods
+  let totalPurchaseCostOfSoldGoods = 0;
   invoices.forEach(inv => {
     (inv.items || []).forEach(item => {
       const costPrice = Number(item.product?.costPrice ?? item.mrp ?? 0);
       const qty = Number(item.quantity) || 1;
-      totalCOGS += (costPrice * qty);
+      totalPurchaseCostOfSoldGoods += (costPrice * qty);
     });
   });
 
-  const grossProfit = totalRevenue - totalCOGS;
-  const netProfit = grossProfit - totalOfficeExpenses;
-  const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
-  const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+  // 3. Gross Margin (Amount & Percentage): sold price - purchase cost of sold goods
+  const grossMarginAmount = totalSalesAmount - totalPurchaseCostOfSoldGoods;
+  const grossMarginPercentage = totalSalesAmount > 0 ? (grossMarginAmount / totalSalesAmount) * 100 : 0;
+
+  // 4. Total Expenses of the month / selected period
+  const totalExpensesOfMonth = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+
+  // 5. Salary Paid for this month / selected period
+  const payrollSalarySum = payrolls.reduce((sum, p) => {
+    if (p.status === 'PAID') return sum + (Number(p.netSalary) || 0);
+    return sum;
+  }, 0);
+
+  const expenseSalarySum = expenses.reduce((sum, e) => {
+    if (e.category === 'SALARY') return sum + (Number(e.amount) || 0);
+    return sum;
+  }, 0);
+
+  const totalSalaryPaidOfMonth = payrollSalarySum + expenseSalarySum;
+
+  // Overall Financial Net Totals
+  const totalPaymentsReceived = payments.reduce((sum, pay) => sum + (Number(pay.amount) || 0), 0);
+  const totalOutstandingDues = outlets.reduce((sum, o) => sum + (Number(o.outstandingBalance) || 0), 0);
+  const netProfit = grossMarginAmount - totalExpensesOfMonth - payrollSalarySum;
+  const netMarginPct = totalSalesAmount > 0 ? (netProfit / totalSalesAmount) * 100 : 0;
 
   // Expense Submit
   const submitExpense = async (e) => {
@@ -170,32 +196,21 @@ export default function StockistAccountManager() {
 
     if (reportType === 'PROFIT_LOSS') {
       const dataRows = [
-        [`${stockistName.toUpperCase()} — PROFIT & LOSS STATEMENT`],
+        [`${stockistName.toUpperCase()} — FINANCIAL STATEMENT & PROFIT LOSS`],
         [`Period: ${dateRangeStr}`],
         [`Generated On: ${new Date().toLocaleString()}`],
         [],
         ['Metric', 'Amount (NPR)', 'Percentage (%)'],
-        ['Total Sales Revenue', totalRevenue, '100.00%'],
-        ['Cost of Goods Sold (COGS)', totalCOGS, `${totalRevenue > 0 ? ((totalCOGS / totalRevenue) * 100).toFixed(2) : '0.00'}%`],
-        ['Gross Profit', grossProfit, `${grossMargin.toFixed(2)}%`],
-        ['Less: Total Office Expenses', totalOfficeExpenses, `${totalRevenue > 0 ? ((totalOfficeExpenses / totalRevenue) * 100).toFixed(2) : '0.00'}%`],
-        ['NET PROFIT / LOSS', netProfit, `${netMargin.toFixed(2)}%`],
-        [],
-        ['EXPENSE CATEGORY BREAKDOWN'],
-        ['Category', 'Total Amount']
+        ['Sales Amount (Unit Price × Qty)', totalSalesAmount, '100.00%'],
+        ['Purchase Amount (Cost of Sold Goods)', totalPurchaseCostOfSoldGoods, `${totalSalesAmount > 0 ? ((totalPurchaseCostOfSoldGoods / totalSalesAmount) * 100).toFixed(2) : '0.00'}%`],
+        ['Gross Margin', grossMarginAmount, `${grossMarginPercentage.toFixed(2)}%`],
+        ['Less: Total Office Expenses', totalExpensesOfMonth, `${totalSalesAmount > 0 ? ((totalExpensesOfMonth / totalSalesAmount) * 100).toFixed(2) : '0.00'}%`],
+        ['Less: Total Salary Paid', totalSalaryPaidOfMonth, `${totalSalesAmount > 0 ? ((totalSalaryPaidOfMonth / totalSalesAmount) * 100).toFixed(2) : '0.00'}%`],
+        ['NET PROFIT / LOSS', netProfit, `${netMarginPct.toFixed(2)}%`]
       ];
 
-      // Group Expenses
-      const catMap = {};
-      expenses.forEach(exp => {
-        catMap[exp.category] = (catMap[exp.category] || 0) + Number(exp.amount);
-      });
-      Object.entries(catMap).forEach(([cat, amt]) => {
-        dataRows.push([cat, amt]);
-      });
-
       const ws = XLSX.utils.aoa_to_sheet(dataRows);
-      XLSX.utils.book_append_sheet(wb, ws, 'Profit & Loss');
+      XLSX.utils.book_append_sheet(wb, ws, 'Financial Statement');
 
     } else if (reportType === 'SALES') {
       const dataRows = [
@@ -218,7 +233,7 @@ export default function StockistAccountManager() {
       });
 
       dataRows.push([]);
-      dataRows.push(['TOTAL SALES REVENUE', '', '', '', '', '', totalRevenue]);
+      dataRows.push(['TOTAL SALES REVENUE', '', '', '', '', '', totalSalesAmount]);
 
       const ws = XLSX.utils.aoa_to_sheet(dataRows);
       XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
@@ -241,9 +256,6 @@ export default function StockistAccountManager() {
         ]);
       });
 
-      dataRows.push([]);
-      dataRows.push(['TOTAL PURCHASES', '', '', '', totalPurchases]);
-
       const ws = XLSX.utils.aoa_to_sheet(dataRows);
       XLSX.utils.book_append_sheet(wb, ws, 'Purchase Report');
 
@@ -265,9 +277,6 @@ export default function StockistAccountManager() {
           pay.remarks || ''
         ]);
       });
-
-      dataRows.push([]);
-      dataRows.push(['TOTAL PAYMENTS COLLECTED', '', '', '', totalPaymentsReceived, '']);
 
       const ws = XLSX.utils.aoa_to_sheet(dataRows);
       XLSX.utils.book_append_sheet(wb, ws, 'Outlet Payments');
@@ -293,9 +302,6 @@ export default function StockistAccountManager() {
         ]);
       });
 
-      dataRows.push([]);
-      dataRows.push(['TOTAL OFFICE EXPENSES', '', '', '', '', '', totalOfficeExpenses, '']);
-
       const ws = XLSX.utils.aoa_to_sheet(dataRows);
       XLSX.utils.book_append_sheet(wb, ws, 'Office Expenses');
     }
@@ -305,7 +311,7 @@ export default function StockistAccountManager() {
 
   return (
     <div className="space-y-6 pb-20">
-      {/* Header & Date Range Toolbar */}
+      {/* Header & Navigation Toolbar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -314,20 +320,44 @@ export default function StockistAccountManager() {
           <p className="text-xs text-slate-500">Record, process, and analyze all stockist financial transactions.</p>
         </div>
 
+        {/* Action Buttons in Same Line */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant={activeTab === 'analytics' ? 'primary' : 'outline'} size="sm" onClick={() => setActiveTab('analytics')}>
-            Financial Analytics
+          <Button
+            variant={activeTab === 'dashboard' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('dashboard')}
+            className="flex items-center gap-1.5"
+          >
+            <BarChart3 className="h-4 w-4" /> Dashboard
           </Button>
-          <Button variant={activeTab === 'payments' ? 'primary' : 'outline'} size="sm" onClick={() => setActiveTab('payments')}>
-            Outlet Payments
+          <Button
+            variant={activeTab === 'analytics' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('analytics')}
+            className="flex items-center gap-1.5"
+          >
+            <PieChart className="h-4 w-4" /> Financial Analytics
           </Button>
-          <Button variant={activeTab === 'expenses' ? 'primary' : 'outline'} size="sm" onClick={() => setActiveTab('expenses')}>
-            Office Expenses
+          <Button
+            variant={activeTab === 'payments' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('payments')}
+            className="flex items-center gap-1.5"
+          >
+            <CreditCard className="h-4 w-4" /> Outlet Payments
+          </Button>
+          <Button
+            variant={activeTab === 'expenses' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('expenses')}
+            className="flex items-center gap-1.5"
+          >
+            <Wallet className="h-4 w-4" /> Office Expenses
           </Button>
         </div>
       </div>
 
-      {/* Custom Date Range Toolbar */}
+      {/* Custom Date Range Filter */}
       <Card className="p-3 sm:p-4 bg-slate-50/50 dark:bg-slate-900/50 border">
         <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -352,61 +382,155 @@ export default function StockistAccountManager() {
         </div>
       </Card>
 
-      {/* Top Financial Analytics Cards */}
-      <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5 sm:gap-3">
-        {/* Total Revenue */}
-        <Card className="p-3 border-l-4 border-l-emerald-500 bg-white dark:bg-slate-900">
-          <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Sales</p>
-          <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-1 truncate">{formatMoney(totalRevenue)}</p>
-          <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">{invoices.length} Invoices</p>
-        </Card>
-
-        {/* COGS */}
-        <Card className="p-3 border-l-4 border-l-blue-500 bg-white dark:bg-slate-900">
-          <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Cost of Goods (COGS)</p>
-          <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-1 truncate">{formatMoney(totalCOGS)}</p>
-          <p className="text-[9px] text-slate-400 font-medium mt-0.5">Purchase Cost</p>
-        </Card>
-
-        {/* Gross Profit */}
-        <Card className="p-3 border-l-4 border-l-indigo-500 bg-white dark:bg-slate-900">
-          <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Gross Profit</p>
-          <p className="text-sm sm:text-base font-black text-indigo-600 dark:text-indigo-400 mt-1 truncate">{formatMoney(grossProfit)}</p>
-          <p className="text-[9px] text-indigo-600 font-bold mt-0.5">{grossMargin.toFixed(1)}% Gross Margin</p>
-        </Card>
-
-        {/* Office Expenses */}
-        <Card className="p-3 border-l-4 border-l-orange-500 bg-white dark:bg-slate-900">
-          <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Office Expenses</p>
-          <p className="text-sm sm:text-base font-black text-orange-600 mt-1 truncate">{formatMoney(totalOfficeExpenses)}</p>
-          <p className="text-[9px] text-slate-400 font-medium mt-0.5">{expenses.length} Records</p>
-        </Card>
-
-        {/* Net Profit */}
-        <Card className="p-3 border-l-4 border-l-purple-500 bg-white dark:bg-slate-900">
-          <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Net Profit</p>
-          <p className={`text-sm sm:text-base font-black mt-1 truncate ${netProfit >= 0 ? 'text-purple-600' : 'text-red-600'}`}>{formatMoney(netProfit)}</p>
-          <p className="text-[9px] text-purple-600 font-bold mt-0.5">{netMargin.toFixed(1)}% Net Margin</p>
-        </Card>
-
-        {/* Payments Collected */}
-        <Card className="p-3 border-l-4 border-l-teal-500 bg-white dark:bg-slate-900">
-          <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Payments Received</p>
-          <p className="text-sm sm:text-base font-black text-teal-600 mt-1 truncate">{formatMoney(totalPaymentsReceived)}</p>
-          <p className="text-[9px] text-teal-600 font-semibold mt-0.5">{payments.length} Payments</p>
-        </Card>
-
-        {/* Outstanding Dues */}
-        <Card className="p-3 border-l-4 border-l-rose-500 bg-white dark:bg-slate-900">
-          <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-wider">Outlet Outstanding</p>
-          <p className="text-sm sm:text-base font-black text-rose-600 mt-1 truncate">{formatMoney(totalOutstandingDues)}</p>
-          <p className="text-[9px] text-rose-600 font-semibold mt-0.5">{outlets.filter(o => o.outstandingBalance > 0).length} Outlets Due</p>
-        </Card>
-      </div>
-
       {loading ? <div className="p-12 text-center"><Spinner /></div> : (
         <>
-          {/* TAB 1: FINANCIAL REPORTS & STATEMENT */}
+          {/* TAB 1: DASHBOARD VIEW (5 SPECIFIC METRICS CARDS) */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              {/* The 5 Main Requested Dashboard Cards */}
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
+                {/* 1. Sales Amount */}
+                <Card className="p-4 border-l-4 border-l-emerald-500 bg-white dark:bg-slate-900 shadow-sm hover:shadow transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Sales Amount</p>
+                    <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600 dark:bg-emerald-900/20">
+                      <TrendingUp className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <p className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white mt-2 truncate">{formatMoney(totalSalesAmount)}</p>
+                  <div className="mt-2 pt-2 border-t text-[10px] text-slate-500 space-y-0.5">
+                    <p className="font-semibold text-emerald-600">∑ (unit sales price × quantity)</p>
+                    <p className="truncate text-slate-400">Sold goods this period ({invoices.length} Invoices)</p>
+                  </div>
+                </Card>
+
+                {/* 2. Purchase Amount */}
+                <Card className="p-4 border-l-4 border-l-blue-500 bg-white dark:bg-slate-900 shadow-sm hover:shadow transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Purchase Amount</p>
+                    <div className="rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-900/20">
+                      <ShoppingBag className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <p className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white mt-2 truncate">{formatMoney(totalPurchaseCostOfSoldGoods)}</p>
+                  <div className="mt-2 pt-2 border-t text-[10px] text-slate-500 space-y-0.5">
+                    <p className="font-semibold text-blue-600">Cost of sold goods</p>
+                    <p className="truncate text-slate-400">Purchase cost of items sold this period</p>
+                  </div>
+                </Card>
+
+                {/* 3. Gross Margin */}
+                <Card className="p-4 border-l-4 border-l-indigo-500 bg-white dark:bg-slate-900 shadow-sm hover:shadow transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Gross Margin</p>
+                    <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-900/20">
+                      <Coins className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between gap-1">
+                    <p className="text-lg sm:text-2xl font-black text-indigo-600 dark:text-indigo-400 truncate">{formatMoney(grossMarginAmount)}</p>
+                    <Badge color="indigo" className="text-[10px] shrink-0 font-bold">{grossMarginPercentage.toFixed(1)}%</Badge>
+                  </div>
+                  <div className="mt-2 pt-2 border-t text-[10px] text-slate-500 space-y-0.5">
+                    <p className="font-semibold text-indigo-600">Amount & Percentage</p>
+                    <p className="truncate text-slate-400">Sales Amount - Purchase Cost</p>
+                  </div>
+                </Card>
+
+                {/* 4. Total Expenses of the Month */}
+                <Card className="p-4 border-l-4 border-l-orange-500 bg-white dark:bg-slate-900 shadow-sm hover:shadow transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Total Expenses</p>
+                    <div className="rounded-lg bg-orange-50 p-2 text-orange-600 dark:bg-orange-900/20">
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <p className="text-lg sm:text-2xl font-black text-orange-600 mt-2 truncate">{formatMoney(totalExpensesOfMonth)}</p>
+                  <div className="mt-2 pt-2 border-t text-[10px] text-slate-500 space-y-0.5">
+                    <p className="font-semibold text-orange-600">{expenses.length} Expense Records</p>
+                    <p className="truncate text-slate-400">Total office expenses of the month</p>
+                  </div>
+                </Card>
+
+                {/* 5. Salary Paid for this Month */}
+                <Card className="p-4 border-l-4 border-l-teal-500 bg-white dark:bg-slate-900 shadow-sm hover:shadow transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Salary Paid</p>
+                    <div className="rounded-lg bg-teal-50 p-2 text-teal-600 dark:bg-teal-900/20">
+                      <Users className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <p className="text-lg sm:text-2xl font-black text-teal-600 dark:text-teal-400 mt-2 truncate">{formatMoney(totalSalaryPaidOfMonth)}</p>
+                  <div className="mt-2 pt-2 border-t text-[10px] text-slate-500 space-y-0.5">
+                    <p className="font-semibold text-teal-600">Staff Salary Records</p>
+                    <p className="truncate text-slate-400">Total salary paid for this month</p>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Financial Statement Summary & Net Profit Card */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="lg:col-span-2 p-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl shadow-md">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-700/80 pb-4">
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Net Profit / Loss Summary</p>
+                      <p className="text-3xl sm:text-4xl font-black text-emerald-400 mt-1">{formatMoney(netProfit)}</p>
+                    </div>
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 text-right">
+                      <p className="text-[10px] font-bold text-slate-300 uppercase">Net Margin Rate</p>
+                      <p className="text-2xl font-black text-white">{netMarginPct.toFixed(2)}%</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-xs">
+                    <div>
+                      <p className="text-slate-400">Sales Amount</p>
+                      <p className="font-bold text-white text-sm mt-0.5">{formatMoney(totalSalesAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400">Purchase Cost (COGS)</p>
+                      <p className="font-bold text-slate-300 text-sm mt-0.5">{formatMoney(totalPurchaseCostOfSoldGoods)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400">Office Expenses</p>
+                      <p className="font-bold text-orange-300 text-sm mt-0.5">{formatMoney(totalExpensesOfMonth)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400">Salary Paid</p>
+                      <p className="font-bold text-teal-300 text-sm mt-0.5">{formatMoney(totalSalaryPaidOfMonth)}</p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Additional Quick Financial Stats */}
+                <Card className="p-5 space-y-4">
+                  <h3 className="font-bold text-sm uppercase tracking-wider text-slate-500 border-b pb-2 flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-primary-600" /> Cash Flow Overview
+                  </h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Payments Received:</span>
+                      <span className="font-bold text-emerald-600">{formatMoney(totalPaymentsReceived)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Outstanding Outlet Dues:</span>
+                      <span className="font-bold text-rose-600">{formatMoney(totalOutstandingDues)}</span>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t flex gap-2">
+                    <Button size="sm" className="w-full text-xs font-bold" onClick={() => setModal('payment')}>
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Record Payment
+                    </Button>
+                    <Button size="sm" variant="outline" className="w-full text-xs font-bold" onClick={() => setModal('expense')}>
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Add Expense
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: FINANCIAL ANALYTICS & REPORTS */}
           {activeTab === 'analytics' && (
             <div className="space-y-6">
               <Card>
@@ -445,26 +569,30 @@ export default function StockistAccountManager() {
                         </div>
                         <div className="text-left sm:text-right">
                           <p className="text-xs text-slate-400">Net Profit Margin</p>
-                          <p className="text-xl font-bold text-white">{netMargin.toFixed(2)}%</p>
+                          <p className="text-xl font-bold text-white">{netMarginPct.toFixed(2)}%</p>
                         </div>
                       </div>
 
                       <div className="border rounded-xl overflow-hidden divide-y text-sm">
                         <div className="p-4 bg-slate-50 dark:bg-slate-800/50 flex justify-between font-bold">
-                          <span>Total Sales Revenue</span>
-                          <span className="text-emerald-600">{formatMoney(totalRevenue)}</span>
+                          <span>Sales Amount (Unit Sales Price × Qty)</span>
+                          <span className="text-emerald-600">{formatMoney(totalSalesAmount)}</span>
                         </div>
                         <div className="p-4 flex justify-between text-slate-600 dark:text-slate-300">
-                          <span>Less: Cost of Goods Sold (COGS)</span>
-                          <span>- {formatMoney(totalCOGS)}</span>
+                          <span>Less: Purchase Amount (Cost of Sold Goods)</span>
+                          <span>- {formatMoney(totalPurchaseCostOfSoldGoods)}</span>
                         </div>
                         <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 flex justify-between font-bold text-indigo-700 dark:text-indigo-300">
-                          <span>Gross Profit</span>
-                          <span>{formatMoney(grossProfit)} ({grossMargin.toFixed(1)}%)</span>
+                          <span>Gross Margin</span>
+                          <span>{formatMoney(grossMarginAmount)} ({grossMarginPercentage.toFixed(1)}%)</span>
                         </div>
                         <div className="p-4 flex justify-between text-slate-600 dark:text-slate-300">
-                          <span>Less: Office Expenses</span>
-                          <span className="text-rose-600">- {formatMoney(totalOfficeExpenses)}</span>
+                          <span>Less: Total Office Expenses</span>
+                          <span className="text-rose-600">- {formatMoney(totalExpensesOfMonth)}</span>
+                        </div>
+                        <div className="p-4 flex justify-between text-slate-600 dark:text-slate-300">
+                          <span>Less: Salary Paid for This Month</span>
+                          <span className="text-teal-600">- {formatMoney(totalSalaryPaidOfMonth)}</span>
                         </div>
                         <div className="p-4 bg-slate-100 dark:bg-slate-800 flex justify-between font-black text-base">
                           <span>NET PROFIT</span>
@@ -542,7 +670,7 @@ export default function StockistAccountManager() {
             </div>
           )}
 
-          {/* TAB 2: OUTLET PAYMENTS MANAGER */}
+          {/* TAB 3: OUTLET PAYMENTS MANAGER */}
           {activeTab === 'payments' && (
             <div className="space-y-6">
               <Card>
@@ -586,7 +714,7 @@ export default function StockistAccountManager() {
             </div>
           )}
 
-          {/* TAB 3: OFFICE EXPENSES MANAGER */}
+          {/* TAB 4: OFFICE EXPENSES MANAGER */}
           {activeTab === 'expenses' && (
             <div className="space-y-6">
               <Card>
