@@ -104,11 +104,11 @@ export default function StockistAccountManager() {
   // 1. Sales Amount: ∑ (unit sales price * quantity) sold goods
   const totalSalesAmount = invoices.reduce((sum, inv) => sum + (Number(inv.netTotal || inv.totalAmount) || 0), 0);
 
-  // 2. Purchase Amount: cost price of sold goods
+  // 2. Purchase Amount: cost price of sold goods ONLY
   let totalPurchaseCostOfSoldGoods = 0;
   invoices.forEach(inv => {
     (inv.items || []).forEach(item => {
-      const costPrice = Number(item.product?.costPrice ?? item.mrp ?? 0);
+      const costPrice = Number(item.costPrice ?? item.product?.costPrice ?? item.mrp ?? 0);
       const qty = Number(item.quantity) || 1;
       totalPurchaseCostOfSoldGoods += (costPrice * qty);
     });

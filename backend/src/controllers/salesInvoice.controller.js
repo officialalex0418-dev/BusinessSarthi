@@ -52,6 +52,7 @@ export const createSalesInvoice = asyncHandler(async (req, res) => {
       productName: item.productName || product?.productName || 'Product',
       batch: item.batch || product?.batchNumber || 'GENERAL',
       price,
+      costPrice: Number(product?.costPrice ?? item.costPrice ?? 0),
       mrp: Number(item.mrp || product?.mrp || 0),
       quantity,
       amount
@@ -137,6 +138,7 @@ export const listSalesInvoices = asyncHandler(async (req, res) => {
   const items = await SalesInvoice.find(filter).sort('-createdAt')
     .populate('staff', 'name')
     .populate('distributor', 'name panVat registrationNumber phone address')
+    .populate('items.product', 'costPrice sellingPrice price mrp')
     .limit(Number(req.query.limit) || 10000);
   res.json({ success: true, data: { items } });
 });
@@ -144,7 +146,8 @@ export const listSalesInvoices = asyncHandler(async (req, res) => {
 export const getSalesInvoice = asyncHandler(async (req, res) => {
   const item = await SalesInvoice.findOne({ _id: req.params.id, company: req.companyId })
     .populate('staff', 'name')
-    .populate('distributor', 'name panVat registrationNumber phone address');
+    .populate('distributor', 'name panVat registrationNumber phone address')
+    .populate('items.product', 'costPrice sellingPrice price mrp');
   if (!item) throw ApiError.notFound('Invoice not found');
   res.json({ success: true, data: item });
 });

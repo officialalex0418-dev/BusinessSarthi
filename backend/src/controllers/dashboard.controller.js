@@ -179,7 +179,7 @@ export const companyDashboard = asyncHandler(async (req, res) => {
     let invProfit = 0;
     (inv.items || []).forEach((item) => {
       const soldPrice = Number(item.price) || 0;
-      const purchaseCost = Number(item.product?.costPrice ?? item.mrp ?? 0);
+      const purchaseCost = Number(item.costPrice ?? item.product?.costPrice ?? item.mrp ?? 0);
       const qty = Number(item.quantity) || 1;
       invProfit += (soldPrice - purchaseCost) * qty;
     });
