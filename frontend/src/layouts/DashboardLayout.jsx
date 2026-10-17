@@ -274,7 +274,6 @@ export default function DashboardLayout({ title, nav }) {
                 <Menu className="h-5 w-5" />
               </button>
             </div>
-            </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
               <button onClick={toggle} className="rounded-lg p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
