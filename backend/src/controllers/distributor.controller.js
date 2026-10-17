@@ -386,6 +386,7 @@ export const listPayments = asyncHandler(async (req, res) => {
 
   const items = await Payment.find(filter)
     .populate('distributor', 'name phone address')
+    .populate('createdBy', 'name email role designation')
     .sort('-paymentDate')
     .limit(Number(req.query.limit) || 10000);
 

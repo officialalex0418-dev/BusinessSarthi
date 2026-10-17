@@ -291,6 +291,29 @@ export default function StockistAccountManager() {
       const ws = XLSX.utils.aoa_to_sheet(dataRows);
       XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
 
+    } else if (reportType === 'PAYMENTS') {
+      const dataRows = [
+        [`${stockistName.toUpperCase()} — OUTLET PAYMENTS REPORT`],
+        [`Period: ${dateRangeStr}`],
+        [],
+        ['SN', 'Payment Date', 'Outlet Name', 'Payment Method', 'Paid Amount', 'Collected By', 'Remarks']
+      ];
+
+      payments.forEach((pay, i) => {
+        dataRows.push([
+          i + 1,
+          formatDate(pay.paymentDate || pay.createdAt, dateFormat),
+          pay.distributor?.name || 'Outlet',
+          pay.method || 'CASH',
+          Number(pay.amount) || 0,
+          pay.createdBy?.name || user?.name || '—',
+          pay.remarks || ''
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(dataRows);
+      XLSX.utils.book_append_sheet(wb, ws, 'Outlet Payments');
+
     } else if (reportType === 'EXPENSES') {
       const dataRows = [
         [`${stockistName.toUpperCase()} — OFFICE EXPENSES REPORT`],
@@ -723,7 +746,7 @@ export default function StockistAccountManager() {
 
                   {reportType === 'PAYMENTS' && (
                     <Table
-                      columns={['Payment Date', 'Outlet Name', 'Method', 'Amount', 'Remarks']}
+                      columns={['Payment Date', 'Outlet Name', 'Payment Method', 'Paid Amount', 'Collected By']}
                       data={payments}
                       renderRow={(pay) => (
                         <tr key={pay._id} className="hover:bg-slate-50 text-sm">
@@ -731,7 +754,7 @@ export default function StockistAccountManager() {
                           <td className="table-td font-semibold">{pay.distributor?.name || 'Outlet'}</td>
                           <td className="table-td"><Badge color="teal">{pay.method}</Badge></td>
                           <td className="table-td font-bold text-emerald-600">{formatDisplayMoney(pay.amount)}</td>
-                          <td className="table-td text-xs text-slate-500">{pay.remarks || '—'}</td>
+                          <td className="table-td text-xs font-semibold text-slate-700 dark:text-slate-300">{pay.createdBy?.name || user?.name || '—'}</td>
                         </tr>
                       )}
                     />
@@ -774,7 +797,7 @@ export default function StockistAccountManager() {
                 </div>
 
                 <Table
-                  columns={['Payment Date', 'Outlet Name', 'Payment Method', 'Paid Amount', 'Remarks']}
+                  columns={['Payment Date', 'Outlet Name', 'Payment Method', 'Paid Amount', 'Collected By']}
                   data={payments}
                   renderRow={(pay) => (
                     <tr key={pay._id} className="hover:bg-slate-50 text-sm">
@@ -782,7 +805,7 @@ export default function StockistAccountManager() {
                       <td className="table-td font-semibold text-[#2563eb]">{pay.distributor?.name || 'Outlet'}</td>
                       <td className="table-td"><Badge color="teal">{pay.method}</Badge></td>
                       <td className="table-td font-bold text-emerald-600">{formatDisplayMoney(pay.amount)}</td>
-                      <td className="table-td text-xs text-slate-500">{pay.remarks || '—'}</td>
+                      <td className="table-td text-xs font-semibold text-slate-700 dark:text-slate-300">{pay.createdBy?.name || user?.name || '—'}</td>
                     </tr>
                   )}
                 />
