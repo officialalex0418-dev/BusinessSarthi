@@ -94,6 +94,7 @@ export const companyDashboard = asyncHandler(async (req, res) => {
     todaySalesInvoiceAgg, yesterdaySalesInvoiceAgg, monthlySalesInvoiceAgg, lastMonthSalesInvoiceAgg,
     todayPaymentsAgg, monthlyPaymentsAgg,
     monthlyInvoicesForProfit,
+    allInventoryItems,
     monthlySalesGraph, productSalesAgg, recentActivities
   ] = await Promise.all([
     User.countDocuments({ $or: [{ company: companyId }, { stockist: companyId }], role: { $in: ['STAFF', 'COMPANY_MANAGER'] } }).catch(() => 0),
