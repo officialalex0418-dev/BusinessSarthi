@@ -270,7 +270,7 @@ export default function StockistAccountManager() {
         [`${stockistName.toUpperCase()} — SALES REPORT`],
         [`Period: ${dateRangeStr}`],
         [],
-        ['SN', 'Invoice NO', 'Outlet Name', 'Date', 'Payment Method', 'Items Count', 'Net Amount']
+        ['SN', 'Invoice NO', 'Outlet Name', 'Date', 'Payment Method', 'Items Count', 'Net Amount', 'Issued By']
       ];
 
       invoices.forEach((inv, i) => {
@@ -281,15 +281,38 @@ export default function StockistAccountManager() {
           formatDate(inv.saleDate || inv.createdAt, dateFormat),
           inv.paymentMethod || 'Credit',
           inv.items?.length || 0,
-          Number(inv.netTotal || inv.totalAmount) || 0
+          Number(inv.netTotal || inv.totalAmount) || 0,
+          inv.staff?.name || user?.name || '—'
         ]);
       });
 
       dataRows.push([]);
-      dataRows.push(['TOTAL SALES REVENUE', '', '', '', '', '', totalSalesAmount]);
+      dataRows.push(['TOTAL SALES REVENUE', '', '', '', '', '', totalSalesAmount, '']);
 
       const ws = XLSX.utils.aoa_to_sheet(dataRows);
       XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
+
+    } else if (reportType === 'PURCHASE') {
+      const dataRows = [
+        [`${stockistName.toUpperCase()} — PURCHASE REPORT`],
+        [`Period: ${dateRangeStr}`],
+        [],
+        ['SN', 'Purchase NO / Bill NO', 'Vendor Name', 'Date', 'Amount', 'Entry By']
+      ];
+
+      purchases.forEach((pur, i) => {
+        dataRows.push([
+          i + 1,
+          pur.purchaseNumber || pur.billNumber || '—',
+          pur.vendor?.name || 'Vendor',
+          formatDate(pur.purchaseDate || pur.createdAt, dateFormat),
+          Number(pur.totalAmount || pur.amount) || 0,
+          pur.staff?.name || user?.name || '—'
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(dataRows);
+      XLSX.utils.book_append_sheet(wb, ws, 'Purchase Report');
 
     } else if (reportType === 'PAYMENTS') {
       const dataRows = [
@@ -319,7 +342,7 @@ export default function StockistAccountManager() {
         [`${stockistName.toUpperCase()} — OFFICE EXPENSES REPORT`],
         [`Period: ${dateRangeStr}`],
         [],
-        ['SN', 'Expense Date', 'Title', 'Category', 'Paid To', 'Method', 'Amount', 'Remarks']
+        ['SN', 'Expense Date', 'Title', 'Category', 'Paid To', 'Method', 'Amount', 'Entry By', 'Remarks']
       ];
 
       expenses.forEach((exp, i) => {
@@ -331,6 +354,7 @@ export default function StockistAccountManager() {
           exp.paidTo || '—',
           exp.paymentMethod || 'CASH',
           Number(exp.amount) || 0,
+          exp.createdBy?.name || user?.name || '—',
           exp.remarks || ''
         ]);
       });
@@ -715,7 +739,7 @@ export default function StockistAccountManager() {
 
                   {reportType === 'SALES' && (
                     <Table
-                      columns={['Invoice #', 'Outlet Name', 'Date', 'Payment Method', 'Net Total']}
+                      columns={['Invoice #', 'Outlet Name', 'Date', 'Payment Method', 'Net Total', 'Issued By']}
                       data={invoices}
                       renderRow={(inv) => (
                         <tr key={inv._id} className="hover:bg-slate-50 text-sm">
@@ -724,6 +748,7 @@ export default function StockistAccountManager() {
                           <td className="table-td">{formatDate(inv.saleDate || inv.createdAt, dateFormat)}</td>
                           <td className="table-td"><Badge color="blue">{inv.paymentMethod}</Badge></td>
                           <td className="table-td font-bold text-emerald-600">{formatDisplayMoney(inv.netTotal || inv.totalAmount)}</td>
+                          <td className="table-td text-xs font-semibold text-slate-700 dark:text-slate-300">{inv.staff?.name || user?.name || '—'}</td>
                         </tr>
                       )}
                     />
@@ -731,7 +756,7 @@ export default function StockistAccountManager() {
 
                   {reportType === 'PURCHASE' && (
                     <Table
-                      columns={['Purchase #', 'Vendor Name', 'Date', 'Amount']}
+                      columns={['Purchase #', 'Vendor Name', 'Date', 'Amount', 'Entry By']}
                       data={purchases}
                       renderRow={(pur) => (
                         <tr key={pur._id} className="hover:bg-slate-50 text-sm">
@@ -739,6 +764,7 @@ export default function StockistAccountManager() {
                           <td className="table-td font-semibold">{pur.vendor?.name || 'Vendor'}</td>
                           <td className="table-td">{formatDate(pur.purchaseDate || pur.createdAt, dateFormat)}</td>
                           <td className="table-td font-bold">{formatDisplayMoney(pur.totalAmount || pur.amount)}</td>
+                          <td className="table-td text-xs font-semibold text-slate-700 dark:text-slate-300">{pur.staff?.name || user?.name || '—'}</td>
                         </tr>
                       )}
                     />
@@ -762,7 +788,7 @@ export default function StockistAccountManager() {
 
                   {reportType === 'EXPENSES' && (
                     <Table
-                      columns={['Expense Date', 'Title', 'Category', 'Paid To', 'Method', 'Amount']}
+                      columns={['Expense Date', 'Title', 'Category', 'Paid To', 'Method', 'Amount', 'Entry By']}
                       data={expenses}
                       renderRow={(exp) => (
                         <tr key={exp._id} className="hover:bg-slate-50 text-sm">
@@ -772,6 +798,7 @@ export default function StockistAccountManager() {
                           <td className="table-td text-xs">{exp.paidTo || '—'}</td>
                           <td className="table-td text-xs">{exp.paymentMethod}</td>
                           <td className="table-td font-bold text-rose-600">{formatDisplayMoney(exp.amount)}</td>
+                          <td className="table-td text-xs font-semibold text-slate-700 dark:text-slate-300">{exp.createdBy?.name || user?.name || '—'}</td>
                         </tr>
                       )}
                     />
@@ -829,11 +856,36 @@ export default function StockistAccountManager() {
                 </div>
 
                 <Table
-                  columns={['Expense Date', 'Title', 'Category', 'Paid To', 'Method', 'Amount', 'Actions']}
+                  columns={['Expense Date', 'Title', 'Category', 'Paid To', 'Method', 'Amount', 'Entry By', 'Actions']}
                   data={expenses}
                   renderRow={(exp) => (
                     <tr key={exp._id} className="hover:bg-slate-50 text-sm">
                       <td className="table-td">{formatDate(exp.expenseDate || exp.createdAt, dateFormat)}</td>
+                      <td className="table-td font-semibold">{exp.title}</td>
+                      <td className="table-td"><Badge color="orange">{exp.category}</Badge></td>
+                      <td className="table-td text-xs">{exp.paidTo || '—'}</td>
+                      <td className="table-td text-xs">{exp.paymentMethod}</td>
+                      <td className="table-td font-bold text-rose-600">{formatDisplayMoney(exp.amount)}</td>
+                      <td className="table-td text-xs font-semibold text-slate-700 dark:text-slate-300">{exp.createdBy?.name || user?.name || '—'}</td>
+                      <td className="table-td">
+                        <div className="flex gap-1">
+                          <button
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                            onClick={() => { setEditingExpense(exp); setExpenseForm({ ...exp }); setModal('expense'); }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                            onClick={() => deleteExpense(exp._id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                />
                       <td className="table-td font-semibold">{exp.title}</td>
                       <td className="table-td"><Badge color="orange">{exp.category}</Badge></td>
                       <td className="table-td text-xs">{exp.paidTo || '—'}</td>
