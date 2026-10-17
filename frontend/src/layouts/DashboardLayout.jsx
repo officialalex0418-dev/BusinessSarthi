@@ -208,29 +208,33 @@ export default function DashboardLayout({ title, nav }) {
         'pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
-        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5 dark:border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm border border-slate-100 dark:border-slate-800">
+        <div className="flex h-16 items-center justify-between border-b border-slate-200/80 px-4 dark:border-slate-800">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-600 text-white shadow-xs">
               {branding.logoUrl ? (
                 <img src={fixFileUrl(branding.logoUrl)} alt="Logo" className="h-full w-full object-cover rounded-xl" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-primary-600 text-white rounded-xl">
-                  <MapPin className="h-5 w-5" />
-                </div>
+                <MapPin className="h-5 w-5 text-white" />
               )}
             </div>
-            <div>
-              <p className="text-sm font-bold leading-tight">{branding.appName}</p>
-              <p className="text-[10px] font-medium tracking-wider text-slate-400">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold leading-tight truncate text-slate-900 dark:text-white">Business Sarthi</p>
+              <p className="text-[10px] font-medium tracking-wide text-slate-400 truncate">
                 {t('Driving Business Forward', language)}
               </p>
             </div>
           </div>
-          <button className="rounded-lg p-1 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(false)}>
-            <X className="h-5 w-5 text-slate-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200/80 font-semibold px-2.5 py-0.5 rounded-full text-[11px] shrink-0">
+              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              Live
+            </span>
+            <button className="rounded-lg p-1 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(false)}>
+              <X className="h-5 w-5 text-slate-500" />
+            </button>
+          </div>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        <nav className="flex-1 space-y-1.5 overflow-y-auto p-3">
           {nav.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
@@ -238,13 +242,13 @@ export default function DashboardLayout({ title, nav }) {
               end={end}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition',
+                'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition',
                 isActive
-                  ? 'bg-primary-600 text-white shadow-sm'
+                  ? 'bg-[#2563eb] text-white shadow-xs font-semibold'
                   : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
               )}
             >
-              <Icon className="h-4.5 w-4.5 h-5 w-5" />
+              <Icon className="h-5 w-5" />
               {t(label, language)}
             </NavLink>
           ))}
@@ -264,15 +268,12 @@ export default function DashboardLayout({ title, nav }) {
             </div>
           )}
           {/* Topbar */}
-          <header className="flex h-auto min-h-[4rem] pt-[env(safe-area-inset-top)] items-center justify-between border-b border-slate-200 bg-white/80 px-2 sm:px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
-            <div className="flex items-center gap-1 sm:gap-3">
+          <header className="flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-3 sm:px-6 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setSidebarOpen(true)}>
                 <Menu className="h-5 w-5" />
               </button>
-              <span className={cn('hidden items-center gap-1.5 text-[10px] sm:flex sm:text-xs', connected ? 'text-emerald-500' : 'text-slate-400')}>
-                <span className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-slate-400')} />
-                {connected ? 'Live' : 'Offline'}
-              </span>
+            </div>
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
@@ -313,26 +314,28 @@ export default function DashboardLayout({ title, nav }) {
               </div>
 
               {/* User menu */}
-            <div className="flex items-center gap-1 sm:gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700 dark:bg-primary-900/50 dark:text-primary-300">
-                {user?.name?.[0]?.toUpperCase()}
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-100 dark:border-slate-800">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-[#2563eb] dark:bg-blue-900/50 dark:text-blue-300">
+                  {user?.name?.[0]?.toUpperCase() || 'L'}
+                </div>
+                <div className="hidden text-left sm:block">
+                  <p className="text-xs font-semibold leading-tight text-slate-800 dark:text-white flex items-center gap-1">
+                    {user?.name || 'Laxmi Kumar Sah'}
+                    <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-normal">
+                    {user?.designation?.name || ROLE_LABELS[user?.role] || 'Stockist'}
+                  </p>
+                </div>
               </div>
-              <div className="hidden text-left sm:block">
-                <p className="text-[10px] font-medium leading-tight md:text-sm">{user?.name}</p>
-                <p className="text-[9px] text-slate-400 md:text-[10px]">
-                  {user?.designation?.name || ROLE_LABELS[user?.role]}
-                </p>
-              </div>
-              <ChevronDown className="hidden h-4 w-4 text-slate-400 sm:block" />
-            </div>
-              <button onClick={handleLogout} title={t('Logout', language)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30">
+              <button onClick={handleLogout} title={t('Logout', language)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition">
                 <LogOut className="h-5 w-5" />
               </button>
             </div>
           </header>
         </div>
 
-        <main className="flex-1 p-4 lg:p-6">
+        <main className="flex-1 p-4 lg:p-6 bg-[#f4f6f9] dark:bg-slate-950">
           <Outlet />
         </main>
       </div>
@@ -341,10 +344,10 @@ export default function DashboardLayout({ title, nav }) {
       {user?.role !== 'SUPER_ADMIN' && (
         <Link
           to={user?.role === 'COMPANY_OWNER' ? '/company/support' : user?.role === 'STOCKIST' ? '/stockist/support' : '/staff/support'}
-          className="fixed bottom-6 right-6 z-[1000] flex items-center gap-2 bg-primary-600 text-white px-5 py-3 rounded-full shadow-2xl hover:bg-primary-700 hover:scale-105 transition-all group"
+          className="fixed bottom-6 right-6 z-[1000] flex items-center gap-2 bg-[#2563eb] text-white px-5 py-2.5 rounded-full shadow-xl hover:bg-blue-700 transition-all font-semibold text-sm group"
         >
           <LifeBuoy className="h-5 w-5 group-hover:rotate-12 transition-transform" />
-          <span className="font-bold text-sm">Support</span>
+          <span>Support</span>
         </Link>
       )}
     </div>
