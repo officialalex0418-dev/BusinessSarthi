@@ -5,8 +5,9 @@ import {
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { Card, Button, Input, Modal, Table, Spinner, Badge, Select, Textarea, DatePicker } from '@/components/ui';
-import { formatDate } from '@/lib/utils';
+import { formatDate, toLocalDateString } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { adToBs, bsToAd, getBsMonthInfo } from '@/lib/nepaliDate';
 import * as XLSX from 'xlsx';
 
 const emptyExpense = { title: '', category: 'MISC', amount: 0, expenseDate: '', paymentMethod: 'CASH', paidTo: '', remarks: '' };
@@ -90,17 +91,46 @@ export default function StockistAccountManager() {
   // Quick Preset Handlers
   const handleSetPreset = (type) => {
     const now = new Date();
+    const todayStr = toLocalDateString(now);
+
     if (type === 'TODAY') {
-      const d = now.toISOString().split('T')[0];
-      setFromDate(d); setToDate(d);
+      setFromDate(todayStr);
+      setToDate(todayStr);
     } else if (type === 'THIS_MONTH') {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      const end = now.toISOString().split('T')[0];
-      setFromDate(start); setToDate(end);
+      if (dateFormat === 'BS') {
+        const bsNow = adToBs(now);
+        const startBsStr = `${bsNow.year}-${String(bsNow.month).padStart(2, '0')}-01`;
+        const endBsStr = bsNow.formatted;
+        setFromDate(toLocalDateString(bsToAd(startBsStr)));
+        setToDate(toLocalDateString(bsToAd(endBsStr)));
+      } else {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        setFromDate(toLocalDateString(start));
+        setToDate(todayStr);
+      }
     } else if (type === 'LAST_MONTH') {
-      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-      const end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
-      setFromDate(start); setToDate(end);
+      if (dateFormat === 'BS') {
+        const bsNow = adToBs(now);
+        let lastMonth = bsNow.month - 1;
+        let lastMonthYear = bsNow.year;
+        if (lastMonth === 0) {
+          lastMonth = 12;
+          lastMonthYear -= 1;
+        }
+        const monthInfo = getBsMonthInfo(lastMonthYear, lastMonth);
+        const daysInLastMonth = monthInfo ? monthInfo.daysInMonth : 30; // fallback
+
+        const startBsStr = `${lastMonthYear}-${String(lastMonth).padStart(2, '0')}-01`;
+        const endBsStr = `${lastMonthYear}-${String(lastMonth).padStart(2, '0')}-${String(daysInLastMonth).padStart(2, '0')}`;
+
+        setFromDate(toLocalDateString(bsToAd(startBsStr)));
+        setToDate(toLocalDateString(bsToAd(endBsStr)));
+      } else {
+        const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const end = new Date(now.getFullYear(), now.getMonth(), 0);
+        setFromDate(toLocalDateString(start));
+        setToDate(toLocalDateString(end));
+      }
     } else if (type === 'CLEAR') {
       setFromDate(''); setToDate('');
     }
