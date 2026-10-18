@@ -32,8 +32,8 @@ export async function connectDB() {
       // CONNECTION POOL
       // --------------------------------------------------
       // Optimized for concurrent users
-      maxPoolSize: 50,
-      minPoolSize: 5,
+      maxPoolSize: 20,
+      minPoolSize: 2,
 
       // Close idle connections after 60 seconds.
       maxIdleTimeMS: 60000,

@@ -71,11 +71,6 @@ app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 app.use(cookieParser());
 app.use(compression());
-if (!env.isProd) {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined', { stream: logger.stream }));
-}
 
 // ---------- Rate limiting ----------
 app.use('/api', apiLimiter);

@@ -29,8 +29,9 @@ const MAX_RETRIES = 2;
 api.interceptors.response.use(null, async (error) => {
   const { config, response } = error;
 
-  // Only retry on network errors or 5xx server errors
-  const shouldRetry = !response || (response.status >= 500 && response.status <= 599);
+  // Only retry on network errors or 5xx server errors, and ONLY for safe HTTP methods
+  const isSafeMethod = ['get', 'head', 'options'].includes(config.method?.toLowerCase());
+  const shouldRetry = isSafeMethod && (!response || (response.status >= 500 && response.status <= 599));
 
   if (shouldRetry && (!config._retryCount || config._retryCount < MAX_RETRIES)) {
     config._retryCount = (config._retryCount || 0) + 1;

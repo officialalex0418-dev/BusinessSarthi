@@ -501,19 +501,45 @@ export const distributorAnalytics = asyncHandler(async (req, res) => {
 
   // Calculate Overdue Outstanding (Aged > 90 days)
   let overdueOutstanding = 0;
-  for (const dist of allDistributorsWithBalance) {
-    const [invoices, payments] = await Promise.all([
-      SalesInvoice.find({ distributor: dist._id, company: companyId }).sort('saleDate'),
-      Payment.find({ distributor: dist._id, company: companyId })
+
+  if (allDistributorsWithBalance.length > 0) {
+    const distributorIds = allDistributorsWithBalance.map(d => d._id);
+
+    const [allInvoices, allPaymentsAgg] = await Promise.all([
+      SalesInvoice.find({ distributor: { $in: distributorIds }, company: companyId })
+        .select('distributor netTotal saleDate')
+        .sort('saleDate')
+        .lean(),
+      Payment.aggregate([
+        { $match: { distributor: { $in: distributorIds }, company: companyId } },
+        { $group: { _id: '$distributor', totalPaid: { $sum: '$amount' } } }
+      ])
     ]);
 
-    let totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-    for (const inv of invoices) {
-      const unpaidAmount = Math.max(0, inv.netTotal - totalPaid);
-      totalPaid = Math.max(0, totalPaid - inv.netTotal);
+    const paymentsByDist = {};
+    allPaymentsAgg.forEach(p => {
+      paymentsByDist[p._id.toString()] = p.totalPaid;
+    });
 
-      if (unpaidAmount > 0 && new Date(inv.saleDate) < ninetyDaysAgo) {
-        overdueOutstanding += unpaidAmount;
+    const invoicesByDist = {};
+    allInvoices.forEach(inv => {
+      const dId = inv.distributor.toString();
+      if (!invoicesByDist[dId]) invoicesByDist[dId] = [];
+      invoicesByDist[dId].push(inv);
+    });
+
+    for (const dist of allDistributorsWithBalance) {
+      const dId = dist._id.toString();
+      const invoices = invoicesByDist[dId] || [];
+      let totalPaid = paymentsByDist[dId] || 0;
+
+      for (const inv of invoices) {
+        const unpaidAmount = Math.max(0, inv.netTotal - totalPaid);
+        totalPaid = Math.max(0, totalPaid - inv.netTotal);
+
+        if (unpaidAmount > 0 && new Date(inv.saleDate) < ninetyDaysAgo) {
+          overdueOutstanding += unpaidAmount;
+        }
       }
     }
   }
