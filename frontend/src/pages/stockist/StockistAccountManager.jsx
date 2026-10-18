@@ -886,30 +886,6 @@ export default function StockistAccountManager() {
                     </tr>
                   )}
                 />
-                      <td className="table-td font-semibold">{exp.title}</td>
-                      <td className="table-td"><Badge color="orange">{exp.category}</Badge></td>
-                      <td className="table-td text-xs">{exp.paidTo || '—'}</td>
-                      <td className="table-td text-xs">{exp.paymentMethod}</td>
-                      <td className="table-td font-bold text-rose-600">{formatDisplayMoney(exp.amount)}</td>
-                      <td className="table-td">
-                        <div className="flex gap-1">
-                          <button
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                            onClick={() => { setEditingExpense(exp); setExpenseForm({ ...exp }); setModal('expense'); }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                            onClick={() => deleteExpense(exp._id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                />
               </Card>
             </div>
           )}
