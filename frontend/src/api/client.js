@@ -58,8 +58,11 @@ api.interceptors.request.use((config) => {
 
   // Automatically add an idempotency key for unsafe methods
   const isUnsafeMethod = ['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase());
-  if (isUnsafeMethod && !config.headers['x-idempotency-key']) {
-    // Generate a simple UUID v4-like string
+
+  // To avoid generating a new idempotency key for an automatic retry (which would defeat the purpose),
+  // we only generate it once and store it on the config object. If the config is cloned during a retry,
+  // the key is preserved.
+  if (isUnsafeMethod && !config._idempotencyKeyGenerated) {
     const generateUUID = () => {
       if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
@@ -70,7 +73,12 @@ api.interceptors.request.use((config) => {
         return v.toString(16);
       });
     };
-    config.headers['x-idempotency-key'] = generateUUID();
+
+    // Only set header if it wasn't already manually provided
+    if (!config.headers['x-idempotency-key']) {
+      config.headers['x-idempotency-key'] = generateUUID();
+    }
+    config._idempotencyKeyGenerated = true;
   }
 
   return config;
