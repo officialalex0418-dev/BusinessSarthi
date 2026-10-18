@@ -68,6 +68,7 @@ r.get('/files/*', misc.getFile);
 
 // ============ DASHBOARDS ============
 r.get('/dashboard/super', protect, authorize(...PLATFORM), dashboard.superDashboard);
+r.get('/dashboard/company-main', protect, authorize('COMPANY_OWNER', 'COMPANY_MANAGER'), scopeCompany, dashboard.companyMainDashboard);
 r.get('/dashboard/company', protect, authorize(...MANAGERS), scopeCompany, dashboard.companyDashboard);
 r.get('/dashboard/staff', protect, authorize(...ALL_STAFF), dashboard.staffDashboard);
 

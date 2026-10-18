@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import {
   Company, User, Package, Attendance, Sale, SalesInvoice,
-  LocationLog, AuditLog, Leave, Holiday, Target, LeaveType, Payment, Inventory
+  LocationLog, AuditLog, Leave, Holiday, Target, LeaveType, Payment, Inventory, Branch, Distributor
 } from '../models/index.js';
 
 import { asyncHandler } from '../utils/ApiError.js';
@@ -355,5 +355,142 @@ export const staffDashboard = asyncHandler(async (req, res) => {
   };
 
   statsCache.set(`staff_dashboard:${userId}`, dashboardData, 60);
+  res.json({ success: true, data: dashboardData });
+});
+
+/** GET /dashboard/company-main — Dedicated Company Dashboard */
+export const companyMainDashboard = asyncHandler(async (req, res) => {
+  const companyId = req.companyId;
+  if (!companyId) {
+    return res.json({ success: false, message: 'No company ID found' });
+  }
+
+  const cachedData = statsCache.get(`company_main_dashboard:${companyId}`);
+  if (cachedData) return res.json({ success: true, data: cachedData });
+
+  const company = await Company.findById(companyId).populate('package', 'name').lean();
+  const dateFormat = company?.settings?.dateFormat || 'AD';
+
+  const now = new Date();
+  const today = todayStr();
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+  const startOfYesterday = new Date(yesterday); startOfYesterday.setHours(0, 0, 0, 0);
+  const endOfYesterday = new Date(yesterday); endOfYesterday.setHours(23, 59, 59, 999);
+
+  let startOfMonth, endOfMonth, startOfLastMonth, endOfLastMonth;
+  if (dateFormat === 'BS') {
+    const bsNow = adToBs(new Date());
+    const bsMonth = `${bsNow.year}-${String(bsNow.month).padStart(2, '0')}`;
+    const range = getBsMonthRange(bsMonth);
+    startOfMonth = range.start;
+    endOfMonth = range.end;
+
+    let lmYear = bsNow.year, lmMonth = bsNow.month - 1;
+    if (lmMonth === 0) { lmMonth = 12; lmYear--; }
+    const lastRange = getBsMonthRange(`${lmYear}-${String(lmMonth).padStart(2, '0')}`);
+    startOfLastMonth = lastRange.start;
+    endOfLastMonth = lastRange.end;
+  } else {
+    startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+    endOfMonth = new Date(); endOfMonth.setMonth(endOfMonth.getMonth() + 1); endOfMonth.setDate(0); endOfMonth.setHours(23, 59, 59, 999);
+
+    startOfLastMonth = new Date(startOfMonth); startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
+    endOfLastMonth = new Date(startOfMonth); endOfLastMonth.setDate(0); endOfLastMonth.setHours(23, 59, 59, 999);
+  }
+
+  const compOid = mongoose.Types.ObjectId.isValid(companyId) ? new mongoose.Types.ObjectId(companyId) : companyId;
+
+  const [
+    totalStaff, checkedInToday, absentToday,
+    totalBranches, totalDistributors, totalProducts,
+    todaySalesInvoiceAgg, yesterdaySalesInvoiceAgg, monthlySalesInvoiceAgg, lastMonthSalesInvoiceAgg,
+    recentSales,
+    monthlySalesGraph, productSalesAgg, recentActivities
+  ] = await Promise.all([
+    User.countDocuments({ company: companyId, role: { $in: ['STAFF', 'COMPANY_MANAGER'] } }).catch(() => 0),
+    Attendance.countDocuments({ company: companyId, date: today, 'checkIn.time': { $exists: true } }).catch(() => 0),
+    Attendance.countDocuments({ company: companyId, date: today, status: { $in: ['ABSENT', 'ON_LEAVE'] } }).catch(() => 0),
+    Branch.countDocuments({ company: companyId }).catch(() => 0),
+    Distributor.countDocuments({ company: companyId }).catch(() => 0),
+    Inventory.countDocuments({ company: companyId }).catch(() => 0),
+    // Sales Today
+    SalesInvoice.aggregate([
+      { $match: { company: compOid, saleDate: { $gte: startOfToday } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$netTotal', '$totalAmount'] } } } }
+    ]).catch(() => []),
+    // Sales Yesterday
+    SalesInvoice.aggregate([
+      { $match: { company: compOid, saleDate: { $gte: startOfYesterday, $lte: endOfYesterday } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$netTotal', '$totalAmount'] } } } }
+    ]).catch(() => []),
+    // Sales This Month
+    SalesInvoice.aggregate([
+      { $match: { company: compOid, saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$netTotal', '$totalAmount'] } } } }
+    ]).catch(() => []),
+    // Sales Last Month
+    SalesInvoice.aggregate([
+      { $match: { company: compOid, saleDate: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$netTotal', '$totalAmount'] } } } }
+    ]).catch(() => []),
+    // Recent Sales
+    SalesInvoice.find({ company: companyId })
+      .sort('-saleDate').limit(5)
+      .populate('distributor', 'name')
+      .lean().catch(() => []),
+    // Sales Graph
+    SalesInvoice.aggregate([
+      { $match: { company: compOid, saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$saleDate' } },
+          total: { $sum: { $ifNull: ['$netTotal', '$totalAmount'] } }
+      }},
+      { $sort: { _id: 1 } }
+    ]).catch(() => []),
+    // Top Products
+    SalesInvoice.aggregate([
+      { $match: { company: compOid, saleDate: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $unwind: '$items' },
+      { $group: { _id: '$items.productName', total: { $sum: '$items.amount' }, quantity: { $sum: '$items.quantity' } } },
+      { $sort: { total: -1 } },
+      { $limit: 5 }
+    ]).catch(() => []),
+    AuditLog.find({ company: companyId }).populate('user', 'name').sort('-createdAt').limit(10).lean().catch(() => []),
+  ]);
+
+  const tSales = todaySalesInvoiceAgg[0]?.total || 0;
+  const ySales = yesterdaySalesInvoiceAgg[0]?.total || 0;
+  const mSales = monthlySalesInvoiceAgg[0]?.total || 0;
+  const lmSales = lastMonthSalesInvoiceAgg[0]?.total || 0;
+
+  const salesTrend = ySales > 0 ? ((tSales - ySales) / ySales) * 100 : 0;
+  const monthlyTrend = lmSales > 0 ? ((mSales - lmSales) / lmSales) * 100 : 0;
+  const productTotal = productSalesAgg.reduce((sum, p) => sum + (p.total || 0), 0);
+
+  const dashboardData = {
+    company: company || { name: 'Company Dashboard' },
+    totalStaff,
+    checkedInToday,
+    absentToday: Math.max(totalStaff - checkedInToday, 0),
+    totalBranches,
+    totalDistributors,
+    totalProducts,
+    todaySales: tSales,
+    salesTrend: Math.round(salesTrend * 10) / 10,
+    monthlySales: mSales,
+    monthlyTrend: Math.round(monthlyTrend * 10) / 10,
+    recentSales,
+    monthlySalesGraph: (monthlySalesGraph || []).map(i => ({ date: i._id, amount: i.total })),
+    productSales: (productSalesAgg || []).map(i => ({
+      name: i._id || 'Unknown',
+      amount: i.total || 0,
+      quantity: i.quantity || 0,
+      percent: productTotal > 0 ? Math.round(((i.total || 0) / productTotal) * 100) : 0
+    })),
+    recentActivities: recentActivities || [],
+  };
+
+  statsCache.set(`company_main_dashboard:${companyId}`, dashboardData, 60);
   res.json({ success: true, data: dashboardData });
 });

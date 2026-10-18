@@ -29,11 +29,10 @@ const StatSparkline = ({ data, color }) => (
 export default function CompanyDashboard() {
   const [data, setData] = useState(null);
   const [currentMonth, setCurrentMonth] = useState('');
-  const isStockist = typeof window !== 'undefined' && window.location.pathname.startsWith('/stockist');
 
   const load = useCallback(async () => {
     try {
-      const { data: res } = await api.get('/dashboard/company');
+      const { data: res } = await api.get('/dashboard/company-main');
       setData(res.data);
 
       const dateFormat = res.data.company?.settings?.dateFormat || 'AD';
@@ -137,50 +136,31 @@ export default function CompanyDashboard() {
           </div>
         </Card>
 
-        {/* Payment Received Today */}
+        {/* Total Outlets */}
         <Card className="p-4 sm:p-5">
           <div className="flex items-start justify-between">
             <div className="rounded-xl bg-teal-50 p-2 sm:p-2.5 text-teal-600 dark:bg-teal-900/20">
-              <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" />
+              <Building2 className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <StatSparkline color="#14b8a6" data={[{value: 5}, {value: 20}, {value: 18}, {value: 35}]} />
           </div>
           <div className="mt-3 sm:mt-4 space-y-1">
-            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Payment Received Today</p>
-            <p className="text-lg sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 truncate">{formatMoney(data.todayPayments)}</p>
-            <p className="text-[11px] sm:text-xs font-medium text-slate-400">Received today across outlets</p>
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Total Outlets</p>
+            <p className="text-lg sm:text-2xl font-bold text-teal-600 dark:text-teal-400 truncate">{data.totalDistributors}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-400">Active registered outlets</p>
           </div>
         </Card>
 
-        {/* Payment Received in a Month */}
+        {/* Total Staff */}
         <Card className="p-4 sm:p-5">
           <div className="flex items-start justify-between">
             <div className="rounded-xl bg-indigo-50 p-2 sm:p-2.5 text-indigo-600 dark:bg-indigo-900/20">
-              <Wallet className="h-5 w-5 sm:h-6 sm:w-6" />
+              <Users className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <StatSparkline color="#6366f1" data={[{value: 10}, {value: 35}, {value: 40}, {value: 60}]} />
           </div>
           <div className="mt-3 sm:mt-4 space-y-1">
-            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Payment Received (Month)</p>
-            <p className="text-lg sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400 truncate">{formatMoney(data.monthlyPayments)}</p>
-            <p className="text-[11px] sm:text-xs font-medium text-slate-400">Total received this month</p>
-          </div>
-        </Card>
-
-        {/* Monthly Profit */}
-        <Card className="p-4 sm:p-5 border-l-4 border-l-purple-500">
-          <div className="flex items-start justify-between">
-            <div className="rounded-xl bg-purple-50 p-2 sm:p-2.5 text-purple-600 dark:bg-purple-900/20">
-              <Coins className="h-5 w-5 sm:h-6 sm:w-6" />
-            </div>
-            <StatSparkline color="#a855f7" data={[{value: 12}, {value: 28}, {value: 32}, {value: 50}]} />
-          </div>
-          <div className="mt-3 sm:mt-4 space-y-1">
-            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Monthly Profit</p>
-            <p className="text-lg sm:text-2xl font-bold text-purple-600 dark:text-purple-400 truncate">{formatMoney(data.monthlyProfit)}</p>
-            <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 flex items-center gap-1">
-              <span>(Sold Price - Purchase Cost) × Qty</span>
-            </p>
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Total Staff</p>
+            <p className="text-lg sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400 truncate">{data.totalStaff}</p>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-400">Total staff across branches</p>
           </div>
         </Card>
 
@@ -190,7 +170,6 @@ export default function CompanyDashboard() {
             <div className="rounded-xl bg-sky-50 p-2 sm:p-2.5 text-sky-600 dark:bg-sky-900/20">
               <UserCheck className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <StatSparkline color="#0284c7" data={[{value: 20}, {value: 28}, {value: 22}, {value: 35}]} />
           </div>
           <div className="mt-3 sm:mt-4 space-y-1">
             <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Present Staff</p>
@@ -205,7 +184,6 @@ export default function CompanyDashboard() {
             <div className="rounded-xl bg-amber-50 p-2 sm:p-2.5 text-amber-600 dark:bg-amber-900/20">
               <UserMinus className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <StatSparkline color="#f59e0b" data={[{value: 5}, {value: 2}, {value: 8}, {value: 4}]} />
           </div>
           <div className="mt-3 sm:mt-4 space-y-1">
             <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Absent Staff</p>
@@ -322,7 +300,7 @@ export default function CompanyDashboard() {
                         </div>
                       ))}
                    </div>
-                   <Button variant="outline" size="sm" className="w-full text-xs font-bold group" onClick={() => window.location.href = isStockist ? '/stockist/inventory' : '/company/inventory'}>
+                   <Button variant="outline" size="sm" className="w-full text-xs font-bold group" onClick={() => window.location.href = '/company/inventory'}>
                      View All Products <ChevronRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
                    </Button>
                 </div>
@@ -335,7 +313,7 @@ export default function CompanyDashboard() {
       <Card>
         <CardHeader
           title="Recent Activity Log"
-          action={<Button variant="outline" size="sm" className="text-xs font-bold" onClick={() => window.location.href = isStockist ? '/stockist/reports' : '/company/reports'}>View All</Button>}
+          action={<Button variant="outline" size="sm" className="text-xs font-bold" onClick={() => window.location.href = '/company/reports'}>View All</Button>}
         />
         <CardBody className="p-0">
            <div className="overflow-x-auto">
