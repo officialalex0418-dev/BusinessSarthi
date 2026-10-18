@@ -6,6 +6,8 @@ import { validate } from '../middleware/validate.js';
 import { authLimiter, apiLimiter } from '../middleware/rateLimit.js';
 import { schemas } from './validators.js';
 
+import { withIdempotency } from '../middleware/idempotency.js';
+
 import * as auth from '../controllers/auth.controller.js';
 import * as company from '../controllers/company.controller.js';
 import * as stockist from '../controllers/stockist.controller.js';
@@ -147,14 +149,14 @@ r.delete('/sales/:id', protect, authorize(...ALL_STAFF), scopeCompany, requireFe
 r.patch('/sales/:id', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('salesTracking'), validate({ body: schemas.updateSale }), sale.updateSale);
 
 // ============ SALES INVOICES ============
-r.post('/sales-invoices', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), validate({ body: schemas.createSalesInvoice }), salesInvoice.createSalesInvoice);
+r.post('/sales-invoices', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), validate({ body: schemas.createSalesInvoice }), withIdempotency, salesInvoice.createSalesInvoice);
 r.get('/sales-invoices', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), salesInvoice.listSalesInvoices);
 r.get('/sales-invoices/:id', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), salesInvoice.getSalesInvoice);
 r.patch('/sales-invoices/:id', protect, authorize(...MANAGERS), scopeCompany, requireFeature('distributorManagement'), validate({ body: schemas.updateSalesInvoice }), salesInvoice.updateSalesInvoice);
 r.delete('/sales-invoices/:id', protect, authorize(...OWNERS), scopeCompany, requireFeature('distributorManagement'), salesInvoice.deleteSalesInvoice);
 
 // ============ PURCHASES ============
-r.post('/purchases', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('vendorManagement'), validate({ body: schemas.createPurchase }), purchase.createPurchase);
+r.post('/purchases', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('vendorManagement'), validate({ body: schemas.createPurchase }), withIdempotency, purchase.createPurchase);
 r.get('/purchases', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('vendorManagement'), purchase.listPurchases);
 r.patch('/purchases/:id', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), purchase.updatePurchase);
 
@@ -205,7 +207,7 @@ r.delete('/expenses/:id', protect, authorize(...OWNERS), scopeCompany, expense.d
 // ============ BILLING & PAYMENTS ============
 r.get('/payments', protect, authorize(...MANAGERS), scopeCompany, distributor.listPayments);
 r.post('/invoices', protect, authorize(...MANAGERS), scopeCompany, distributor.createInvoice);
-r.post('/payments', protect, authorize(...MANAGERS), scopeCompany, distributor.recordPayment);
+r.post('/payments', protect, authorize(...MANAGERS), scopeCompany, withIdempotency, distributor.recordPayment);
 r.patch('/payments/:id', protect, authorize(...MANAGERS), scopeCompany, distributor.updatePayment);
 r.delete('/payments/:id', protect, authorize(...OWNERS), scopeCompany, distributor.deletePayment);
 
@@ -225,7 +227,7 @@ r.patch('/vendors/:id', protect, authorize(...MANAGERS), scopeCompany, requireFe
 r.delete('/vendors/:id', protect, authorize(...OWNERS), scopeCompany, requireFeature('vendorManagement'), vendor.deleteVendor);
 
 // ============ VENDOR PAYMENTS ============
-r.post('/vendor-payments', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), validate({ body: schemas.recordVendorPayment }), vendor.recordVendorPayment);
+r.post('/vendor-payments', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), validate({ body: schemas.recordVendorPayment }), withIdempotency, vendor.recordVendorPayment);
 r.patch('/vendor-payments/:id', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.updateVendorPayment);
 r.delete('/vendor-payments/:id', protect, authorize(...OWNERS), scopeCompany, requireFeature('vendorManagement'), vendor.deleteVendorPayment);
 

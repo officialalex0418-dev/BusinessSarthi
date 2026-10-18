@@ -55,6 +55,24 @@ export const setAccessToken = (t) => {
 
 api.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+
+  // Automatically add an idempotency key for unsafe methods
+  const isUnsafeMethod = ['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase());
+  if (isUnsafeMethod && !config.headers['x-idempotency-key']) {
+    // Generate a simple UUID v4-like string
+    const generateUUID = () => {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    };
+    config.headers['x-idempotency-key'] = generateUUID();
+  }
+
   return config;
 });
 

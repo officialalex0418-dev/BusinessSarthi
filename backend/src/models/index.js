@@ -38,3 +38,4 @@ export { default as Inquiry } from './Inquiry.js';
 export { default as SupportTicket } from './SupportTicket.js';
 export { default as Product } from './Product.js';
 export { default as Expense } from './Expense.js';
+export { default as IdempotencyKey } from './IdempotencyKey.js';
