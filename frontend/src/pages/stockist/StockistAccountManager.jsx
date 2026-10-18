@@ -426,27 +426,19 @@ export default function StockistAccountManager() {
       {/* 2. Date Filter Bar (Matching Image) */}
       <div className="bg-white rounded-2xl p-3 border border-slate-100 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="From Date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="w-36 sm:w-44 bg-slate-50/60 border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 pr-8"
-            />
-            <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-          </div>
+          <DatePicker
+            placeholder="From Date"
+            value={fromDate}
+            onChange={(val) => setFromDate(val)}
+            className="w-36 sm:w-44 bg-slate-50/60 border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          />
           <span className="text-xs font-medium text-slate-400">to</span>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="To Date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="w-36 sm:w-44 bg-slate-50/60 border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 pr-8"
-            />
-            <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-          </div>
+          <DatePicker
+            placeholder="To Date"
+            value={toDate}
+            onChange={(val) => setToDate(val)}
+            className="w-36 sm:w-44 bg-slate-50/60 border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          />
         </div>
 
         <div className="flex items-center gap-5">
