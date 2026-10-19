@@ -11,104 +11,122 @@ export const createPurchase = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('Purchase items are required');
   }
 
-  let totalAmount = 0;
-  const processedItems = [];
+  const session = await mongoose.startSession();
+  let purchase;
 
-  for (const rawItem of items) {
-    const item = {
-      productName: String(rawItem.productName || rawItem.product || 'Product').trim(),
-      batch: String(rawItem.batch || 'GENERAL').trim(),
-      price: Number(rawItem.price) || 0,
-      mrp: Number(rawItem.mrp || rawItem.price || 0),
-      quantity: Number(rawItem.quantity) || 1,
-      expiryDate: rawItem.expiryDate || null
-    };
+  try {
+    await session.withTransaction(async () => {
+      let totalAmount = 0;
+      const processedItems = [];
 
-    const itemAmount = item.price * item.quantity;
-    totalAmount += itemAmount;
+      for (const rawItem of items) {
+        const item = {
+          productName: String(rawItem.productName || rawItem.product || 'Product').trim(),
+          batch: String(rawItem.batch || 'GENERAL').trim(),
+          price: Number(rawItem.price) || 0,
+          mrp: Number(rawItem.mrp || rawItem.price || 0),
+          quantity: Number(rawItem.quantity) || 1,
+          expiryDate: rawItem.expiryDate || null
+        };
 
-    let product = await Inventory.findOne({
-      productName: item.productName,
-      batchNumber: item.batch,
-      company: companyId
-    }).select('+movements');
+        const itemAmount = item.price * item.quantity;
+        totalAmount += itemAmount;
 
-    if (product) {
-      product.quantity += item.quantity;
-      product.costPrice = item.price;
-      product.mrp = item.mrp || product.mrp || 0;
-      product.sellingPrice = product.mrp;
-      if (item.expiryDate) product.expiryDate = item.expiryDate;
-      if (vendorId) product.vendor = vendorId;
+        let product = await Inventory.findOne({
+          productName: item.productName,
+          batchNumber: item.batch,
+          company: companyId
+        }).session(session).select('+movements');
 
-      product.movements.push({
-        type: 'IN',
-        quantity: item.quantity,
-        note: `Purchase Entry - Restock Batch: ${item.batch}`,
-        by: req.user._id
-      });
-      await product.save();
-    } else {
-      product = await Inventory.create({
-        company: companyId,
-        productName: item.productName,
-        sku: `AUTO-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-        batchNumber: item.batch,
-        quantity: item.quantity,
-        costPrice: item.price,
-        mrp: item.mrp,
-        sellingPrice: item.mrp,
-        vendor: vendorId || null,
-        expiryDate: item.expiryDate,
-        movements: [{
-          type: 'IN',
+        if (product) {
+          product.quantity += item.quantity;
+          product.costPrice = item.price;
+          product.mrp = item.mrp || product.mrp || 0;
+          product.sellingPrice = product.mrp;
+          if (item.expiryDate) product.expiryDate = item.expiryDate;
+          if (vendorId) product.vendor = vendorId;
+
+          product.movements.push({
+            type: 'IN',
+            quantity: item.quantity,
+            note: `Purchase Entry - Restock Batch: ${item.batch}`,
+            by: req.user._id
+          });
+          await product.save({ session });
+        } else {
+          [product] = await Inventory.create([{
+            company: companyId,
+            productName: item.productName,
+            sku: `AUTO-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+            batchNumber: item.batch,
+            quantity: item.quantity,
+            costPrice: item.price,
+            mrp: item.mrp,
+            sellingPrice: item.mrp,
+            vendor: vendorId || null,
+            expiryDate: item.expiryDate,
+            movements: [{
+              type: 'IN',
+              quantity: item.quantity,
+              note: `New Purchase Entry - New Batch/Listing`,
+              by: req.user._id
+            }]
+          }], { session });
+        }
+
+        processedItems.push({
+          product: product._id,
+          productName: item.productName,
+          batch: item.batch,
+          price: item.price,
+          mrp: item.mrp,
           quantity: item.quantity,
-          note: `New Purchase Entry - New Batch/Listing`,
-          by: req.user._id
-        }]
-      });
-    }
+          amount: itemAmount,
+          expiryDate: item.expiryDate
+        });
+      }
 
-    processedItems.push({
-      product: product._id,
-      productName: item.productName,
-      batch: item.batch,
-      price: item.price,
-      mrp: item.mrp,
-      quantity: item.quantity,
-      amount: itemAmount,
-      expiryDate: item.expiryDate
+      const discountAmount = (totalAmount * (Number(discountPct) || 0)) / 100;
+      const taxableAmount = totalAmount - discountAmount;
+      const vatAmount = (taxableAmount * (Number(vatPct) || 0)) / 100;
+      const netTotal = taxableAmount + vatAmount;
+
+      [purchase] = await Purchase.create([{
+        company: companyId,
+        staff: req.user._id,
+        vendor: vendorId || null,
+        billNumber,
+        billDate,
+        items: processedItems,
+        totalAmount,
+        discountPct: Number(discountPct) || 0,
+        discountAmount,
+        taxableAmount,
+        vatPct: Number(vatPct) || 0,
+        vatAmount,
+        netTotal
+      }], { session });
+
+      if (vendorId) {
+        await mongoose.model('Vendor').findByIdAndUpdate(
+          vendorId,
+          { $inc: { outstandingBalance: netTotal } },
+          { session }
+        );
+      }
+
+      if (req.idempotencyRecord) {
+        req.idempotencyRecord.status = 'COMPLETED';
+        req.idempotencyRecord.responseBody = { success: true, data: purchase };
+        req.idempotencyRecord.responseStatus = 201;
+        await req.idempotencyRecord.save({ session });
+      }
     });
+  } finally {
+    session.endSession();
   }
 
-  const discountAmount = (totalAmount * (Number(discountPct) || 0)) / 100;
-  const taxableAmount = totalAmount - discountAmount;
-  const vatAmount = (taxableAmount * (Number(vatPct) || 0)) / 100;
-  const netTotal = taxableAmount + vatAmount;
-
-  const purchase = await Purchase.create({
-    company: companyId,
-    staff: req.user._id,
-    vendor: vendorId || null,
-    billNumber,
-    billDate,
-    items: processedItems,
-    totalAmount,
-    discountPct: Number(discountPct) || 0,
-    discountAmount,
-    taxableAmount,
-    vatPct: Number(vatPct) || 0,
-    vatAmount,
-    netTotal
-  });
-
-  if (vendorId) {
-    await mongoose.model('Vendor').findByIdAndUpdate(vendorId, {
-      $inc: { outstandingBalance: netTotal }
-    });
-  }
-
-  audit({ req, action: 'CREATE_PURCHASE', entity: 'Purchase', entityId: purchase._id, meta: { netTotal } });
+  audit({ req, action: 'CREATE_PURCHASE', entity: 'Purchase', entityId: purchase._id, meta: { netTotal: purchase.netTotal } });
 
   res.status(201).json({ success: true, data: purchase });
 });

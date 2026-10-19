@@ -143,11 +143,33 @@ export const recordVendorPayment = asyncHandler(async (req, res) => {
     };
   }
 
-  const payment = await VendorPayment.create(paymentData);
+  const session = await mongoose.startSession();
+  let payment;
 
-  // Update vendor outstanding balance
-  vendor.outstandingBalance -= Number(amount);
-  await vendor.save();
+  try {
+    await session.withTransaction(async () => {
+      [payment] = await VendorPayment.create([paymentData], { session });
+
+      const updatedVendor = await Vendor.findOneAndUpdate(
+        { _id: vendorId, company: req.companyId },
+        { $inc: { outstandingBalance: -Number(amount) } },
+        { session, new: true }
+      );
+
+      if (!updatedVendor) {
+        throw ApiError.notFound('Vendor not found');
+      }
+
+      if (req.idempotencyRecord) {
+        req.idempotencyRecord.status = 'COMPLETED';
+        req.idempotencyRecord.responseBody = { success: true, data: { payment } };
+        req.idempotencyRecord.responseStatus = 201;
+        await req.idempotencyRecord.save({ session });
+      }
+    });
+  } finally {
+    session.endSession();
+  }
 
   audit({ req, action: 'RECORD_VENDOR_PAYMENT', entity: 'VendorPayment', entityId: payment._id });
   res.status(201).json({ success: true, data: { payment } });

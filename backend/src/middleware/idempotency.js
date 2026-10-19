@@ -46,7 +46,14 @@ export const withIdempotency = async (req, res, next) => {
       }
 
       if (idempotencyRecord.status === 'IN_PROGRESS') {
-        return res.status(409).json({ success: false, message: 'Request is already in progress. Please wait.' });
+        const age = Date.now() - (idempotencyRecord.updatedAt || idempotencyRecord.createdAt).getTime();
+        // If older than 2 minutes, assume crashed and allow retry
+        if (age > 120000) {
+          idempotencyRecord.status = 'IN_PROGRESS';
+          await idempotencyRecord.save();
+        } else {
+          return res.status(409).json({ success: false, message: 'Request is already in progress. Please wait.' });
+        }
       }
 
       if (idempotencyRecord.status === 'COMPLETED') {
@@ -65,6 +72,8 @@ export const withIdempotency = async (req, res, next) => {
     }
   }
 
+  req.idempotencyRecord = idempotencyRecord;
+
   // Intercept the response to save it once the controller completes
   const originalJson = res.json.bind(res);
   const originalStatus = res.status.bind(res);
@@ -77,21 +86,20 @@ export const withIdempotency = async (req, res, next) => {
   };
 
   res.json = function (body) {
-    // Save the outcome in the background (fire and forget to not delay the response)
-    const isSuccess = currentStatus >= 200 && currentStatus < 400;
+    // Only update if not already marked COMPLETED by a transaction
+    if (idempotencyRecord.status !== 'COMPLETED') {
+      const isSuccess = currentStatus >= 200 && currentStatus < 400;
 
-    // We only mark as completed if it was a success.
-    // If it was a validation error (4xx) or server error (5xx), we mark as FAILED
-    // so the client can safely correct and retry.
-    idempotencyRecord.status = isSuccess ? 'COMPLETED' : 'FAILED';
-    if (isSuccess) {
-      idempotencyRecord.responseBody = body;
-      idempotencyRecord.responseStatus = currentStatus;
+      idempotencyRecord.status = isSuccess ? 'COMPLETED' : 'FAILED';
+      if (isSuccess) {
+        idempotencyRecord.responseBody = body;
+        idempotencyRecord.responseStatus = currentStatus;
+      }
+
+      idempotencyRecord.save().catch(err => {
+        console.error('Failed to save idempotency key outcome:', err);
+      });
     }
-
-    idempotencyRecord.save().catch(err => {
-      console.error('Failed to save idempotency key outcome:', err);
-    });
 
     return originalJson(body);
   };

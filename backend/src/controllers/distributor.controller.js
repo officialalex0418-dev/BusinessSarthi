@@ -180,71 +180,96 @@ export const createInvoice = asyncHandler(async (req, res) => {
   const distributor = await Distributor.findOne({ _id: distributorId, company: companyId });
   if (!distributor) throw ApiError.notFound(getNotFoundMsg(req));
 
-  let totalAmount = 0;
-  const processedItems = [];
+  const session = await mongoose.startSession();
+  let invoice;
 
-  for (const item of items) {
-    const amt = (Number(item.rate) || Number(item.price) || 0) * (Number(item.quantity) || 0);
-    totalAmount += amt;
+  try {
+    await session.withTransaction(async () => {
+      let totalAmount = 0;
+      const processedItems = [];
 
-    // Deduct stock for each item
-    const product = await Inventory.findOne({ productName: item.productName, company: companyId }).select('+movements');
-    if (product) {
-      if (product.quantity < Number(item.quantity)) {
-        throw ApiError.badRequest(`Insufficient stock for ${product.productName}. Available: ${product.quantity}`);
+      for (const item of items) {
+        const amt = (Number(item.rate) || Number(item.price) || 0) * (Number(item.quantity) || 0);
+        totalAmount += amt;
+
+        // Deduct stock for each item using findOneAndUpdate to prevent race conditions and ensure atomicity
+        const product = await Inventory.findOne({ productName: item.productName, company: companyId }).session(session).select('+movements');
+
+        if (product) {
+          if (product.quantity < Number(item.quantity)) {
+            throw ApiError.badRequest(`Insufficient stock for ${product.productName}. Available: ${product.quantity}`);
+          }
+
+          product.quantity -= Number(item.quantity);
+          product.movements.push({
+            type: 'OUT',
+            quantity: item.quantity,
+            note: `Invoice Entry (${req.user?.role === 'STOCKIST' ? 'Outlet' : 'Distributor'})`,
+            by: req.user._id
+          });
+          await product.save({ session });
+        }
+
+        processedItems.push({
+          product: product ? product._id : null,
+          productName: item.productName,
+          price: Number(item.rate) || Number(item.price) || 0,
+          quantity: Number(item.quantity),
+          amount: amt
+        });
       }
-      product.quantity -= Number(item.quantity);
-      product.movements.push({
-        type: 'OUT',
-        quantity: item.quantity,
-        note: `Invoice Entry (${req.user?.role === 'STOCKIST' ? 'Outlet' : 'Distributor'})`,
-        by: req.user._id
-      });
-      await product.save();
-    }
 
-    processedItems.push({
-      product: product?._id,
-      productName: item.productName,
-      price: Number(item.rate) || Number(item.price) || 0,
-      quantity: Number(item.quantity),
-      amount: amt
+      // Simple tax calculation for demo (13% VAT)
+      const vatAmount = totalAmount * 0.13;
+      const netTotal = totalAmount + vatAmount;
+
+      // SBXXXXX format logic - We do this inside the transaction to avoid gaps/duplicates
+      const lastInvoice = await SalesInvoice.findOne({ company: companyId, invoiceNumber: /^SB/ }).sort('-createdAt').session(session);
+      let nextNum = 1;
+      if (lastInvoice) {
+        const match = lastInvoice.invoiceNumber.match(/SB(\d+)/);
+        if (match) nextNum = parseInt(match[1]) + 1;
+      }
+      const invoiceNumber = `SB${String(nextNum).padStart(5, '0')}`;
+
+      [invoice] = await SalesInvoice.create([{
+        company: companyId,
+        staff: req.user._id,
+        invoiceNumber,
+        distributor: distributorId,
+        items: processedItems,
+        totalAmount,
+        taxableAmount: totalAmount,
+        vatPct: 13,
+        vatAmount,
+        netTotal,
+        paymentMethod: 'Credit',
+        saleDate: saleDate || new Date(),
+        dueDate,
+        remarks
+      }], { session });
+
+      // Update distributor outstanding
+      const updatedDistributor = await Distributor.findOneAndUpdate(
+        { _id: distributorId, company: companyId },
+        { $inc: { outstandingBalance: netTotal } },
+        { session, new: true }
+      );
+
+      if (!updatedDistributor) {
+         throw ApiError.notFound(getNotFoundMsg(req));
+      }
+
+      if (req.idempotencyRecord) {
+        req.idempotencyRecord.status = 'COMPLETED';
+        req.idempotencyRecord.responseBody = { success: true, data: { invoice } };
+        req.idempotencyRecord.responseStatus = 201;
+        await req.idempotencyRecord.save({ session });
+      }
     });
+  } finally {
+    session.endSession();
   }
-
-  // Simple tax calculation for demo (13% VAT)
-  const vatAmount = totalAmount * 0.13;
-  const netTotal = totalAmount + vatAmount;
-
-  // SBXXXXX format logic
-  const lastInvoice = await SalesInvoice.findOne({ company: companyId, invoiceNumber: /^SB/ }).sort('-createdAt');
-  let nextNum = 1;
-  if (lastInvoice) {
-    const match = lastInvoice.invoiceNumber.match(/SB(\d+)/);
-    if (match) nextNum = parseInt(match[1]) + 1;
-  }
-  const invoiceNumber = `SB${String(nextNum).padStart(5, '0')}`;
-
-  const invoice = await SalesInvoice.create({
-    company: companyId,
-    staff: req.user._id,
-    invoiceNumber,
-    distributor: distributorId,
-    items: processedItems,
-    totalAmount,
-    taxableAmount: totalAmount,
-    vatPct: 13,
-    vatAmount,
-    netTotal,
-    paymentMethod: 'Credit',
-    saleDate: saleDate || new Date(),
-    dueDate,
-    remarks
-  });
-
-  // Update distributor outstanding
-  distributor.outstandingBalance += netTotal;
-  await distributor.save();
 
   audit({ req, action: 'CREATE_SALES_INVOICE', entity: 'SalesInvoice', entityId: invoice._id, company: companyId });
   res.status(201).json({ success: true, data: { invoice } });
@@ -274,19 +299,42 @@ export const recordPayment = asyncHandler(async (req, res) => {
     }
   }
 
-  const payment = await Payment.create({
-    company: req.companyId,
-    distributor: distributorId,
-    amount: Number(amount),
-    method,
-    remarks,
-    paymentDate: finalDate,
-    createdBy: req.user._id
-  });
+  const session = await mongoose.startSession();
+  let payment;
 
-  // Update distributor outstanding balance
-  distributor.outstandingBalance -= Number(amount);
-  await distributor.save();
+  try {
+    await session.withTransaction(async () => {
+      [payment] = await Payment.create([{
+        company: req.companyId,
+        distributor: distributorId,
+        amount: Number(amount),
+        method,
+        remarks,
+        paymentDate: finalDate,
+        createdBy: req.user._id
+      }], { session });
+
+      // Update distributor outstanding balance
+      const updatedDistributor = await Distributor.findOneAndUpdate(
+        { _id: distributorId, company: req.companyId },
+        { $inc: { outstandingBalance: -Number(amount) } },
+        { session, new: true }
+      );
+
+      if (!updatedDistributor) {
+        throw ApiError.notFound(getNotFoundMsg(req));
+      }
+
+      if (req.idempotencyRecord) {
+        req.idempotencyRecord.status = 'COMPLETED';
+        req.idempotencyRecord.responseBody = { success: true, data: { payment } };
+        req.idempotencyRecord.responseStatus = 201;
+        await req.idempotencyRecord.save({ session });
+      }
+    });
+  } finally {
+    session.endSession();
+  }
 
   audit({ req, action: 'RECORD_PAYMENT', entity: 'Payment', entityId: payment._id, company: req.companyId });
   res.status(201).json({ success: true, data: { payment } });
