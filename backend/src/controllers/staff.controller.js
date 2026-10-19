@@ -200,7 +200,8 @@ export const updateStaff = asyncHandler(async (req, res) => {
   }
 
   await user.save();
-  authCache.del(user._id.toString());
+  authCache.delete(`user_ctx:${user._id}`);
+  authCache.delete(`user_socket_auth:${user._id}`);
 
   audit({ req, action: 'UPDATE_STAFF', entity: 'User', entityId: user._id });
   res.json({ success: true, data: { user: user.toSafeJSON() } });
@@ -214,7 +215,8 @@ export const authorizeDeviceReset = asyncHandler(async (req, res) => {
   user.primaryDeviceId = null;
   user.deviceInfo = null;
   await user.save();
-  authCache.del(user._id.toString());
+  authCache.delete(`user_ctx:${user._id}`);
+  authCache.delete(`user_socket_auth:${user._id}`);
   res.json({ success: true, message: 'Device reset authorized successfully' });
 });
 
@@ -223,7 +225,8 @@ export const deleteStaff = asyncHandler(async (req, res) => {
   if (!user) throw ApiError.notFound('User not found');
   user.isActive = false;
   await user.save();
-  authCache.del(user._id.toString());
+  authCache.delete(`user_ctx:${user._id}`);
+  authCache.delete(`user_socket_auth:${user._id}`);
   audit({ req, action: 'DELETE_STAFF', entity: 'User', entityId: user._id });
   res.json({ success: true, message: 'Staff deactivated successfully' });
 });
@@ -232,7 +235,8 @@ export const hardDeleteStaff = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) throw ApiError.notFound('User not found');
   await User.findByIdAndDelete(req.params.id);
-  authCache.delete(user._id.toString());
+  authCache.delete(`user_ctx:${user._id}`);
+  authCache.delete(`user_socket_auth:${user._id}`);
   audit({ req, action: 'HARD_DELETE_STAFF', entity: 'User', entityId: user._id });
   res.json({ success: true, message: 'Staff permanently deleted successfully' });
 });
