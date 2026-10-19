@@ -28,6 +28,11 @@ const designationSchema = new mongoose.Schema(
       complaints: { type: Boolean, default: false },
       reports: { type: Boolean, default: false },
 
+      // Stockist specific
+      accounts: { type: Boolean, default: false },
+      dispatchPayment: { type: Boolean, default: false },
+      support: { type: Boolean, default: false },
+
       // Shared
       configuration: { type: Boolean, default: false },
     },

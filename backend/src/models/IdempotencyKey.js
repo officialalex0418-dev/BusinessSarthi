@@ -13,7 +13,8 @@ const idempotencyKeySchema = new mongoose.Schema(
     responseStatus: { type: Number },
     // Expire keys after 24 hours automatically
     createdAt: { type: Date, default: Date.now, expires: 86400 }
-  }
+  },
+  { timestamps: true }
 );
 
 // Compound unique index on key + user + company to scope the idempotency correctly

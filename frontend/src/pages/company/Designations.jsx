@@ -21,15 +21,18 @@ const COMPANY_PERMISSIONS = [
 ];
 
 const STOCKIST_PERMISSIONS = [
+  { key: 'accounts', label: 'Account Manager' },
   { key: 'staff', label: 'Staff Management' },
+  { key: 'attendance', label: 'Attendance Management' },
   { key: 'leaves', label: 'Leave Management' },
-  { key: 'vendors', label: 'Vendor Management' },
-  { key: 'salesTracker', label: 'Sales Management' },
+  { key: 'salesTracker', label: 'Sales Tracker' },
+  { key: 'dispatchPayment', label: 'Dispatch and Payment' },
   { key: 'inventory', label: 'Inventory' },
+  { key: 'distributors', label: 'Outlets' },
+  { key: 'vendors', label: 'Vendors' },
   { key: 'payroll', label: 'Payroll Management' },
+  { key: 'support', label: 'Support' },
   { key: 'configuration', label: 'Configuration' },
-  { key: 'distributors', label: 'Outlets Management' },
-  { key: 'dispatchPayment', label: 'Dispatch & Payments' },
 ];
 
 export default function Designations() {

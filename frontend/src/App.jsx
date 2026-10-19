@@ -230,17 +230,18 @@ export default function App() {
 
     const perms = user.designation.permissions;
     if (item.to === '/stockist') return true;
-    if (item.to === '/stockist/accounts') return perms.distributors || perms.reports || perms.salesTracker;
+    if (item.to === '/stockist/accounts') return perms.accounts;
     if (item.to === '/stockist/staff') return perms.staff;
     if (item.to === '/stockist/attendance') return perms.attendance;
     if (item.to === '/stockist/leaves') return perms.leaves;
     if (item.to === '/stockist/sales') return perms.salesTracker;
-    if (item.to === '/stockist/dispatch-payment') return perms.dispatchPayment || perms.distributors;
+    if (item.to === '/stockist/dispatch-payment') return perms.dispatchPayment;
     if (item.to === '/stockist/inventory') return perms.inventory;
     if (item.to === '/stockist/outlets') return perms.distributors;
     if (item.to === '/stockist/vendors') return perms.vendors;
     if (item.to === '/stockist/payroll') return perms.payroll;
     if (item.to === '/stockist/reports') return perms.reports;
+    if (item.to === '/stockist/support') return perms.support;
     if (item.to === '/stockist/configuration') return perms.configuration;
     return true;
   });
