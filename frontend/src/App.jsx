@@ -225,8 +225,10 @@ export default function App() {
   });
 
   const filteredStockistNav = stockistNav.filter(item => {
-    if (user?.role === 'STOCKIST') return true;
-    if (!user?.designation?.permissions) return item.to === '/stockist' || item.to === '/stockist/support' || item.to === '/stockist/settings';
+    if (user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER') return true;
+    if (!user?.designation?.permissions) {
+      return ['/stockist', '/stockist/attendance', '/stockist/leaves', '/stockist/payroll', '/stockist/support', '/stockist/settings'].includes(item.to);
+    }
 
     const perms = user.designation.permissions;
     if (item.to === '/stockist') return true;
@@ -540,7 +542,7 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={<StockistDashboard />} />
+        <Route index element={user?.role === 'STAFF' ? <StaffDashboard /> : <StockistDashboard />} />
         <Route path="accounts" element={<StockistAccountManager />} />
         <Route path="staff" element={<StaffList />} />
         <Route path="attendance" element={<AttendancePage />} />
