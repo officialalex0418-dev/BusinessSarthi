@@ -4,7 +4,7 @@ import {
   CalendarOff, Clock as ClockIcon, MapPin,
   AlertTriangle, Mail, Phone, Building2, Calendar,
   Fingerprint, Activity, Target, TrendingUp, ChevronRight,
-  Quote, CalendarDays, UserCheck, Timer
+  Quote, CalendarDays, UserCheck, Timer, FileText, CreditCard
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { NativeBiometric } from '@capgo/capacitor-native-biometric';
@@ -181,6 +181,93 @@ export default function StaffDashboard() {
             </div>
          </Card>
       </div>
+
+      {/* 3.5 Stockist Stats (Invoice & Dispatch + Payment & Expenses) */}
+      {data.stockistStats && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+           {/* Invoice & Dispatch */}
+           <Card className="border-none shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                 <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-blue-50 text-blue-600"><FileText className="h-5 w-5" /></div>
+                    <div>
+                       <h3 className="font-bold text-slate-900 text-sm">Invoice & Dispatch</h3>
+                       <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Order lifecycle tracker</p>
+                    </div>
+                 </div>
+                 <button className="text-xs font-bold text-primary-600 hover:underline" onClick={() => navigate('/stockist/dispatch-payment')}>Manage All</button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="flex items-center gap-2.5">
+                       <div className="h-2 w-2 rounded-full bg-blue-500" />
+                       <span className="text-xs font-bold text-slate-600">Invoice Issued Today</span>
+                    </div>
+                    <Badge color="blue" className="font-black px-2.5 py-1 text-xs">{data.stockistStats.invoiceIssuedToday}</Badge>
+                 </div>
+                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="flex items-center gap-2.5">
+                       <div className="h-2 w-2 rounded-full bg-amber-500" />
+                       <span className="text-xs font-bold text-slate-600">Pending Invoice to Dispatch</span>
+                    </div>
+                    <Badge color="yellow" className="font-black px-2.5 py-1 text-xs">{data.stockistStats.pendingInvoiceToDispatch}</Badge>
+                 </div>
+                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="flex items-center gap-2.5">
+                       <div className="h-2 w-2 rounded-full bg-rose-500" />
+                       <span className="text-xs font-bold text-slate-600">Old Invoice to Dispatch</span>
+                    </div>
+                    <Badge color="red" className="font-black px-2.5 py-1 text-xs">{data.stockistStats.oldInvoiceToDispatch}</Badge>
+                 </div>
+                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="flex items-center gap-2.5">
+                       <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                       <span className="text-xs font-bold text-slate-600">Completed Dispatch Today</span>
+                    </div>
+                    <Badge color="green" className="font-black px-2.5 py-1 text-xs">{data.stockistStats.completedDispatchToday}</Badge>
+                 </div>
+              </div>
+           </Card>
+
+           {/* Payment & Expenses */}
+           <Card className="border-none shadow-sm p-6 flex flex-col justify-between">
+              <div>
+                 <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                       <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><CreditCard className="h-5 w-5" /></div>
+                       <div>
+                          <h3 className="font-bold text-slate-900 text-sm">Payment & Expenses</h3>
+                          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Financial summary</p>
+                       </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2.5 py-1 rounded-md">Currency: NPR</span>
+                 </div>
+                 <div className="space-y-3.5 my-4">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                       <span className="text-slate-500">Payments Collected Today:</span>
+                       <span className="text-emerald-600 font-black text-sm">{formatMoney(data.stockistStats.paymentCollectedToday, 'NPR ')}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs font-bold">
+                       <span className="text-slate-500">Outstanding Outlet Dues:</span>
+                       <span className="text-slate-900 font-black text-sm">{formatMoney(data.stockistStats.outletsOutstandingDue, 'NPR ')}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs font-bold border-t border-slate-100 pt-3">
+                       <span className="text-slate-500 uppercase tracking-wider">Today's Expenses:</span>
+                       <span className="text-slate-900 font-black text-sm">{formatMoney(data.stockistStats.expensesToday, 'NPR ')}</span>
+                    </div>
+                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                 <Button className="bg-primary-600 hover:bg-primary-700 text-xs font-bold py-2.5 rounded-xl shadow-sm" onClick={() => navigate('/stockist/dispatch-payment')}>
+                    + Record Payment
+                 </Button>
+                 <Button variant="outline" className="text-xs font-bold py-2.5 rounded-xl border-slate-200 hover:bg-slate-50" onClick={() => navigate('/stockist/expenses')}>
+                    + Add Expense
+                 </Button>
+              </div>
+           </Card>
+        </div>
+      )}
 
       {/* 4. Progress Bars & Holidays */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

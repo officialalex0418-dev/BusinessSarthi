@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import {
   Company, User, Package, Attendance, Sale, SalesInvoice,
-  LocationLog, AuditLog, Leave, Holiday, Target, LeaveType, Payment, Inventory, Branch, Distributor
+  LocationLog, AuditLog, Leave, Holiday, Target, LeaveType, Payment, Inventory, Branch, Distributor, Expense
 } from '../models/index.js';
 
 import { asyncHandler } from '../utils/ApiError.js';
@@ -321,6 +321,85 @@ export const staffDashboard = asyncHandler(async (req, res) => {
   if (hour < 12) greeting = 'Good Morning';
   else if (hour < 17) greeting = 'Good Afternoon';
 
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+
+  const stockistId = req.user.stockist?._id || req.user.stockist;
+  const targetId = stockistId || companyId;
+
+  const [
+    invoicesIssuedToday,
+    allInvoices,
+    completedDispatchTodayCount,
+    paymentsCollectedTodayAgg,
+    outletsDueAgg,
+    expensesTodayAgg
+  ] = await Promise.all([
+    SalesInvoice.countDocuments({
+      company: targetId,
+      saleDate: { $gte: startOfToday, $lte: endOfToday }
+    }),
+    SalesInvoice.find({ company: targetId }).lean(),
+    SalesInvoice.countDocuments({
+      company: targetId,
+      $or: [
+        { remarks: { $regex: /^completed$/i } },
+        { remarks: { $regex: /^dispatch.*completed$/i } }
+      ],
+      updatedAt: { $gte: startOfToday, $lte: endOfToday }
+    }),
+    Payment.aggregate([
+      {
+        $match: {
+          company: targetId,
+          createdBy: userId,
+          paymentDate: { $gte: startOfToday, $lte: endOfToday }
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]).catch(() => []),
+    Distributor.aggregate([
+      { $match: { company: targetId } },
+      { $group: { _id: null, total: { $sum: '$outstandingBalance' } } }
+    ]).catch(() => []),
+    Expense.aggregate([
+      {
+        $match: {
+          $or: [{ company: targetId }, { stockist: targetId }],
+          createdBy: userId,
+          expenseDate: { $gte: startOfToday, $lte: endOfToday }
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]).catch(() => [])
+  ]);
+
+  let pendingInvoiceToDispatch = 0;
+  let oldInvoiceToDispatch = 0;
+
+  allInvoices.forEach(inv => {
+    const isCompleted = inv.remarks && (inv.remarks.match(/^completed$/i) || inv.remarks.match(/^dispatch.*completed$/i));
+    if (!isCompleted) {
+      pendingInvoiceToDispatch++;
+      const isIssuedToday = inv.saleDate && new Date(inv.saleDate) >= startOfToday && new Date(inv.saleDate) <= endOfToday;
+      if (!isIssuedToday) {
+        oldInvoiceToDispatch++;
+      }
+    }
+  });
+
+  const stockistStats = {
+    invoiceIssuedToday: invoicesIssuedToday,
+    pendingInvoiceToDispatch,
+    oldInvoiceToDispatch,
+    completedDispatchToday: completedDispatchTodayCount,
+    paymentCollectedToday: paymentsCollectedTodayAgg[0]?.total || 0,
+    outletsOutstandingDue: outletsDueAgg[0]?.total || 0,
+    expensesToday: expensesTodayAgg[0]?.total || 0,
+  };
+
   const dashboardData = {
     profile: {
       name: req.user.name,
@@ -352,6 +431,7 @@ export const staffDashboard = asyncHandler(async (req, res) => {
       }
     },
     upcomingHolidays,
+    stockistStats,
   };
 
   statsCache.set(`staff_dashboard:${userId}`, dashboardData, 60);
