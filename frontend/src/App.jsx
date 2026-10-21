@@ -119,7 +119,7 @@ const adminNav = [
 
 const companyNav = [
   { to: '/company', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/company/staff', label: 'Employee', icon: Users },
+  { to: '/company/Staff', label: 'Employee', icon: Users },
   { to: '/company/tracking', label: 'Live Tracking', icon: MapPin },
   { to: '/company/attendance', label: 'Attendance', icon: CalendarCheck },
   { to: '/company/leaves', label: 'Leave Management', icon: CalendarOff },
@@ -151,7 +151,7 @@ const staffNavBase = [
 const stockistNav = [
   { to: '/stockist', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/stockist/accounts', label: 'Account Manager', icon: Calculator },
-  { to: '/stockist/staff', label: 'Employee', icon: Users },
+  { to: '/stockist/Staff', label: 'Employee', icon: Users },
   { to: '/stockist/attendance', label: 'Attendance', icon: CalendarCheck },
   { to: '/stockist/leaves', label: 'Leave Management', icon: CalendarOff },
   { to: '/stockist/sales', label: 'Sales Tracker', icon: TrendingUp },
@@ -206,7 +206,7 @@ export default function App() {
 
     if (user?.designation?.permissions) {
       const perms = user.designation.permissions;
-      if (item.to === '/company/staff') return perms.staff;
+      if (item.to === '/company/Staff') return perms.staff;
       if (item.to === '/company/tracking') return perms.liveTracking;
       if (item.to === '/company/attendance') return perms.attendance;
       if (item.to === '/company/leaves') return perms.leaves;
@@ -233,7 +233,7 @@ export default function App() {
     const perms = user.designation.permissions;
     if (item.to === '/stockist') return true;
     if (item.to === '/stockist/accounts') return perms.accounts;
-    if (item.to === '/stockist/staff') return perms.staff;
+    if (item.to === '/stockist/Staff') return perms.staff;
     if (item.to === '/stockist/attendance') return perms.attendance;
     if (item.to === '/stockist/leaves') return perms.leaves;
     if (item.to === '/stockist/sales') return perms.salesTracker;
@@ -458,7 +458,7 @@ export default function App() {
         }
       >
         <Route index element={<CompanyDashboard />} />
-        <Route path="staff" element={<StaffList />} />
+        <Route path="Staff" element={<StaffList />} />
         <Route path="tracking" element={<LiveTracking />} />
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
@@ -544,7 +544,7 @@ export default function App() {
       >
         <Route index element={user?.role === 'STAFF' ? <StaffDashboard /> : <StockistDashboard />} />
         <Route path="accounts" element={<StockistAccountManager />} />
-        <Route path="staff" element={<StaffList />} />
+        <Route path="Staff" element={<StaffList />} />
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="sales" element={<SalesTracker />} />
