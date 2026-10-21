@@ -224,14 +224,19 @@ export default function App() {
     return user?.role === 'COMPANY_MANAGER';
   });
 
-  const filteredStockistNav = stockistNav.filter(item => {
+  const filteredStockistNav = stockistNav.map(item => {
+    if (item.end && user?.role === 'STAFF') {
+      return { ...item, to: '/stockist/Staff' };
+    }
+    return item;
+  }).filter(item => {
     if (user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER') return true;
     if (!user?.designation?.permissions) {
-      return ['/stockist', '/stockist/attendance', '/stockist/leaves', '/stockist/payroll', '/stockist/support', '/stockist/settings'].includes(item.to);
+      return ['/stockist/Staff', '/stockist/attendance', '/stockist/leaves', '/stockist/payroll', '/stockist/support', '/stockist/settings'].includes(item.to);
     }
 
     const perms = user.designation.permissions;
-    if (item.to === '/stockist') return true;
+    if (item.to === '/stockist' || item.to === '/stockist/Staff') return true;
     if (item.to === '/stockist/accounts') return perms.accounts;
     if (item.to === '/stockist/Staff') return perms.staff;
     if (item.to === '/stockist/attendance') return perms.attendance;
@@ -542,9 +547,9 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={user?.role === 'STAFF' ? <StaffDashboard /> : <StockistDashboard />} />
+        <Route index element={user?.role === 'STAFF' ? <Navigate to="Staff" replace /> : <StockistDashboard />} />
         <Route path="accounts" element={<StockistAccountManager />} />
-        <Route path="Staff" element={<StaffList />} />
+        <Route path="Staff" element={user?.role === 'STAFF' ? <StaffDashboard /> : <StaffList />} />
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="sales" element={<SalesTracker />} />
