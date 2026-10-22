@@ -11,7 +11,7 @@ import { NativeBiometric } from '@capgo/capacitor-native-biometric';
 import { Device } from '@capacitor/device';
 import { useAuth } from '@/context/AuthContext';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
-import { Card, CardBody, Spinner, Badge, Button } from '@/components/ui';
+import { Card, CardBody, Spinner, Badge, Button, Modal, Input, Select, DatePicker, Textarea } from '@/components/ui';
 import { formatTime, cn, formatMoney, fixFileUrl, formatDate } from '@/lib/utils';
 import { t } from '@/lib/i18n';
 import LiveClock from '@/components/Clock';
@@ -21,6 +21,27 @@ export default function StaffDashboard() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  const [outlets, setOutlets] = useState([]);
+  const [modal, setModal] = useState(null); // 'payment' | 'expense'
+  const [payForm, setPayForm] = useState({
+    distributorId: '',
+    amount: 0,
+    method: 'CASH',
+    paymentDate: new Date().toISOString().split('T')[0],
+    remarks: ''
+  });
+  const [expenseForm, setExpenseForm] = useState({
+    title: '',
+    category: 'MISC',
+    amount: 0,
+    expenseDate: new Date().toISOString().split('T')[0],
+    paymentMethod: 'CASH',
+    paidTo: '',
+    remarks: ''
+  });
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const isTrackingNeeded = data ? (data.checkInStatus && !data.checkOutStatus) : false;
   const { status: trackingStatus, intervalMinutes, lastPing } = useLocationTracker(isTrackingNeeded);
@@ -36,7 +57,56 @@ export default function StaffDashboard() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    api.get('/distributors').then(res => {
+      setOutlets(res.data?.data?.items || res.data?.data || []);
+    }).catch(() => {});
+  }, [load]);
+
+  const submitPayment = async (e) => {
+    e.preventDefault();
+    if (!payForm.distributorId) {
+      setFormError('Please select an outlet');
+      return;
+    }
+    if (!payForm.amount || Number(payForm.amount) <= 0) {
+      setFormError('Please enter a valid amount');
+      return;
+    }
+    setSaving(true);
+    setFormError('');
+    try {
+      await api.post('/payments', payForm);
+      setModal(null);
+      setPayForm({ distributorId: '', amount: 0, method: 'CASH', paymentDate: new Date().toISOString().split('T')[0], remarks: '' });
+      load();
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to record payment');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submitExpense = async (e) => {
+    e.preventDefault();
+    if (!expenseForm.title || !expenseForm.amount) {
+      setFormError('Please fill in title and amount');
+      return;
+    }
+    setSaving(true);
+    setFormError('');
+    try {
+      await api.post('/expenses', expenseForm);
+      setModal(null);
+      setExpenseForm({ title: '', category: 'MISC', amount: 0, expenseDate: new Date().toISOString().split('T')[0], paymentMethod: 'CASH', paidTo: '', remarks: '' });
+      load();
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to record expense');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (error) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -258,10 +328,10 @@ export default function StaffDashboard() {
                  </div>
               </div>
               <div className="grid grid-cols-2 gap-3 pt-2">
-                 <Button className="bg-primary-600 hover:bg-primary-700 text-xs font-bold py-2.5 rounded-xl shadow-sm" onClick={() => navigate('/stockist/dispatch-payment')}>
+                 <Button className="bg-primary-600 hover:bg-primary-700 text-xs font-bold py-2.5 rounded-xl shadow-sm" onClick={() => setModal('payment')}>
                     + Record Payment
                  </Button>
-                 <Button variant="outline" className="text-xs font-bold py-2.5 rounded-xl border-slate-200 hover:bg-slate-50" onClick={() => navigate('/stockist/expenses')}>
+                 <Button variant="outline" className="text-xs font-bold py-2.5 rounded-xl border-slate-200 hover:bg-slate-50" onClick={() => setModal('expense')}>
                     + Add Expense
                  </Button>
               </div>
@@ -395,6 +465,133 @@ export default function StaffDashboard() {
             </svg>
          </div>
       </div>
+
+      {/* RECORD OUTLET PAYMENT MODAL */}
+      <Modal open={modal === 'payment'} onClose={() => setModal(null)} title="Record Outlet Payment">
+        {formError && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{formError}</div>}
+        <form onSubmit={submitPayment} className="space-y-4">
+          <Select
+            label="Select Outlet *"
+            required
+            value={payForm.distributorId}
+            onChange={(e) => setPayForm({ ...payForm, distributorId: e.target.value })}
+            options={[
+              { value: '', label: 'Select Outlet...' },
+              ...outlets.map(o => ({ value: o._id, label: `${o.name} (Due: ${formatMoney(o.outstandingBalance, 'Rs.')})` }))
+            ]}
+          />
+          <Input
+            label="Amount Received *"
+            type="number"
+            required
+            min="1"
+            value={payForm.amount}
+            onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })}
+          />
+          <Select
+            label="Payment Method *"
+            required
+            value={payForm.method}
+            onChange={(e) => setPayForm({ ...payForm, method: e.target.value })}
+            options={[
+              { value: 'CASH', label: 'Cash' },
+              { value: 'CHEQUE', label: 'Cheque' },
+              { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+              { value: 'ONLINE', label: 'Online / QR' }
+            ]}
+          />
+          <DatePicker
+            label="Payment Date"
+            value={payForm.paymentDate}
+            onChange={(val) => setPayForm({ ...payForm, paymentDate: val })}
+          />
+          <Textarea
+            label="Remarks"
+            value={payForm.remarks}
+            onChange={(e) => setPayForm({ ...payForm, remarks: e.target.value })}
+            placeholder="Notes or reference number..."
+          />
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Record Payment (FIFO)</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ADD EXPENSE MODAL */}
+      <Modal open={modal === 'expense'} onClose={() => setModal(null)} title="Add Office Expense">
+        {formError && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{formError}</div>}
+        <form onSubmit={submitExpense} className="space-y-4">
+          <Input
+            label="Expense Title *"
+            required
+            placeholder="e.g. Office Rent, Electricity Bill, Staff Lunch"
+            value={expenseForm.title}
+            onChange={(e) => setExpenseForm({ ...expenseForm, title: e.target.value })}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Category *"
+              required
+              value={expenseForm.category}
+              onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
+              options={[
+                { value: 'RENT', label: 'Rent' },
+                { value: 'UTILITIES', label: 'Utilities (Electricity/Water)' },
+                { value: 'SALARY', label: 'Staff Salary' },
+                { value: 'FUEL', label: 'Fuel & Transport' },
+                { value: 'MAINTENANCE', label: 'Maintenance' },
+                { value: 'SUPPLIES', label: 'Office Supplies' },
+                { value: 'MARKETING', label: 'Marketing' },
+                { value: 'TAX', label: 'Tax & Fees' },
+                { value: 'MISC', label: 'Miscellaneous' }
+              ]}
+            />
+            <Input
+              label="Amount (NPR) *"
+              type="number"
+              required
+              min="0"
+              value={expenseForm.amount}
+              onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <DatePicker
+              label="Expense Date"
+              value={expenseForm.expenseDate}
+              onChange={(val) => setExpenseForm({ ...expenseForm, expenseDate: val })}
+            />
+            <Select
+              label="Payment Method"
+              value={expenseForm.paymentMethod}
+              onChange={(e) => setExpenseForm({ ...expenseForm, paymentMethod: e.target.value })}
+              options={[
+                { value: 'CASH', label: 'Cash' },
+                { value: 'CHEQUE', label: 'Cheque' },
+                { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+                { value: 'ONLINE', label: 'Online' }
+              ]}
+            />
+          </div>
+          <Input
+            label="Paid To / Vendor"
+            placeholder="e.g. Nepal Electricity Authority"
+            value={expenseForm.paidTo}
+            onChange={(e) => setExpenseForm({ ...expenseForm, paidTo: e.target.value })}
+          />
+          <Textarea
+            label="Remarks"
+            value={expenseForm.remarks}
+            onChange={(e) => setExpenseForm({ ...expenseForm, remarks: e.target.value })}
+            placeholder="Additional notes..."
+          />
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Save Expense</Button>
+          </div>
+        </form>
+      </Modal>
 
     </div>
   );
