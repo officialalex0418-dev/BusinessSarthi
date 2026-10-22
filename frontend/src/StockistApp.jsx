@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 
 // Stockist & Staff
+import StockistOwnerDashboard from '@/pages/stockist/StockistOwnerDashboard';
+import StockistEmployeeDashboard from '@/pages/stockist/StockistEmployeeDashboard';
 import StockistDashboard from '@/pages/stockist/StockistDashboard';
 import StockistAccountManager from '@/pages/stockist/StockistAccountManager';
 import StaffList from '@/pages/company/StaffList';
@@ -123,9 +125,9 @@ export default function StockistApp() {
           </Protected>
         }
       >
-        <Route index element={user?.role === 'STAFF' ? <Navigate to="Staff" replace /> : <StockistDashboard />} />
+        <Route index element={user?.role === 'STAFF' ? <Navigate to="Staff" replace /> : <StockistOwnerDashboard />} />
         <Route path="accounts" element={<StockistAccountManager />} />
-        <Route path="Staff" element={user?.role === 'STAFF' ? <StaffDashboard /> : <StaffList />} />
+        <Route path="Staff" element={user?.role === 'STAFF' ? <StockistEmployeeDashboard /> : <StaffList />} />
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="sales" element={<SalesTracker />} />

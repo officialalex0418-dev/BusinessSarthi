@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 
 // Company
+import CompanyOwnerDashboard from '@/pages/company/CompanyOwnerDashboard';
+import CompanyEmployeeDashboard from '@/pages/company/CompanyEmployeeDashboard';
 import CompanyDashboard from '@/pages/company/Dashboard';
 import StaffList from '@/pages/company/StaffList';
 import LiveTracking from '@/pages/company/LiveTracking';
@@ -189,7 +191,7 @@ export default function CompanyApp() {
           </Protected>
         }
       >
-        <Route index element={<CompanyDashboard />} />
+        <Route index element={<CompanyOwnerDashboard />} />
         <Route path="Staff" element={<StaffList />} />
         <Route path="tracking" element={<LiveTracking />} />
         <Route path="attendance" element={<AttendancePage />} />
@@ -228,7 +230,7 @@ export default function CompanyApp() {
           </Protected>
         }
       >
-        <Route index element={<StaffDashboard />} />
+        <Route index element={<CompanyEmployeeDashboard />} />
         <Route path="attendance" element={<StaffAttendance />} />
         <Route path="leaves" element={<StaffLeaves />} />
         <Route path="customers" element={<StaffCustomers />} />

@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 
 // Super Admin pages
-import SuperDashboard from '@/pages/superadmin/Dashboard';
+import SuperAdminDashboard from '@/pages/superadmin/SuperAdminDashboard';
+import AdminEmployeeDashboard from '@/pages/superadmin/AdminEmployeeDashboard';
 import Companies from '@/pages/superadmin/Companies';
 import Stockists from '@/pages/superadmin/Stockists';
 import Packages from '@/pages/superadmin/Packages';
@@ -78,7 +79,7 @@ export default function AdminApp() {
           </Protected>
         }
       >
-        <Route index element={<SuperDashboard />} />
+        <Route index element={user?.role === 'ADMIN_EMPLOYEE' ? <AdminEmployeeDashboard /> : <SuperAdminDashboard />} />
         <Route path="companies" element={<Companies />} />
         <Route path="stockists" element={<Stockists />} />
         <Route path="packages" element={<Packages />} />
