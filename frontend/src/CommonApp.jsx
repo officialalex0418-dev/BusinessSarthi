@@ -15,7 +15,7 @@ export default function CommonApp() {
   const [splashFinished, setSplashFinished] = useState(false);
 
   if (loading || !splashFinished) {
-    return <SplashScreen onFinish={() => setSplashFinished(true)} />;
+    return <SplashScreen isAppReady={!loading} onFinished={() => setSplashFinished(true)} />;
   }
 
   return (
