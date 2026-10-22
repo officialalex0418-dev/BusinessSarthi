@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   LayoutGrid, Clock, CreditCard, FileText, ArrowUpRight, Inbox,
-  Receipt, Users, Layers, Plus, Download, Filter, Calendar, Pencil, Trash2
+  Receipt, Users, Layers, Plus, Download, Filter, Calendar, Pencil, Trash2, Wallet
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { Card, Button, Input, Modal, Table, Spinner, Badge, Select, Textarea, DatePicker } from '@/components/ui';
 import { formatDate, toLocalDateString } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { adToBs, bsToAd, getBsMonthInfo } from '@/lib/nepaliDate';
+import PayrollManager from '@/components/PayrollManager';
 import * as XLSX from 'xlsx';
 
 const emptyExpense = { title: '', category: 'MISC', amount: 0, expenseDate: '', paymentMethod: 'CASH', paidTo: '', remarks: '' };
@@ -450,6 +451,19 @@ export default function StockistAccountManager() {
         >
           <FileText className="h-4 w-4 text-slate-500" />
           Office Expenses
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('payroll')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition shadow-xs ${
+            activeTab === 'payroll'
+              ? 'bg-[#2563eb] text-white shadow-sm'
+              : 'bg-white text-slate-700 border border-slate-200/80 hover:bg-slate-50'
+          }`}
+        >
+          <Wallet className="h-4 w-4 text-slate-500" />
+          Payroll
         </button>
       </div>
 
@@ -909,6 +923,13 @@ export default function StockistAccountManager() {
                   )}
                 />
               </Card>
+            </div>
+          )}
+
+          {/* TAB 5: PAYROLL MANAGEMENT */}
+          {activeTab === 'payroll' && (
+            <div className="space-y-6">
+              <PayrollManager />
             </div>
           )}
         </>
