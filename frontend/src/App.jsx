@@ -24,6 +24,8 @@ import ForgotPassword from '@/pages/auth/ForgotPassword';
 import ResetPassword from '@/pages/auth/ResetPassword';
 
 // Super Admin
+import SuperAdminDashboard from '@/pages/superadmin/SuperAdminDashboard';
+import AdminEmployeeDashboard from '@/pages/superadmin/AdminEmployeeDashboard';
 import SuperDashboard from '@/pages/superadmin/Dashboard';
 import Companies from '@/pages/superadmin/Companies';
 import Stockists from '@/pages/superadmin/Stockists';
@@ -42,6 +44,8 @@ import SupportManagement from '@/pages/superadmin/support/SupportManagement';
 import AdminTicketDetail from '@/pages/superadmin/support/AdminTicketDetail';
 
 // Company
+import CompanyOwnerDashboard from '@/pages/company/CompanyOwnerDashboard';
+import CompanyEmployeeDashboard from '@/pages/company/CompanyEmployeeDashboard';
 import CompanyDashboard from '@/pages/company/Dashboard';
 import StaffList from '@/pages/company/StaffList';
 import LiveTracking from '@/pages/company/LiveTracking';
@@ -73,6 +77,8 @@ import Chat from '@/pages/shared/Complaints';
 import StaffDashboard from '@/pages/staff/Dashboard';
 
 // Stockist
+import StockistOwnerDashboard from '@/pages/stockist/StockistOwnerDashboard';
+import StockistEmployeeDashboard from '@/pages/stockist/StockistEmployeeDashboard';
 import StockistDashboard from '@/pages/stockist/StockistDashboard';
 import StockistAccountManager from '@/pages/stockist/StockistAccountManager';
 import StaffAttendance from '@/pages/staff/Attendance';
@@ -435,7 +441,7 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={<SuperDashboard />} />
+        <Route index element={user?.role === 'ADMIN_EMPLOYEE' ? <AdminEmployeeDashboard /> : <SuperAdminDashboard />} />
         <Route path="companies" element={<Companies />} />
         <Route path="stockists" element={<Stockists />} />
         <Route path="packages" element={<Packages />} />
@@ -463,7 +469,7 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={<CompanyDashboard />} />
+        <Route index element={<CompanyOwnerDashboard />} />
         <Route path="Staff" element={<StaffList />} />
         <Route path="tracking" element={<LiveTracking />} />
         <Route path="attendance" element={<AttendancePage />} />
@@ -503,7 +509,7 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={<StaffDashboard />} />
+        <Route index element={<CompanyEmployeeDashboard />} />
         <Route path="attendance" element={<StaffAttendance />} />
         <Route path="leaves" element={<StaffLeaves />} />
         <Route path="customers" element={<StaffCustomers />} />
@@ -548,9 +554,9 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={user?.role === 'STAFF' ? <Navigate to="Staff" replace /> : <StockistDashboard />} />
+        <Route index element={user?.role === 'STAFF' ? <Navigate to="Staff" replace /> : <StockistOwnerDashboard />} />
         <Route path="accounts" element={<StockistAccountManager />} />
-        <Route path="Staff" element={user?.role === 'STAFF' ? <StaffDashboard /> : <StaffList />} />
+        <Route path="Staff" element={user?.role === 'STAFF' ? <StockistEmployeeDashboard /> : <StaffList />} />
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="sales" element={<SalesTracker />} />
