@@ -47,7 +47,7 @@ export default function StaffPayroll() {
         <CardHeader title="Salary History" subtitle="View your monthly salary slips and payment status" />
         <Table
           columns={['Month', 'Basic Salary', 'Allowance', 'Net Salary', 'Status', 'Action']}
-          data={data.items}
+          data={data?.items || []}
           renderRow={(p) => (
             <tr key={p._id}>
               <td className="table-td font-bold">{dateFormat === 'BS' ? toNepaliMonth(p.month) : p.month}</td>

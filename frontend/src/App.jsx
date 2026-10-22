@@ -150,20 +150,20 @@ const staffNavBase = [
 
 const stockistNav = [
   { to: '/stockist', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/stockist/accounts', label: 'Account Manager', icon: Calculator },
-  { to: '/stockist/Staff', label: 'Employee', icon: Users },
   { to: '/stockist/attendance', label: 'Attendance', icon: CalendarCheck },
   { to: '/stockist/leaves', label: 'Leave Management', icon: CalendarOff },
+  { to: '/stockist/payroll', label: 'My Payroll', icon: Wallet },
+  { to: '/stockist/accounts', label: 'Account Manager', icon: Calculator },
+  { to: '/stockist/Staff', label: 'Employee', icon: Users },
   { to: '/stockist/sales', label: 'Sales Tracker', icon: TrendingUp },
   { to: '/stockist/dispatch-payment', label: 'Dispatch and Payment', icon: PackageCheck },
   { to: '/stockist/inventory', label: 'Inventory', icon: Boxes },
   { to: '/stockist/outlets', label: 'Outlets', icon: Truck },
   { to: '/stockist/vendors', label: 'Vendors', icon: Building2 },
-  { to: '/stockist/payroll', label: 'Payroll Management', icon: Wallet },
-  { to: '/stockist/support', label: 'Support', icon: LifeBuoy },
   { to: '/stockist/reports', label: 'Report', icon: FileText },
   { to: '/stockist/configuration', label: 'Configuration', icon: Settings },
-  { to: '/stockist/settings', label: 'Setting', icon: Settings },
+  { to: '/stockist/support', label: 'Support', icon: LifeBuoy },
+  { to: '/stockist/settings', label: 'Profile', icon: Settings },
 ];
 
 export default function App() {
@@ -231,25 +231,26 @@ export default function App() {
     return item;
   }).filter(item => {
     if (user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER') return true;
-    if (!user?.designation?.permissions) {
-      return ['/stockist/Staff', '/stockist/attendance', '/stockist/leaves', '/stockist/payroll', '/stockist/support', '/stockist/settings'].includes(item.to);
+
+    // Base items always shown for staff
+    if (['/stockist', '/stockist/Staff', '/stockist/attendance', '/stockist/leaves', '/stockist/payroll', '/stockist/support', '/stockist/settings'].includes(item.to)) {
+      return true;
     }
 
-    const perms = user.designation.permissions;
-    if (item.to === '/stockist' || item.to === '/stockist/Staff') return true;
-    if (item.to === '/stockist/accounts') return perms.accounts;
-    if (item.to === '/stockist/Staff') return perms.staff;
-    if (item.to === '/stockist/attendance') return perms.attendance;
-    if (item.to === '/stockist/leaves') return perms.leaves;
-    if (item.to === '/stockist/sales') return perms.salesTracker;
-    if (item.to === '/stockist/dispatch-payment') return perms.dispatchPayment;
-    if (item.to === '/stockist/inventory') return perms.inventory;
-    if (item.to === '/stockist/outlets') return perms.distributors;
-    if (item.to === '/stockist/vendors') return perms.vendors;
-    if (item.to === '/stockist/payroll') return perms.payroll;
-    if (item.to === '/stockist/reports') return perms.reports;
-    if (item.to === '/stockist/support') return perms.support;
-    if (item.to === '/stockist/configuration') return perms.configuration;
+    const perms = user?.designation?.permissions;
+    if (!perms) return false;
+
+    if (item.to === '/stockist/accounts') return !!perms.accounts;
+    if (item.to === '/stockist/Staff') return !!perms.staff;
+    if (item.to === '/stockist/sales') return !!perms.salesTracker;
+    if (item.to === '/stockist/dispatch-payment') return !!perms.dispatchPayment;
+    if (item.to === '/stockist/inventory') return !!perms.inventory;
+    if (item.to === '/stockist/outlets') return !!perms.distributors;
+    if (item.to === '/stockist/vendors') return !!perms.vendors;
+    if (item.to === '/stockist/payroll') return !!perms.payroll;
+    if (item.to === '/stockist/reports') return !!perms.reports;
+    if (item.to === '/stockist/configuration') return !!perms.configuration;
+
     return true;
   });
 
