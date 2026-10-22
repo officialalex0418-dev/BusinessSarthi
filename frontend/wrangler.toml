@@ -1,4 +1,4 @@
-name = "business-sarthi-frontend"
+name = "business-sarthi-web"
 main = "_worker.js"
 compatibility_date = "2024-01-01"
 
