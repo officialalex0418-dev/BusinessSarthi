@@ -155,12 +155,12 @@ const staffNavBase = [
 ];
 
 const stockistNav = [
-  { to: '/stockist', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/stockist/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/stockist/attendance', label: 'Attendance', icon: CalendarCheck },
   { to: '/stockist/leaves', label: 'Leave Management', icon: CalendarOff },
   { to: '/stockist/payroll', label: 'My Payroll', icon: Wallet },
   { to: '/stockist/accounts', label: 'Account Manager', icon: Calculator },
-  { to: '/stockist/Staff', label: 'Employee', icon: Users },
+  { to: '/stockist/staff', label: 'Employee', icon: Users },
   { to: '/stockist/sales', label: 'Sales Tracker', icon: TrendingUp },
   { to: '/stockist/dispatch-payment', label: 'Dispatch and Payment', icon: PackageCheck },
   { to: '/stockist/inventory', label: 'Inventory', icon: Boxes },
@@ -230,16 +230,11 @@ export default function App() {
     return user?.role === 'COMPANY_MANAGER';
   });
 
-  const filteredStockistNav = stockistNav.map(item => {
-    if (item.end && user?.role === 'STAFF') {
-      return { ...item, to: '/stockist/Staff' };
-    }
-    return item;
-  }).filter(item => {
+  const filteredStockistNav = stockistNav.filter(item => {
     if (user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER') return true;
 
     // Base items always shown for staff
-    if (['/stockist', '/stockist/Staff', '/stockist/attendance', '/stockist/leaves', '/stockist/payroll', '/stockist/support', '/stockist/settings'].includes(item.to)) {
+    if (['/stockist/dashboard', '/stockist/attendance', '/stockist/leaves', '/stockist/payroll', '/stockist/support', '/stockist/settings'].includes(item.to)) {
       return true;
     }
 
@@ -247,7 +242,7 @@ export default function App() {
     if (!perms) return false;
 
     if (item.to === '/stockist/accounts') return !!perms.accounts;
-    if (item.to === '/stockist/Staff') return !!perms.staff;
+    if (item.to === '/stockist/staff') return !!perms.staff;
     if (item.to === '/stockist/sales') return !!perms.salesTracker;
     if (item.to === '/stockist/dispatch-payment') return !!perms.dispatchPayment;
     if (item.to === '/stockist/inventory') return !!perms.inventory;
@@ -554,9 +549,10 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={user?.role === 'STAFF' ? <Navigate to="Staff" replace /> : <StockistOwnerDashboard />} />
+        <Route index element={user?.role === 'STAFF' ? <Navigate to="dashboard" replace /> : <StockistOwnerDashboard />} />
+        <Route path="dashboard" element={user?.role === 'STAFF' ? <StockistEmployeeDashboard /> : <StockistOwnerDashboard />} />
         <Route path="accounts" element={<StockistAccountManager />} />
-        <Route path="Staff" element={user?.role === 'STAFF' ? <StockistEmployeeDashboard /> : <StaffList />} />
+        <Route path="staff" element={<StaffList />} />
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="sales" element={<SalesTracker />} />

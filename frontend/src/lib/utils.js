@@ -160,7 +160,7 @@ export const getRoleHome = (user) => {
   if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN_EMPLOYEE') return '/admin';
   if (user.role === 'COMPANY_OWNER') return '/company';
   if (user.role === 'STOCKIST') return '/stockist';
-  if (user.stockist && user.role === 'STAFF') return '/stockist/Staff';
+  if (user.stockist && user.role === 'STAFF') return '/stockist/dashboard';
   return '/staff';
 };
 
