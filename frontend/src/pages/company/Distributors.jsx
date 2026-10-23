@@ -14,9 +14,9 @@ const emptyCheque = { distributor: '', chequeNumber: '', bankName: '', issueDate
 export default function Distributors() {
   const { user } = useAuth();
   const isStockist = user?.role === 'STOCKIST' || window.location.pathname.startsWith('/stockist');
-  const entitySingular = 'Outlet';
-  const entityPlural = 'Outlets';
-  const activeStatLabel = 'Active Outlet';
+  const entitySingular = isStockist ? 'Outlet' : 'Distributor';
+  const entityPlural = isStockist ? 'Outlets' : 'Distributors';
+  const activeStatLabel = isStockist ? 'Active Outlet' : 'Active Dist';
 
   const [data, setData] = useState(null);
   const [analytics, setAnalytics] = useState(null);
