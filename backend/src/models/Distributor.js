@@ -14,6 +14,8 @@ const distributorSchema = new mongoose.Schema(
     outstandingBalance: { type: Number, default: 0 },
     status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'BLOCKED'], default: 'ACTIVE' },
     isActive: { type: Boolean, default: true },
+    linkedVendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null },
+    isLinked: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

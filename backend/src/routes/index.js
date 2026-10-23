@@ -172,6 +172,8 @@ r.delete('/inventory/:id/hard', protect, authorize(...OWNERS), scopeCompany, req
 // ============ DISTRIBUTORS / OUTLETS (feature-gated) ============
 r.get('/distributors', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.listDistributors);
 r.post('/distributors', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.createDistributor);
+r.post('/distributors/link', protect, authorize(...MANAGERS), scopeCompany, requireFeature('distributorManagement'), distributor.linkStockist);
+r.get('/distributors/:id/stock-report', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.getStockReport);
 r.patch('/distributors/:id', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('distributorManagement'), distributor.updateDistributor);
 r.delete('/distributors/:id', protect, authorize(...OWNERS), scopeCompany, requireFeature('distributorManagement'), distributor.deleteDistributor);
 r.delete('/distributors/:id/hard', protect, authorize(...OWNERS), scopeCompany, requireFeature('distributorManagement'), distributor.hardDeleteDistributor);
@@ -220,6 +222,7 @@ r.delete('/customers/:id', protect, authorize(...OWNERS), scopeCompany, customer
 // ============ VENDORS (feature-gated) ============
 r.get('/vendors', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.listVendors);
 r.post('/vendors', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.createVendor);
+r.post('/vendors/:id/generate-key', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.generateVendorKey);
 r.get('/vendors/analytics', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.vendorAnalytics);
 r.get('/vendors/:id', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.getVendorDetails);
 r.post('/vendors/:id/bulk-transactions', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), upload.single('file'), vendor.bulkUploadLedger);

@@ -71,6 +71,8 @@ import CompanyTargets from '@/pages/company/Targets';
 import CompanyDepartments from '@/pages/company/Departments';
 import CompanyLeavesConfig from '@/pages/company/LeavesConfig';
 import HolidayCalendar from '@/pages/company/HolidayCalendar';
+import LinkStockist from '@/pages/company/LinkStockist';
+import LinkVendor from '@/pages/company/LinkVendor';
 import Chat from '@/pages/shared/Complaints';
 
 // Staff
@@ -491,6 +493,8 @@ export default function App() {
           <Route path="departments" element={<CompanyDepartments />} />
           <Route path="leaves" element={<CompanyLeavesConfig />} />
           <Route path="holidays" element={<HolidayCalendar />} />
+          <Route path="link-stockist" element={<LinkStockist />} />
+          <Route path="link-vendor" element={<LinkVendor />} />
         </Route>
         <Route path="settings" element={<CompanySettings />} />
         <Route path="settings/edit" element={<CompanyEditProfile />} />
@@ -538,6 +542,8 @@ export default function App() {
           <Route path="departments" element={<CompanyDepartments />} />
           <Route path="leaves" element={<CompanyLeavesConfig />} />
           <Route path="holidays" element={<HolidayCalendar />} />
+          <Route path="link-stockist" element={<LinkStockist />} />
+          <Route path="link-vendor" element={<LinkVendor />} />
         </Route>
       </Route>
 
@@ -575,6 +581,8 @@ export default function App() {
           <Route path="departments" element={<CompanyDepartments />} />
           <Route path="leaves" element={<CompanyLeavesConfig />} />
           <Route path="holidays" element={<HolidayCalendar />} />
+          <Route path="link-stockist" element={<LinkStockist />} />
+          <Route path="link-vendor" element={<LinkVendor />} />
         </Route>
         <Route path="settings" element={<CompanySettings />} />
         <Route path="settings/edit" element={<CompanyEditProfile />} />

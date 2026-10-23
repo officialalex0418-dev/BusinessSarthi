@@ -12,10 +12,14 @@ const vendorSchema = new mongoose.Schema(
     outstandingBalance: { type: Number, default: 0 },
     status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
     isActive: { type: Boolean, default: true },
+    secretKey: { type: String, default: null },
+    linkedCompany: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null },
+    isLinked: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
 vendorSchema.index({ company: 1, name: 1 });
+vendorSchema.index({ secretKey: 1 });
 
 export default mongoose.model('Vendor', vendorSchema);

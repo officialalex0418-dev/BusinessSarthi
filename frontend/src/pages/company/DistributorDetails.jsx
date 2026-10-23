@@ -560,6 +560,18 @@ export default function DistributorDetails() {
                 </Button>
                 <p className="text-[10px] text-slate-400 mt-1 text-center italic">Upload Ledger Excel (Old Transactions)</p>
               </div>
+
+              {distributor.isLinked && (
+                <div className="col-span-1 xs:col-span-2 pt-2">
+                  <Button
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => downloadFile(`/distributors/${id}/stock-report`, `Stock_Report_${distributor.name.replace(/\s+/g, '_')}.xlsx`)}
+                  >
+                    <Download className="h-4 w-4 mr-2" /> Get Stock
+                  </Button>
+                  <p className="text-[10px] text-slate-400 mt-1 text-center italic">Download linked stockist inventory stock report</p>
+                </div>
+              )}
             </div>
           </div>
         </Card>

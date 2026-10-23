@@ -100,6 +100,29 @@ export const deleteVendor = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Vendor deactivated' });
 });
 
+/** POST /vendors/:id/generate-key */
+export const generateVendorKey = asyncHandler(async (req, res) => {
+  const vendor = await Vendor.findOne({ _id: req.params.id, company: req.companyId });
+  if (!vendor) throw ApiError.notFound('Vendor not found');
+
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+';
+  let key = '';
+  key += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+  key += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+  key += '0123456789'[Math.floor(Math.random() * 10)];
+  key += '!@#$%^&*'[Math.floor(Math.random() * 8)];
+  for (let i = 4; i < 18; i++) {
+    key += chars[Math.floor(Math.random() * chars.length)];
+  }
+  const secretKey = key.split('').sort(() => 0.5 - Math.random()).join('');
+
+  vendor.secretKey = secretKey;
+  await vendor.save();
+
+  audit({ req, action: 'GENERATE_VENDOR_KEY', entity: 'Vendor', entityId: vendor._id });
+  res.json({ success: true, data: { secretKey } });
+});
+
 /** POST /vendor-payments */
 export const recordVendorPayment = asyncHandler(async (req, res) => {
   const { vendorId, amount, method, remarks, paymentDate, chequeNumber, bankName, maturityDate } = req.body;

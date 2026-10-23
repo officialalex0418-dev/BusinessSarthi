@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import ExcelJS from 'exceljs';
-import { Distributor, Invoice, Payment, SalesInvoice, Cheque, Company, Stockist, Inventory } from '../models/index.js';
+import { Distributor, Invoice, Payment, SalesInvoice, Cheque, Company, Stockist, Inventory, Vendor } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
@@ -603,4 +603,72 @@ export const distributorAnalytics = asyncHandler(async (req, res) => {
       overdueOutstanding
     }
   });
+});
+
+/** POST /distributors/link */
+export const linkStockist = asyncHandler(async (req, res) => {
+  const { distributorId, secretKey } = req.body;
+  if (!distributorId || !secretKey) {
+    throw ApiError.badRequest('Distributor ID and secret code are required');
+  }
+
+  const distributor = await Distributor.findOne({ _id: distributorId, company: req.companyId });
+  if (!distributor) throw ApiError.notFound('Distributor not found');
+
+  const vendor = await Vendor.findOne({ secretKey });
+  if (!vendor) {
+    throw ApiError.badRequest('Invalid secret code. Please verify the key with the stockist.');
+  }
+
+  distributor.linkedVendor = vendor._id;
+  distributor.isLinked = true;
+  await distributor.save();
+
+  vendor.linkedCompany = req.companyId;
+  vendor.isLinked = true;
+  await vendor.save();
+
+  audit({ req, action: 'LINK_STOCKIST', entity: 'Distributor', entityId: distributor._id });
+  res.json({ success: true, message: 'Stockist linked successfully' });
+});
+
+/** GET /distributors/:id/stock-report */
+export const getStockReport = asyncHandler(async (req, res) => {
+  const distributor = await Distributor.findOne({ _id: req.params.id, company: req.companyId }).populate('linkedVendor');
+  if (!distributor) throw ApiError.notFound('Distributor not found');
+  if (!distributor.linkedVendor || !distributor.linkedVendor.isLinked) {
+    throw ApiError.badRequest('This outlet is not linked to any stockist vendor');
+  }
+
+  const vendor = distributor.linkedVendor;
+  const inventoryItems = await Inventory.find({ company: vendor.company }).lean();
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Stock Report');
+
+  sheet.columns = [
+    { header: 'SN', key: 'sn', width: 6 },
+    { header: 'Product Name', key: 'name', width: 30 },
+    { header: 'SKU / Batch', key: 'sku', width: 15 },
+    { header: 'Category', key: 'category', width: 15 },
+    { header: 'Stock Quantity', key: 'qty', width: 15 },
+    { header: 'Selling Price (NPR)', key: 'price', width: 20 },
+  ];
+
+  inventoryItems.forEach((item, index) => {
+    sheet.addRow({
+      sn: index + 1,
+      name: item.name || item.productName,
+      sku: item.sku || item.batch || '—',
+      category: item.category || 'General',
+      qty: item.quantity || item.stock || 0,
+      price: item.sellingPrice || item.price || 0,
+    });
+  });
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename=Stock_Report_${vendor.name.replace(/\s+/g, '_')}.xlsx`);
+
+  await workbook.xlsx.write(res);
+  res.end();
 });

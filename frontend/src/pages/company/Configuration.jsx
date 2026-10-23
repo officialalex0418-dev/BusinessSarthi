@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
-import { UserCog, MapPin, Clock, Building2, CalendarCheck, ChevronRight, Target } from 'lucide-react';
+import { UserCog, MapPin, Clock, Building2, CalendarCheck, ChevronRight, Target, Link as LinkIcon, Key } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui';
 
 export default function Configuration() {
+  const isStockist = window.location.pathname.startsWith('/stockist');
+
   const options = [
     { title: 'Designation', desc: 'Manage roles and granular permissions', icon: UserCog, to: 'designations', color: 'text-blue-600 bg-blue-50' },
     { title: 'Branches', desc: 'Manage multiple office locations and geofencing', icon: MapPin, to: 'branches', color: 'text-emerald-600 bg-emerald-50' },
@@ -13,9 +15,15 @@ export default function Configuration() {
     { title: 'Holiday Calendar', desc: 'Manage annual holidays and festivals', icon: CalendarCheck, to: 'holidays', color: 'text-amber-600 bg-amber-50' },
   ];
 
+  if (isStockist) {
+    options.push({ title: 'Link Vendor', desc: 'Generate secret keys to link with companies', icon: Key, to: 'link-vendor', color: 'text-teal-600 bg-teal-50' });
+  } else {
+    options.push({ title: 'Link Stockist', desc: 'Link your outlets/distributors with stockist vendors', icon: LinkIcon, to: 'link-stockist', color: 'text-indigo-600 bg-indigo-50' });
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Company Configuration</h1>
+      <h1 className="text-2xl font-bold">{isStockist ? 'Stockist Configuration' : 'Company Configuration'}</h1>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {options.map((opt) => (
           <Link key={opt.title} to={opt.to}>
