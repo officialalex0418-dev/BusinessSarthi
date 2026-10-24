@@ -77,7 +77,7 @@ export default function Companies() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    api.get('/packages?status=ACTIVE').then(({ data }) => setPackages(data.data.items));
+    api.get('/packages?status=ACTIVE&type=COMPANY').then(({ data }) => setPackages(data.data.items));
   }, []);
 
   const submit = async (e) => {

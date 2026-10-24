@@ -76,7 +76,7 @@ export default function Stockists() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    api.get('/packages?status=ACTIVE').then(({ data }) => setPackages(data.data.items)).catch(() => {});
+    api.get('/packages?status=ACTIVE&type=STOCKIST').then(({ data }) => setPackages(data.data.items)).catch(() => {});
   }, []);
 
   const submit = async (e) => {

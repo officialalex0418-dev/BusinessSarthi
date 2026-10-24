@@ -5,6 +5,7 @@ import { audit } from '../utils/audit.js';
 export const listPackages = asyncHandler(async (req, res) => {
   const filter = {};
   if (req.query.status) filter.status = req.query.status;
+  if (req.query.type) filter.type = req.query.type;
   const items = await Package.find(filter).sort('price');
   res.json({ success: true, data: { items } });
 });
@@ -33,7 +34,7 @@ export const updatePackage = asyncHandler(async (req, res) => {
 
 export const deletePackage = asyncHandler(async (req, res) => {
   const inUse = await Company.countDocuments({ package: req.params.id });
-  if (inUse > 0) throw ApiError.conflict(`Package in use by ${inUse} companies. Set INACTIVE instead.`);
+  if (inUse > 0) throw ApiError.conflict(`Package in use by ${inUse} businesses. Set INACTIVE instead.`);
   const pkg = await Package.findByIdAndDelete(req.params.id);
   if (!pkg) throw ApiError.notFound('Package not found');
   audit({ req, action: 'DELETE_PACKAGE', entity: 'Package', entityId: req.params.id });

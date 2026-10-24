@@ -24,7 +24,7 @@ const emptyForm = {
   },
 };
 
-export default function Packages() {
+export default function Packages({ type = 'COMPANY' }) {
   const [items, setItems] = useState(null);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -33,16 +33,16 @@ export default function Packages() {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const { data } = await api.get('/packages');
+    const { data } = await api.get(`/packages?type=${type}`);
     setItems(data.data.items);
-  }, []);
+  }, [type]);
   useEffect(() => { load(); }, [load]);
 
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true); setError('');
     try {
-      const body = { ...form, price: Number(form.price), maxStaff: Number(form.maxStaff), trackingIntervalMinutes: Number(form.trackingIntervalMinutes) };
+      const body = { ...form, type, price: Number(form.price), maxStaff: Number(form.maxStaff), trackingIntervalMinutes: Number(form.trackingIntervalMinutes) };
       if (editing) await api.patch(`/packages/${editing._id}`, body);
       else await api.post('/packages', body);
       setModal(false); setEditing(null); setForm(emptyForm); load();
@@ -62,7 +62,7 @@ export default function Packages() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Packages</h1>
+        <h1 className="text-2xl font-bold">{type === 'STOCKIST' ? 'Stockist Packages' : 'Company Packages'}</h1>
         <Button onClick={() => { setEditing(null); setForm(emptyForm); setModal(true); }}>
           <Plus className="h-4 w-4" /> New Package
         </Button>
@@ -107,7 +107,7 @@ export default function Packages() {
         ))}
       </div>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing ? `Edit ${editing.name}` : 'New Package'} wide>
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? `Edit ${editing.name}` : `New ${type === 'STOCKIST' ? 'Stockist' : 'Company'} Package`} wide>
         {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{error}</div>}
         <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label="Package Name *" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

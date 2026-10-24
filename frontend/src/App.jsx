@@ -30,6 +30,7 @@ import SuperDashboard from '@/pages/superadmin/Dashboard';
 import Companies from '@/pages/superadmin/Companies';
 import Stockists from '@/pages/superadmin/Stockists';
 import Packages from '@/pages/superadmin/Packages';
+import PackageHub from '@/pages/superadmin/PackageHub';
 import SystemEmployees from '@/pages/superadmin/SystemEmployees';
 import CompanyStaff from '@/pages/superadmin/CompanyStaff';
 import StockistEmployees from '@/pages/superadmin/StockistEmployees';
@@ -452,7 +453,11 @@ export default function App() {
         <Route index element={user?.role === 'ADMIN_EMPLOYEE' ? <AdminEmployeeDashboard /> : <SuperAdminDashboard />} />
         <Route path="companies" element={<Companies />} />
         <Route path="stockists" element={<Stockists />} />
-        <Route path="packages" element={<Packages />} />
+        <Route path="packages">
+          <Route index element={<PackageHub />} />
+          <Route path="company" element={<Packages type="COMPANY" />} />
+          <Route path="stockist" element={<Packages type="STOCKIST" />} />
+        </Route>
         <Route path="employee">
           <Route index element={<EmployeeHub />} />
           <Route path="system" element={<SystemEmployees />} />

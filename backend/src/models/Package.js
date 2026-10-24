@@ -7,6 +7,7 @@ const packageSchema = new mongoose.Schema(
     description: { type: String, maxlength: 500 },
     price: { type: Number, min: 0, default: 0 }, // per month
     maxStaff: { type: Number, required: true, min: 1 },
+    type: { type: String, enum: ['COMPANY', 'STOCKIST'], default: 'COMPANY', index: true },
     trackingIntervalMinutes: {
       type: Number,
       enum: TRACKING_INTERVALS,
