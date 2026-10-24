@@ -12,8 +12,12 @@ export default function CompanySettings() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get('/companies/me').then(({ data }) => setCompany(data.data.company));
-  }, []);
+    const isStockistContext = window.location.pathname.startsWith('/stockist') || user?.stockist;
+    const endpoint = isStockistContext ? '/stockists/me' : '/companies/me';
+    api.get(endpoint)
+      .then(({ data }) => setCompany(data.data.company || data.data.stockist))
+      .catch((err) => console.error('Failed to load profile', err));
+  }, [user]);
 
   const handleResetPassword = async () => {
     try {

@@ -88,7 +88,7 @@ r.delete('/companies/:id/hard', protect, authorize('SUPER_ADMIN'), company.hardD
 // ============ STOCKISTS (Super Admin & Stockist Owner) ============
 r.get('/stockists', protect, authorize(...PLATFORM), stockist.listStockists);
 r.post('/stockists', protect, authorize(...PLATFORM), stockist.createStockist);
-r.get('/stockists/me', protect, authorize('STOCKIST'), stockist.myStockist);
+r.get('/stockists/me', protect, authorize('STOCKIST', 'COMPANY_MANAGER', 'STAFF'), stockist.myStockist);
 r.patch('/stockists/me', protect, authorize('STOCKIST'), stockist.updateMyStockist);
 r.get('/stockists/:id', protect, authorize(...PLATFORM), stockist.getStockist);
 r.patch('/stockists/:id', protect, authorize(...PLATFORM), stockist.updateStockist);
