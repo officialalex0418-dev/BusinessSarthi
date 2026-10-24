@@ -32,6 +32,8 @@ import Stockists from '@/pages/superadmin/Stockists';
 import Packages from '@/pages/superadmin/Packages';
 import SystemEmployees from '@/pages/superadmin/SystemEmployees';
 import CompanyStaff from '@/pages/superadmin/CompanyStaff';
+import StockistEmployees from '@/pages/superadmin/StockistEmployees';
+import EmployeeHub from '@/pages/superadmin/EmployeeHub';
 import Products from '@/pages/superadmin/Products';
 import Configuration from '@/pages/superadmin/Configuration';
 import Designations from '@/pages/superadmin/Designations';
@@ -116,8 +118,7 @@ const adminNav = [
   { to: '/admin/companies', label: 'Companies', icon: Building2 },
   { to: '/admin/stockists', label: 'Stockists', icon: Store },
   { to: '/admin/packages', label: 'Packages', icon: Package },
-  { to: '/admin/employees', label: 'System Employees', icon: Users },
-  { to: '/admin/company-staff', label: 'Company Staff', icon: Users },
+  { to: '/admin/employee', label: 'Employee', icon: Users },
   { to: '/admin/products', label: 'RCS Products', icon: LayoutGrid },
   { to: '/admin/inquiries', label: 'Inquiries', icon: Inbox },
   { to: '/admin/support', label: 'Support Tickets', icon: LifeBuoy },
@@ -196,8 +197,7 @@ export default function App() {
       if (item.to === '/admin/companies') return perms.companies;
       if (item.to === '/admin/stockists') return perms.companies;
       if (item.to === '/admin/packages') return perms.packages;
-      if (item.to === '/admin/employees') return perms.systemEmployees;
-      if (item.to === '/admin/company-staff') return perms.companyStaff;
+      if (item.to === '/admin/employee') return perms.systemEmployees || perms.companyStaff;
       if (item.to === '/admin/configuration') return perms.configuration;
     }
     return true;
@@ -453,8 +453,14 @@ export default function App() {
         <Route path="companies" element={<Companies />} />
         <Route path="stockists" element={<Stockists />} />
         <Route path="packages" element={<Packages />} />
-        <Route path="employees" element={<SystemEmployees />} />
-        <Route path="company-staff" element={<CompanyStaff />} />
+        <Route path="employee">
+          <Route index element={<EmployeeHub />} />
+          <Route path="system" element={<SystemEmployees />} />
+          <Route path="company" element={<CompanyStaff />} />
+          <Route path="stockist" element={<StockistEmployees />} />
+        </Route>
+        <Route path="employees" element={<Navigate to="employee/system" replace />} />
+        <Route path="company-staff" element={<Navigate to="employee/company" replace />} />
         <Route path="products" element={<Products />} />
         <Route path="configuration">
           <Route index element={<Configuration />} />

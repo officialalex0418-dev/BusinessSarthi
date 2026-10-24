@@ -24,13 +24,14 @@ const emptyForm = {
 };
 
 
-export default function StaffManager({ mode = 'company', companyId = null, allowCompanySelection = false }) {
+export default function StaffManager({ mode = 'company', companyId = null, allowCompanySelection = false, stockistId = null, allowStockistSelection = false }) {
   const { requestCamera } = useAppPermissions();
   const fileInputRef = useRef(null);
   const [data, setData] = useState(null);
 
 
   const [companies, setCompanies] = useState([]);
+  const [stockists, setStockists] = useState([]);
   const [designations, setDesignations] = useState([]);
   const [branches, setBranches] = useState([]);
   const [shifts, setShifts] = useState([]);
@@ -44,13 +45,15 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [selectedCompanyId, setSelectedCompanyId] = useState(companyId || '');
+  const [selectedStockistId, setSelectedStockistId] = useState(stockistId || '');
 
   useEffect(() => {
     if (companyId) setSelectedCompanyId(companyId);
-  }, [companyId]);
+    if (stockistId) setSelectedStockistId(stockistId);
+  }, [companyId, stockistId]);
 
   useEffect(() => {
-    if (mode === 'company') {
+    if (mode === 'company' || mode === 'stockist') {
       api.get('/company-config/designations').then(({ data }) => setDesignations(data.data)).catch(() => {});
       api.get('/company-config/branches').then(({ data }) => setBranches(data.data)).catch(() => {});
       api.get('/company-config/shifts').then(({ data }) => setShifts(data.data)).catch(() => {});
@@ -59,26 +62,34 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
       api.get('/designations').then(res => setDesignations(res.data?.data || [])).catch(() => setDesignations([]));
       api.get('/shifts').then(res => setShifts(res.data?.data || [])).catch(() => setShifts([]));
     }
-    if (!allowCompanySelection) return;
-    (async () => {
-      const { data: response } = await api.get('/companies', { params: { limit: 200 } });
-      const items = response.data.items || [];
-      setCompanies(items);
-      if (!selectedCompanyId && items.length) setSelectedCompanyId(items[0]._id);
-    })();
-  }, [allowCompanySelection, selectedCompanyId, mode]);
+    if (allowCompanySelection) {
+      api.get('/companies', { params: { limit: 200 } }).then(({ data }) => {
+        const items = data.data.items || [];
+        setCompanies(items);
+        if (!selectedCompanyId && items.length) setSelectedCompanyId(items[0]._id);
+      }).catch(() => {});
+    }
+    if (allowStockistSelection) {
+      api.get('/stockists', { params: { limit: 200 } }).then(({ data }) => {
+        const items = data.data.items || data.data || [];
+        setStockists(items);
+        if (!selectedStockistId && items.length) setSelectedStockistId(items[0]._id);
+      }).catch(() => {});
+    }
+  }, [allowCompanySelection, allowStockistSelection, selectedCompanyId, selectedStockistId, mode]);
 
   const load = useCallback(async () => {
     const params = { page, search: search || undefined };
     if (mode === 'system') params.scope = 'system';
     if (mode === 'company' && (companyId || selectedCompanyId)) params.companyId = companyId || selectedCompanyId;
-    if (allowCompanySelection && !params.companyId) {
+    if (mode === 'stockist' && (stockistId || selectedStockistId)) params.stockistId = stockistId || selectedStockistId;
+    if ((allowCompanySelection && !params.companyId) || (allowStockistSelection && !params.stockistId)) {
       setData({ items: [], pagination: { page: 1, limit: 0, total: 0, totalPages: 1 } });
       return;
     }
     const { data } = await api.get('/staff', { params });
     setData(data.data);
-  }, [page, search, mode, companyId, selectedCompanyId, allowCompanySelection]);
+  }, [page, search, mode, companyId, selectedCompanyId, stockistId, selectedStockistId, allowCompanySelection, allowStockistSelection]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -190,12 +201,15 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
 
   if (!data) return <Spinner />;
   const companyOptions = companies.map((c) => ({ value: c._id, label: c.name }));
+  const stockistOptions = stockists.map((s) => ({ value: s._id, label: s.name }));
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">{mode === 'system' ? 'System Employees' : 'Employee Management'}</h1>
-        <Button className="w-full sm:w-auto" onClick={() => { setEditing(null); setForm(emptyForm); setModal(true); }} disabled={allowCompanySelection && !selectedCompanyId}>
+        <h1 className="text-2xl font-bold">
+          {mode === 'system' ? 'System Employees' : mode === 'stockist' ? 'Stockist Employees' : 'Company Employees'}
+        </h1>
+        <Button className="w-full sm:w-auto" onClick={() => { setEditing(null); setForm(emptyForm); setModal(true); }} disabled={(allowCompanySelection && !selectedCompanyId) || (allowStockistSelection && !selectedStockistId)}>
           <Plus className="h-4 w-4 mr-2" /> Add Employee
         </Button>
       </div>
@@ -210,6 +224,20 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
               options={[{ value: '', label: 'Choose a company…' }, ...companyOptions]}
             />
             <p className="text-sm text-slate-500">Manage employees for the selected company.</p>
+          </div>
+        </Card>
+      )}
+
+      {allowStockistSelection && (
+        <Card>
+          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
+            <Select
+              label="Select Stockist"
+              value={selectedStockistId}
+              onChange={(e) => { setSelectedStockistId(e.target.value); setPage(1); }}
+              options={[{ value: '', label: 'Choose a stockist…' }, ...stockistOptions]}
+            />
+            <p className="text-sm text-slate-500">Manage employees for the selected stockist.</p>
           </div>
         </Card>
       )}

@@ -23,6 +23,10 @@ export const listStaff = asyncHandler(async (req, res) => {
     filter.$or = [{ company: req.companyId }, { stockist: req.companyId }];
   } else if (req.query.scope === 'system') {
     filter.role = ROLES.ADMIN_EMPLOYEE;
+  } else if (req.query.companyId) {
+    filter.company = req.query.companyId;
+  } else if (req.query.stockistId) {
+    filter.stockist = req.query.stockistId;
   }
 
   if (req.query.role) filter.role = req.query.role;
