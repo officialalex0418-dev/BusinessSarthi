@@ -27,6 +27,21 @@ export const authorize = (...roles) => (req, _res, next) => {
     // Company/Stockist-level permissions (for STAFF and COMPANY_MANAGER)
     // Owners and Stockists bypass designation checks within their workspace
     if (role !== 'COMPANY_OWNER' && role !== 'STOCKIST' && role !== 'SUPER_ADMIN') {
+      if (permissions.accounts && (
+        path.startsWith('/sales-invoices') ||
+        path.startsWith('/purchases') ||
+        path.startsWith('/payments') ||
+        path.startsWith('/expenses') ||
+        path.startsWith('/payroll') ||
+        path.startsWith('/inventory') ||
+        path.startsWith('/distributors') ||
+        path.startsWith('/outlets') ||
+        path.startsWith('/vendors') ||
+        path.startsWith('/cheques')
+      )) {
+        return next();
+      }
+
       let permissionChecked = false;
       let permissionGranted = false;
 
