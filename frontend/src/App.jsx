@@ -83,6 +83,7 @@ import StockistOwnerDashboard from '@/pages/stockist/StockistOwnerDashboard';
 import StockistEmployeeDashboard from '@/pages/stockist/StockistEmployeeDashboard';
 import StockistDashboard from '@/pages/stockist/StockistDashboard';
 import StockistAccountManager from '@/pages/stockist/StockistAccountManager';
+import SalesStatistics from '@/pages/stockist/SalesStatistics';
 import StaffAttendance from '@/pages/staff/Attendance';
 import StaffLeaves from '@/pages/staff/Leaves';
 import StaffCustomers from '@/pages/staff/Customers';
@@ -472,6 +473,7 @@ export default function App() {
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="sales" element={<SalesTracker />} />
+        <Route path="sales-statistics" element={<SalesStatistics />} />
         <Route path="dispatch-payment" element={<StockistDispatchPayment />} />
         <Route path="customers" element={<CompanyCustomers />} />
         <Route path="inventory" element={<InventoryPage />} />
@@ -562,6 +564,7 @@ export default function App() {
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="sales" element={<SalesTracker />} />
+        <Route path="sales-statistics" element={<SalesStatistics />} />
         <Route path="dispatch-payment" element={<StockistDispatchPayment />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="outlets" element={<Distributors />} />

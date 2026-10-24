@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import ExcelJS from 'exceljs';
-import { Attendance, Sale, Payroll, LocationLog, User, Company, Setting } from '../models/index.js';
+import { Attendance, Sale, Payroll, LocationLog, User, Company, Setting, SalesInvoice, Distributor, Vendor, Inventory, Payment } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { sendExcel, sendPdf } from '../services/report.service.js';
 import { rangeFromPeriod } from '../utils/dates.js';
@@ -420,4 +420,167 @@ export const bulkUploadSample = asyncHandler(async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${type}_Upload_Template.xlsx"`);
   await workbook.xlsx.write(res);
   res.end();
+});
+
+/** GET /reports/sales-statistics */
+export const getSalesStatistics = asyncHandler(async (req, res) => {
+  const companyId = req.companyId;
+  const { fromDate, toDate, vendorId } = req.query;
+
+  const dateFilter = {};
+  if (fromDate || toDate) {
+    dateFilter.saleDate = {};
+    if (fromDate) dateFilter.saleDate.$gte = new Date(fromDate);
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.saleDate.$lte = end;
+    }
+  }
+
+  const invoiceMatch = { company: oid(companyId), ...dateFilter };
+
+  const [invoices, distributors, vendors, inventoryItems, payments] = await Promise.all([
+    SalesInvoice.find(invoiceMatch).populate('distributor').lean(),
+    Distributor.find({ company: companyId, isActive: true }).lean(),
+    Vendor.find({ company: companyId, isActive: true }).lean(),
+    Inventory.find({ company: companyId }).lean(),
+    Payment.find({ company: companyId }).lean()
+  ]);
+
+  const totalSales = invoices.reduce((sum, inv) => sum + (inv.netTotal || 0), 0);
+
+  const productStats = {};
+  const outletPurchases = {};
+  const productVendorMap = {};
+  inventoryItems.forEach(item => {
+    productVendorMap[item._id.toString()] = item.vendor?.toString();
+  });
+
+  invoices.forEach(inv => {
+    const distId = inv.distributor?._id?.toString() || 'unknown';
+    const distName = inv.distributor?.name || inv.customerName || 'Walk-in Customer';
+    if (!outletPurchases[distId]) {
+      outletPurchases[distId] = { name: distName, totalPurchased: 0, invoiceCount: 0 };
+    }
+    outletPurchases[distId].totalPurchased += (inv.netTotal || 0);
+    outletPurchases[distId].invoiceCount += 1;
+
+    inv.items.forEach(item => {
+      const pName = item.productName || 'Product';
+      const pId = item.product?.toString() || pName;
+      const qty = item.quantity || 1;
+      const amt = item.amount || (qty * item.price);
+      const cost = (item.costPrice || 0) * qty;
+      const margin = amt - cost;
+
+      if (!productStats[pId]) {
+        productStats[pId] = {
+          id: pId,
+          name: pName,
+          vendorId: item.product ? productVendorMap[item.product.toString()] : null,
+          qty: 0,
+          amount: 0,
+          margin: 0
+        };
+      }
+      productStats[pId].qty += qty;
+      productStats[pId].amount += amt;
+      productStats[pId].margin += margin;
+    });
+  });
+
+  const productsList = Object.values(productStats);
+  const bestSellingProducts = [...productsList].sort((a, b) => b.qty - a.qty).slice(0, 10);
+  const topPerformingProducts = [...productsList].sort((a, b) => b.margin - a.margin).slice(0, 10);
+  const topOutlets = Object.values(outletPurchases).sort((a, b) => b.totalPurchased - a.totalPurchased).slice(0, 10);
+
+  const paymentsByDist = {};
+  payments.forEach(p => {
+    const dId = p.distributor?.toString();
+    if (dId) {
+      paymentsByDist[dId] = (paymentsByDist[dId] || 0) + (p.amount || 0);
+    }
+  });
+
+  const outletHealth = distributors.map(d => {
+    const dId = d._id.toString();
+    const totalPurchased = outletPurchases[dId]?.totalPurchased || 0;
+    const paid = paymentsByDist[dId] || 0;
+    const outstanding = d.outstandingBalance || 0;
+
+    let healthScore = 100;
+    if (totalPurchased > 0) {
+      const ratio = outstanding / totalPurchased;
+      healthScore = Math.max(0, 100 - (ratio * 50));
+    }
+    if (outstanding === 0) healthScore += 20;
+
+    return {
+      name: d.name,
+      outstandingBalance: outstanding,
+      totalPurchased,
+      healthScore: Math.round(healthScore)
+    };
+  }).sort((a, b) => b.healthScore - a.healthScore).slice(0, 10);
+
+  let vendorReport = null;
+  if (vendorId) {
+    const vIdStr = vendorId.toString();
+    const vendorInvoices = invoices.filter(inv => {
+      return inv.items.some(item => {
+        const pVenId = item.product ? productVendorMap[item.product.toString()] : null;
+        return pVenId === vIdStr;
+      });
+    });
+
+    let vendorTotalSales = 0;
+    const vendorProductStats = {};
+    const vendorOutletPurchases = {};
+
+    vendorInvoices.forEach(inv => {
+      const distId = inv.distributor?._id?.toString() || 'unknown';
+      const distName = inv.distributor?.name || inv.customerName || 'Walk-in';
+
+      inv.items.forEach(item => {
+        const pVenId = item.product ? productVendorMap[item.product.toString()] : null;
+        if (pVenId === vIdStr) {
+          const pName = item.productName || 'Product';
+          const qty = item.quantity || 1;
+          const amt = item.amount || (qty * item.price);
+          vendorTotalSales += amt;
+
+          if (!vendorProductStats[pName]) {
+            vendorProductStats[pName] = { name: pName, qty: 0, amount: 0 };
+          }
+          vendorProductStats[pName].qty += qty;
+          vendorProductStats[pName].amount += amt;
+
+          if (!vendorOutletPurchases[distId]) {
+            vendorOutletPurchases[distId] = { name: distName, amount: 0 };
+          }
+          vendorOutletPurchases[distId].amount += amt;
+        }
+      });
+    });
+
+    vendorReport = {
+      totalSales: vendorTotalSales,
+      topSellingProducts: Object.values(vendorProductStats).sort((a, b) => b.qty - a.qty).slice(0, 10),
+      topBuyingOutlets: Object.values(vendorOutletPurchases).sort((a, b) => b.amount - a.amount).slice(0, 10)
+    };
+  }
+
+  res.json({
+    success: true,
+    data: {
+      totalSales,
+      bestSellingProducts,
+      topOutlets,
+      topPerformingOutlets: outletHealth,
+      topPerformingProducts,
+      vendors,
+      vendorReport
+    }
+  });
 });

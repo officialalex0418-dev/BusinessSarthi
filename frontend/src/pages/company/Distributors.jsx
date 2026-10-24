@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Pencil, CreditCard, History, Truck, Trash2, Printer, Download } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, Pencil, CreditCard, History, Truck, Trash2, Printer, Download, BarChart3 } from 'lucide-react';
 import { api } from '@/api/client';
 import { Card, Button, Input, Modal, Table, Spinner, Pagination, EmptyState, Badge, Select, Textarea, DatePicker } from '@/components/ui';
 import { formatMoney, formatDate } from '@/lib/utils';
@@ -13,6 +13,7 @@ const emptyCheque = { distributor: '', chequeNumber: '', bankName: '', issueDate
 
 export default function Distributors() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isStockist = user?.role === 'STOCKIST' || window.location.pathname.startsWith('/stockist');
   const entitySingular = isStockist ? 'Outlet' : 'Distributor';
   const entityPlural = isStockist ? 'Outlets' : 'Distributors';
@@ -472,6 +473,11 @@ export default function Distributors() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">{entityPlural}</h1>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {isStockist && (
+            <Button variant="outline" className="flex-1 sm:flex-none justify-center text-xs sm:text-sm" onClick={() => navigate('/stockist/sales-statistics')}>
+              <BarChart3 className="h-4 w-4 mr-1.5" /> Sales Statistics
+            </Button>
+          )}
           <Button variant="outline" className="flex-1 sm:flex-none justify-center text-xs sm:text-sm" onClick={() => { setReportError(''); setReportModal(true); }}>
             <Download className="h-4 w-4 mr-1.5" /> Download
           </Button>

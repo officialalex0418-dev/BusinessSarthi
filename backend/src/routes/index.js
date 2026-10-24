@@ -337,6 +337,7 @@ r.get('/support/tickets/:id', protect, authorize(...ALL_STAFF), scopeCompany, su
 r.post('/support/tickets/:id/replies', protect, authorize(...ALL_STAFF), scopeCompany, validate({ body: schemas.ticketMessage }), support.addMessage);
 
 // ============ REPORTS ============
+r.get('/reports/sales-statistics', protect, authorize(...MANAGERS), scopeCompany, report.getSalesStatistics);
 r.get('/reports/tracking/excel', protect, authorize(...MANAGERS), scopeCompany, report.trackingExcel);
 r.get('/reports/attendance/excel', protect, authorize(...MANAGERS), scopeCompany, report.attendanceExcel);
 r.get('/reports/sales/excel', protect, authorize(...MANAGERS), scopeCompany, report.salesExcel);
