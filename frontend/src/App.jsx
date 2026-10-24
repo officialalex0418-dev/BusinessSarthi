@@ -233,7 +233,17 @@ export default function App() {
     return user?.role === 'COMPANY_MANAGER';
   });
 
-  const filteredStockistNav = stockistNav.filter(item => {
+  const filteredStockistNav = stockistNav.map(item => {
+    if (item.to === '/stockist/attendance') {
+      const hasPerm = user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER' || user?.designation?.permissions?.attendance;
+      return { ...item, label: hasPerm ? 'Attendance Management' : 'Attendance' };
+    }
+    if (item.to === '/stockist/leaves') {
+      const hasPerm = user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER' || user?.designation?.permissions?.leaves;
+      return { ...item, label: hasPerm ? 'Leave Management' : 'Leave' };
+    }
+    return item;
+  }).filter(item => {
     if (user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER') return true;
 
     // Base items always shown for staff
@@ -470,8 +480,16 @@ export default function App() {
         <Route index element={<CompanyOwnerDashboard />} />
         <Route path="Staff" element={<StaffList />} />
         <Route path="tracking" element={<LiveTracking />} />
-        <Route path="attendance" element={<AttendancePage />} />
-        <Route path="leaves" element={<Leaves />} />
+        <Route path="attendance" element={
+          user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER' || user?.designation?.permissions?.attendance
+            ? <AttendancePage />
+            : <StaffAttendance />
+        } />
+        <Route path="leaves" element={
+          user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER' || user?.designation?.permissions?.leaves
+            ? <Leaves />
+            : <StaffLeaves />
+        } />
         <Route path="sales" element={<SalesTracker />} />
         <Route path="sales-statistics" element={<SalesStatistics />} />
         <Route path="dispatch-payment" element={<StockistDispatchPayment />} />
@@ -561,8 +579,16 @@ export default function App() {
         <Route path="dashboard" element={user?.role === 'STAFF' ? <StockistEmployeeDashboard /> : <StockistOwnerDashboard />} />
         <Route path="accounts" element={<StockistAccountManager />} />
         <Route path="staff" element={<StaffList />} />
-        <Route path="attendance" element={<AttendancePage />} />
-        <Route path="leaves" element={<Leaves />} />
+        <Route path="attendance" element={
+          user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER' || user?.designation?.permissions?.attendance
+            ? <AttendancePage />
+            : <StaffAttendance />
+        } />
+        <Route path="leaves" element={
+          user?.role === 'STOCKIST' || user?.role === 'COMPANY_MANAGER' || user?.designation?.permissions?.leaves
+            ? <Leaves />
+            : <StaffLeaves />
+        } />
         <Route path="sales" element={<SalesTracker />} />
         <Route path="sales-statistics" element={<SalesStatistics />} />
         <Route path="dispatch-payment" element={<StockistDispatchPayment />} />
