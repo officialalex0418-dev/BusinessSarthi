@@ -280,11 +280,11 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
                 <p>{u.email}</p>
                 <p className="text-xs text-slate-400">{u.phone || '—'}</p>
               </td>
-              {mode === 'company' && <td className="table-td">{u.position || '—'}</td>}
+              {mode !== 'system' && <td className="table-td">{u.position || '—'}</td>}
               <td className="table-td">
                 <Badge color="blue">{u.designation?.name || (mode === 'system' ? (u.subRole || 'ADMIN') : u.role.replace('COMPANY_', ''))}</Badge>
               </td>
-              {mode === 'company' && (
+              {mode !== 'system' && (
                 <td className="table-td">
                   <p>{formatMoney(u.basicSalary)}</p>
                   <p className="text-xs text-slate-400">+{formatMoney((u.allowances || 0) + (u.dailyAllowance || 0))}</p>
@@ -311,7 +311,7 @@ export default function StaffManager({ mode = 'company', companyId = null, allow
                     <Pencil className="h-4 w-4" />
                   </button>
 
-                  {mode === 'company' && (
+                  {mode !== 'system' && (
                     <button className="rounded p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" title="Employee PDF"
                       onClick={() => downloadFile(`/reports/employee/${u._id}/pdf`, `employee-${u.name}.pdf`)}>
                       <FileDown className="h-4 w-4" />
