@@ -18,7 +18,9 @@ import * as attendance from '../controllers/attendance.controller.js';
 import * as leave from '../controllers/leave.controller.js';
 import * as sale from '../controllers/sale.controller.js';
 import * as salesInvoice from '../controllers/salesInvoice.controller.js';
+import * as salesReturn from '../controllers/salesReturn.controller.js';
 import * as purchase from '../controllers/purchase.controller.js';
+import * as purchaseReturn from '../controllers/purchaseReturn.controller.js';
 import * as inventory from '../controllers/inventory.controller.js';
 import * as distributor from '../controllers/distributor.controller.js';
 import * as customer from '../controllers/customer.controller.js';
@@ -159,6 +161,18 @@ r.delete('/sales-invoices/:id', protect, authorize(...OWNERS), scopeCompany, req
 r.post('/purchases', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('vendorManagement'), validate({ body: schemas.createPurchase }), withIdempotency, purchase.createPurchase);
 r.get('/purchases', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('vendorManagement'), purchase.listPurchases);
 r.patch('/purchases/:id', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), purchase.updatePurchase);
+
+// ============ SALES RETURN ============
+r.get('/sales-returns', protect, authorize(...ALL_STAFF), scopeCompany, salesReturn.listSalesReturns);
+r.post('/sales-returns', protect, authorize(...ALL_STAFF), scopeCompany, salesReturn.createSalesReturn);
+r.get('/sales-returns/:id', protect, authorize(...ALL_STAFF), scopeCompany, salesReturn.getSalesReturnDetails);
+r.delete('/sales-returns/:id', protect, authorize(...MANAGERS), scopeCompany, salesReturn.deleteSalesReturn);
+
+// ============ PURCHASE RETURN ============
+r.get('/purchase-returns', protect, authorize(...MANAGERS), scopeCompany, purchaseReturn.listPurchaseReturns);
+r.post('/purchase-returns', protect, authorize(...MANAGERS), scopeCompany, purchaseReturn.createPurchaseReturn);
+r.get('/purchase-returns/:id', protect, authorize(...MANAGERS), scopeCompany, purchaseReturn.getPurchaseReturnDetails);
+r.delete('/purchase-returns/:id', protect, authorize(...MANAGERS), scopeCompany, purchaseReturn.deletePurchaseReturn);
 
 // ============ INVENTORY (feature-gated) ============
 r.get('/inventory', protect, authorize(...ALL_STAFF), scopeCompany, requireFeature('inventoryManagement'), inventory.listInventory);

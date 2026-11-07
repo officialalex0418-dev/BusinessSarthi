@@ -7,7 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import {
   LayoutDashboard, Building2, Users, Package, Wallet, Settings, ShieldCheck,
   MapPin, Boxes, Truck, TrendingUp, FileText, CalendarCheck, CalendarOff, User,
-  MessageSquare, LayoutGrid, Inbox, LifeBuoy, Store, PackageCheck, Calculator
+  MessageSquare, LayoutGrid, Inbox, LifeBuoy, Store, PackageCheck, Calculator, RotateCcw, Undo2
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
@@ -97,6 +97,8 @@ import EditProfile from '@/pages/staff/EditProfile';
 import ChangePassword from '@/pages/auth/ChangePassword';
 import TicketList from '@/pages/support/TicketList';
 import TicketDetail from '@/pages/support/TicketDetail';
+import SalesReturnList from '@/pages/shared/SalesReturnList';
+import PurchaseReturnList from '@/pages/shared/PurchaseReturnList';
 
 function Protected({ roles, children }) {
   const { user, loading } = useAuth();
@@ -135,10 +137,12 @@ const companyNav = [
   { to: '/company/attendance', label: 'Attendance', icon: CalendarCheck },
   { to: '/company/leaves', label: 'Leave Management', icon: CalendarOff },
   { to: '/company/sales', label: 'Sales Tracker', icon: TrendingUp },
+  { to: '/company/sales-return', label: 'Sales Return', icon: RotateCcw },
   { to: '/company/customers', label: 'Customer Master List', icon: Users },
   { to: '/company/inventory', label: 'Inventory', icon: Boxes },
   { to: '/company/distributors', label: 'Distributors', icon: Truck },
   { to: '/company/vendors', label: 'Vendors', icon: Building2 },
+  { to: '/company/purchase-return', label: 'Purchase Return', icon: Undo2 },
   { to: '/company/payroll', label: 'Payroll Management', icon: Wallet },
   { to: '/company/complaints', label: 'Chat', icon: MessageSquare },
   { to: '/company/support', label: 'Support', icon: LifeBuoy },
@@ -167,10 +171,12 @@ const stockistNav = [
   { to: '/stockist/accounts', label: 'Account Manager', icon: Calculator },
   { to: '/stockist/staff', label: 'Employee', icon: Users },
   { to: '/stockist/sales', label: 'Sales Tracker', icon: TrendingUp },
+  { to: '/stockist/sales-return', label: 'Sales Return', icon: RotateCcw },
   { to: '/stockist/dispatch-payment', label: 'Dispatch and Payment', icon: PackageCheck },
   { to: '/stockist/inventory', label: 'Inventory', icon: Boxes },
   { to: '/stockist/outlets', label: 'Outlets', icon: Truck },
   { to: '/stockist/vendors', label: 'Vendors', icon: Building2 },
+  { to: '/stockist/purchase-return', label: 'Purchase Return', icon: Undo2 },
   { to: '/stockist/reports', label: 'Report', icon: FileText },
   { to: '/stockist/configuration', label: 'Configuration', icon: Settings },
   { to: '/stockist/support', label: 'Support', icon: LifeBuoy },
@@ -502,6 +508,7 @@ export default function App() {
             : <StaffLeaves />
         } />
         <Route path="sales" element={<SalesTracker />} />
+        <Route path="sales-return" element={<SalesReturnList />} />
         <Route path="sales-statistics" element={<SalesStatistics />} />
         <Route path="dispatch-payment" element={<StockistDispatchPayment />} />
         <Route path="customers" element={<CompanyCustomers />} />
@@ -510,6 +517,7 @@ export default function App() {
         <Route path="distributors/:id" element={<DistributorDetails />} />
         <Route path="vendors" element={<Vendors />} />
         <Route path="vendors/:id" element={<VendorDetails />} />
+        <Route path="purchase-return" element={<PurchaseReturnList />} />
         <Route path="payroll" element={<CompanyPayroll />} />
         <Route path="complaints" element={hasFeature('complaintChat') ? <Chat /> : <Navigate to="/company" />} />
         <Route path="support" element={<TicketList />} />
@@ -556,12 +564,14 @@ export default function App() {
         <Route path="management/attendance" element={<AttendancePage />} />
         <Route path="management/leaves" element={<Leaves />} />
         <Route path="management/sales" element={<SalesTracker />} />
+        <Route path="management/sales-return" element={<SalesReturnList />} />
         <Route path="management/customers" element={<CompanyCustomers />} />
         <Route path="management/inventory" element={<InventoryPage />} />
         <Route path="management/distributors" element={<Distributors />} />
         <Route path="management/distributors/:id" element={<DistributorDetails />} />
         <Route path="management/vendors" element={<Vendors />} />
         <Route path="management/vendors/:id" element={<VendorDetails />} />
+        <Route path="management/purchase-return" element={<PurchaseReturnList />} />
         <Route path="management/payroll" element={<CompanyPayroll />} />
         <Route path="management/reports" element={<Reports />} />
         <Route path="management/configuration">
@@ -601,6 +611,7 @@ export default function App() {
             : <StaffLeaves />
         } />
         <Route path="sales" element={<SalesTracker />} />
+        <Route path="sales-return" element={<SalesReturnList />} />
         <Route path="sales-statistics" element={<SalesStatistics />} />
         <Route path="dispatch-payment" element={<StockistDispatchPayment />} />
         <Route path="inventory" element={<InventoryPage />} />
@@ -608,6 +619,7 @@ export default function App() {
         <Route path="outlets/:id" element={<DistributorDetails />} />
         <Route path="vendors" element={<Vendors />} />
         <Route path="vendors/:id" element={<VendorDetails />} />
+        <Route path="purchase-return" element={<PurchaseReturnList />} />
         <Route path="payroll" element={<CompanyPayroll />} />
         <Route path="support" element={<TicketList />} />
         <Route path="support/:id" element={<TicketDetail />} />

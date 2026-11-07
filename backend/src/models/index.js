@@ -39,3 +39,5 @@ export { default as SupportTicket } from './SupportTicket.js';
 export { default as Product } from './Product.js';
 export { default as Expense } from './Expense.js';
 export { default as IdempotencyKey } from './IdempotencyKey.js';
+export { default as SalesReturn } from './SalesReturn.js';
+export { default as PurchaseReturn } from './PurchaseReturn.js';

@@ -30,6 +30,8 @@ export const authorize = (...roles) => (req, _res, next) => {
       if (permissions.accounts && (
         path.startsWith('/sales-invoices') ||
         path.startsWith('/purchases') ||
+        path.startsWith('/sales-returns') ||
+        path.startsWith('/purchase-returns') ||
         path.startsWith('/payments') ||
         path.startsWith('/expenses') ||
         path.startsWith('/payroll') ||
@@ -103,12 +105,12 @@ export const authorize = (...roles) => (req, _res, next) => {
       } else if (path.startsWith('/inventory')) {
         permissionChecked = true;
         permissionGranted = permissions.inventory;
-      } else if (path.startsWith('/distributors') || path.startsWith('/outlets') || path.startsWith('/invoices') || path.startsWith('/payments') || path.startsWith('/sales-invoices')) {
+      } else if (path.startsWith('/distributors') || path.startsWith('/outlets') || path.startsWith('/invoices') || path.startsWith('/payments') || path.startsWith('/sales-invoices') || path.startsWith('/sales-returns')) {
         permissionChecked = true;
-        permissionGranted = permissions.distributors || permissions.dispatchPayment;
-      } else if (path.startsWith('/vendors') || path.startsWith('/purchases') || path.startsWith('/vendor-payments')) {
+        permissionGranted = permissions.distributors || permissions.dispatchPayment || permissions.salesTracker;
+      } else if (path.startsWith('/vendors') || path.startsWith('/purchases') || path.startsWith('/vendor-payments') || path.startsWith('/purchase-returns')) {
         permissionChecked = true;
-        permissionGranted = permissions.vendors;
+        permissionGranted = permissions.vendors || permissions.inventory;
       } else if (path.startsWith('/cheques')) {
         permissionChecked = true;
         permissionGranted = permissions.distributors || permissions.vendors;
