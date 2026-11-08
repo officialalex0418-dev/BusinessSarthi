@@ -647,12 +647,12 @@ export default function DistributorDetails() {
                   <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
                     <td className="table-td text-xs">{formatDate(h.date, dateFormat)}</td>
                     <td className="table-td">
-                      <Badge color={h.type === 'INVOICE' ? 'blue' : 'green'}>{h.type}</Badge>
+                      <Badge color={h.type === 'INVOICE' ? 'blue' : h.type === 'SALES_RETURN' ? 'purple' : 'green'}>{h.type}</Badge>
                     </td>
                     <td className="table-td">
                       <div>
                         <p className="font-medium text-xs">{h.ref}</p>
-                        <p className="text-[10px] text-slate-400">{h.method}</p>
+                        <p className="text-[10px] text-slate-400">{h.method || h.reason}</p>
                       </div>
                     </td>
                     <td className={`table-td font-bold ${h.type === 'INVOICE' ? 'text-red-600' : 'text-emerald-600'}`}>
@@ -688,14 +688,14 @@ export default function DistributorDetails() {
                   <div key={idx} className="p-3 border-b flex items-center justify-between text-xs">
                     <div>
                       <p className="font-semibold">{formatDate(h.date, dateFormat)}</p>
-                      <p className="text-slate-400">{h.ref} {h.method && `· ${h.method}`}</p>
+                      <p className="text-slate-400">{h.ref} { (h.method || h.reason) && `· ${h.method || h.reason}`}</p>
                     </div>
                     <div className="text-right flex items-center gap-2">
                       <div>
                         <p className={`font-bold ${h.type === 'INVOICE' ? 'text-red-600' : 'text-emerald-600'}`}>
                            {h.type === 'INVOICE' ? '+' : '-'}{formatMoney(h.amount)}
                         </p>
-                        <Badge color={h.type === 'INVOICE' ? 'blue' : 'green'} className="mt-0.5">{h.type}</Badge>
+                        <Badge color={h.type === 'INVOICE' ? 'blue' : h.type === 'SALES_RETURN' ? 'purple' : 'green'} className="mt-0.5">{h.type}</Badge>
                       </div>
                       <div className="flex gap-1 ml-1 no-print">
                         {h.type === 'INVOICE' && (

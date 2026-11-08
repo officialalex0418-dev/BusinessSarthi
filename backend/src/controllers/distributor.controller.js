@@ -30,24 +30,25 @@ export const getDistributorDetails = asyncHandler(async (req, res) => {
   const distributor = await Distributor.findOne({ _id: req.params.id, company: req.companyId });
   if (!distributor) throw ApiError.notFound(getNotFoundMsg(req));
 
-  const [invoices, payments] = await Promise.all([
+  const [invoices, payments, salesReturns] = await Promise.all([
     SalesInvoice.find({ distributor: distributor._id, company: req.companyId }).sort('saleDate'),
     Payment.find({ distributor: distributor._id, company: req.companyId }).sort('paymentDate'),
+    SalesReturn.find({ distributor: distributor._id, company: req.companyId, status: 'COMPLETED' }).sort('returnDate'),
   ]);
 
-  // Recalculate and ensure accurate outstanding balance (Total Invoiced - Total Paid)
+  // Recalculate and ensure accurate outstanding balance (Total Invoiced - Total Paid - Total Sales Returns)
   const totalInvoiced = invoices.reduce((sum, i) => sum + (i.netTotal || 0), 0);
   const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-  const calculatedOutstanding = totalInvoiced - totalPaid;
+  const totalReturns = salesReturns.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+  const calculatedOutstanding = Math.max(0, totalInvoiced - totalPaid - totalReturns);
 
   if (distributor.outstandingBalance !== calculatedOutstanding) {
     distributor.outstandingBalance = calculatedOutstanding;
     await distributor.save();
   }
 
-  // Aging calculation using FIFO matching on-the-fly
-  // Total received vs chronological invoices
-  let totalPaymentsReceived = payments.reduce((sum, p) => sum + p.amount, 0);
+  // Aging calculation using FIFO matching on-the-fly (factoring in payments and returns)
+  let totalCreditsReceived = totalPaid + totalReturns;
   const now = new Date();
 
   const aging = [];
@@ -61,11 +62,11 @@ export const getDistributorDetails = asyncHandler(async (req, res) => {
       paidForThis = inv.netTotal;
       dueForThis = 0;
     } else {
-      dueForThis = Math.max(0, inv.netTotal - totalPaymentsReceived);
+      dueForThis = Math.max(0, inv.netTotal - totalCreditsReceived);
       paidForThis = inv.netTotal - dueForThis;
 
-      // Reduce the pool of available payments
-      totalPaymentsReceived = Math.max(0, totalPaymentsReceived - inv.netTotal);
+      // Reduce the pool of available credits (payments + returns)
+      totalCreditsReceived = Math.max(0, totalCreditsReceived - inv.netTotal);
     }
 
     const days = Math.floor((now - new Date(inv.saleDate)) / (1000 * 60 * 60 * 24));
@@ -86,17 +87,25 @@ export const getDistributorDetails = asyncHandler(async (req, res) => {
     };
   });
 
+  const history = [
+    ...invoices.map(i => ({ id: i._id, type: 'INVOICE', date: i.saleDate, amount: i.netTotal, ref: i.invoiceNumber, createdAt: i.createdAt })),
+    ...payments.map(p => ({ id: p._id, type: 'PAYMENT', date: p.paymentDate, amount: p.amount, ref: p.method, createdAt: p.createdAt })),
+    ...salesReturns.map(r => ({ id: r._id, type: 'SALES_RETURN', date: r.returnDate, amount: r.totalAmount, ref: r.returnNumber, reason: r.reason, createdAt: r.createdAt }))
+  ].sort((a, b) => {
+    const dateDiff = new Date(b.date) - new Date(a.date);
+    if (dateDiff !== 0) return dateDiff;
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
   res.json({
     success: true,
     data: {
       distributor,
-      invoices: processedInvoices.reverse(), // Sort for list display (newest first)
+      invoices: processedInvoices.reverse(),
       payments: payments.reverse(),
+      salesReturns: salesReturns.reverse(),
       aging,
-      history: [
-        ...invoices.map(i => ({ id: i._id, type: 'INVOICE', date: i.saleDate, amount: i.netTotal, ref: i.invoiceNumber, method: i.paymentMethod })),
-        ...payments.map(p => ({ id: p._id, type: 'PAYMENT', date: p.paymentDate, amount: p.amount, ref: 'Payment', method: p.method }))
-      ].sort((a, b) => new Date(b.date) - new Date(a.date))
+      history
     }
   });
 });
