@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import ExcelJS from 'exceljs';
-import { Vendor, Purchase, VendorPayment, Company, PurchaseReturn } from '../models/index.js';
+import { Vendor, Purchase, VendorPayment, Company, PurchaseReturn, VendorAdjustment } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
@@ -26,17 +26,19 @@ export const getVendorDetails = asyncHandler(async (req, res) => {
   let vendor = await Vendor.findOne({ _id: req.params.id, company: req.companyId });
   if (!vendor) throw ApiError.notFound('Vendor not found');
 
-  const [purchases, payments, purchaseReturns] = await Promise.all([
+  const [purchases, payments, purchaseReturns, adjustments] = await Promise.all([
     Purchase.find({ vendor: vendor._id, company: req.companyId }).sort('createdAt'),
     VendorPayment.find({ vendor: vendor._id, company: req.companyId }).sort('paymentDate'),
     PurchaseReturn.find({ vendor: vendor._id, company: req.companyId, status: 'COMPLETED' }).sort('returnDate'),
+    VendorAdjustment.find({ vendor: vendor._id, company: req.companyId }).sort('adjustmentDate'),
   ]);
 
   // Recalculate balance from history to ensure accuracy (Fixes sync issues)
   const totalPurchased = purchases.reduce((sum, p) => sum + (p.netTotal || 0), 0);
   const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
   const totalReturns = purchaseReturns.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
-  const actualBalance = Math.max(0, totalPurchased - totalPaid - totalReturns);
+  const totalAdjustments = adjustments.reduce((sum, a) => sum + (a.amount || 0), 0);
+  const actualBalance = Math.max(0, totalPurchased - totalPaid - totalReturns - totalAdjustments);
 
   if (vendor.outstandingBalance !== actualBalance) {
     vendor.outstandingBalance = actualBalance;
@@ -50,6 +52,7 @@ export const getVendorDetails = asyncHandler(async (req, res) => {
       purchases: purchases.reverse(),
       payments: payments.reverse(),
       purchaseReturns: purchaseReturns.reverse(),
+      adjustments: adjustments.reverse(),
       history: [
         ...purchases.map(p => ({ id: p._id, type: 'PURCHASE', date: p.createdAt, amount: p.netTotal, ref: 'Purchase', createdAt: p.createdAt })),
         ...payments.map(p => ({
@@ -70,6 +73,16 @@ export const getVendorDetails = asyncHandler(async (req, res) => {
             ref: r.returnNumber,
             reason: r.reason,
             createdAt: r.createdAt
+        })),
+        ...adjustments.map(a => ({
+            id: a._id,
+            type: 'VENDOR_ADJUSTMENT',
+            date: a.adjustmentDate || a.createdAt,
+            amount: a.amount,
+            ref: a.claimType === 'Others' ? a.customClaimType : a.claimType,
+            method: a.paymentMode,
+            remarks: a.remarks,
+            createdAt: a.createdAt
         }))
       ].sort((a, b) => {
         const dateDiff = new Date(b.date) - new Date(a.date);

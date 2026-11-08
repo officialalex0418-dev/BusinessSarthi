@@ -25,6 +25,7 @@ import * as inventory from '../controllers/inventory.controller.js';
 import * as distributor from '../controllers/distributor.controller.js';
 import * as customer from '../controllers/customer.controller.js';
 import * as vendor from '../controllers/vendor.controller.js';
+import * as vendorAdjustment from '../controllers/vendorAdjustment.controller.js';
 import * as payroll from '../controllers/payroll.controller.js';
 import * as cheque from '../controllers/cheque.controller.js';
 import * as dashboard from '../controllers/dashboard.controller.js';
@@ -247,6 +248,11 @@ r.delete('/vendors/:id', protect, authorize(...OWNERS), scopeCompany, requireFea
 r.post('/vendor-payments', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), validate({ body: schemas.recordVendorPayment }), withIdempotency, vendor.recordVendorPayment);
 r.patch('/vendor-payments/:id', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendor.updateVendorPayment);
 r.delete('/vendor-payments/:id', protect, authorize(...OWNERS), scopeCompany, requireFeature('vendorManagement'), vendor.deleteVendorPayment);
+
+// ============ VENDOR ADJUSTMENTS (Claims / Income) ============
+r.get('/vendor-adjustments', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendorAdjustment.listVendorAdjustments);
+r.post('/vendor-adjustments', protect, authorize(...MANAGERS), scopeCompany, requireFeature('vendorManagement'), vendorAdjustment.createVendorAdjustment);
+r.delete('/vendor-adjustments/:id', protect, authorize(...OWNERS), scopeCompany, requireFeature('vendorManagement'), vendorAdjustment.deleteVendorAdjustment);
 
 // ============ PAYROLL ============
 r.post('/payroll/generate', protect, authorize(...MANAGERS), scopeCompany, requireFeature('payrollManagement'), validate({ body: schemas.generatePayroll }), payroll.generatePayroll);

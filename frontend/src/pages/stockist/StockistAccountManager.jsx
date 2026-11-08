@@ -43,12 +43,23 @@ export default function StockistAccountManager() {
   const [expenses, setExpenses] = useState([]);
   const [payrolls, setPayrolls] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
+  const [vendors, setVendors] = useState([]);
 
   // Modals & Forms
-  const [modal, setModal] = useState(null); // 'payment' | 'expense'
+  const [modal, setModal] = useState(null); // 'payment' | 'expense' | 'adjustment'
   const [editingExpense, setEditingExpense] = useState(null);
   const [payForm, setPayForm] = useState(emptyPayment);
   const [expenseForm, setExpenseForm] = useState(emptyExpense);
+  const [adjustmentForm, setAdjustmentForm] = useState({
+    vendorId: '',
+    claimType: 'Discount',
+    customClaimType: '',
+    amount: 0,
+    paymentMode: 'Balance Adjustment',
+    chequeDetails: { bankName: '', number: '', issueDate: '', depositDate: '' },
+    remarks: '',
+    adjustmentDate: ''
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -62,14 +73,15 @@ export default function StockistAccountManager() {
         limit: 10000
       };
 
-      const [distRes, invRes, purRes, payRes, expRes, payrRes, stockRes] = await Promise.all([
+      const [distRes, invRes, purRes, payRes, expRes, payrRes, stockRes, vendRes] = await Promise.all([
         api.get('/distributors', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/sales-invoices', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/purchases', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/payments', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/expenses', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/payroll', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } })),
-        api.get('/inventory', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } }))
+        api.get('/inventory', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } })),
+        api.get('/vendors', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } }))
       ]);
 
       setOutlets(distRes.data?.data?.items || []);
@@ -79,6 +91,7 @@ export default function StockistAccountManager() {
       setExpenses(expRes.data?.data?.items || []);
       setPayrolls(payrRes.data?.data?.items || payrRes.data?.data?.results || []);
       setInventoryItems(stockRes.data?.data?.items || []);
+      setVendors(vendRes.data?.data?.items || vendRes.data?.data || []);
     } catch (err) {
       console.error('Failed to load accounting data', err);
       setError('Failed to load accounting records. Please refresh.');
@@ -266,6 +279,31 @@ export default function StockistAccountManager() {
       loadData();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to record payment');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submitAdjustment = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      await api.post('/vendor-adjustments', adjustmentForm);
+      setModal(null);
+      setAdjustmentForm({
+        vendorId: '',
+        claimType: 'Discount',
+        customClaimType: '',
+        amount: 0,
+        paymentMode: 'Balance Adjustment',
+        chequeDetails: { bankName: '', number: '', issueDate: '', depositDate: '' },
+        remarks: '',
+        adjustmentDate: ''
+      });
+      loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to record adjustment');
     } finally {
       setSaving(false);
     }
@@ -677,7 +715,7 @@ export default function StockistAccountManager() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
                     <button
                       type="button"
                       onClick={() => setModal('payment')}
@@ -694,6 +732,15 @@ export default function StockistAccountManager() {
                     >
                       <Plus className="h-4 w-4" />
                       Add Expense
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setAdjustmentForm({ vendorId: '', claimType: 'Discount', customClaimType: '', amount: 0, paymentMode: 'Balance Adjustment', chequeDetails: { bankName: '', number: '', issueDate: '', depositDate: '' }, remarks: '', adjustmentDate: '' }); setModal('adjustment'); }}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition shadow-xs"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Record Adjustments
                     </button>
                   </div>
                 </div>
@@ -983,6 +1030,113 @@ export default function StockistAccountManager() {
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => setModal(null)}>Cancel</Button>
             <Button type="submit" loading={saving}>Record Payment (FIFO)</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* RECORD ADJUSTMENTS MODAL */}
+      <Modal open={modal === 'adjustment'} onClose={() => setModal(null)} title="Record Vendor Claim Adjustments (Income)">
+        {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">{error}</div>}
+        <form onSubmit={submitAdjustment} className="space-y-4">
+          <p className="text-xs text-purple-700 bg-purple-50 p-3 rounded-xl font-medium">
+            Note: These adjustments are recorded as income / claim adjustments for the stockist and reduce vendor liability.
+          </p>
+          <Select
+            label="Choose Vendor *"
+            required
+            value={adjustmentForm.vendorId}
+            onChange={(e) => setAdjustmentForm({ ...adjustmentForm, vendorId: e.target.value })}
+            options={[{ value: '', label: 'Select Vendor...' }, ...vendors.map(v => ({ value: v._id, label: v.name }))]}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Claim Type *"
+              value={adjustmentForm.claimType}
+              onChange={(e) => setAdjustmentForm({ ...adjustmentForm, claimType: e.target.value })}
+              options={[
+                { value: 'Discount', label: 'Discount' },
+                { value: 'Sales Commission', label: 'Sales Commission' },
+                { value: 'Incentive', label: 'Incentive' },
+                { value: 'Bonus', label: 'Bonus' },
+                { value: 'Others', label: 'Others (Type Custom)' },
+              ]}
+            />
+            {adjustmentForm.claimType === 'Others' && (
+              <Input
+                label="Custom Claim Type *"
+                required
+                placeholder="Enter custom claim type"
+                value={adjustmentForm.customClaimType}
+                onChange={(e) => setAdjustmentForm({ ...adjustmentForm, customClaimType: e.target.value })}
+              />
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Amount *"
+              type="number"
+              min="0"
+              required
+              value={adjustmentForm.amount}
+              onChange={(e) => setAdjustmentForm({ ...adjustmentForm, amount: e.target.value })}
+            />
+            <Select
+              label="Payment Mode *"
+              value={adjustmentForm.paymentMode}
+              onChange={(e) => setAdjustmentForm({ ...adjustmentForm, paymentMode: e.target.value })}
+              options={[
+                { value: 'Balance Adjustment', label: 'Balance Adjustment' },
+                { value: 'Cash', label: 'Cash' },
+                { value: 'Cheque', label: 'Cheque' },
+                { value: 'BankTransfer', label: 'Bank Transfer' },
+              ]}
+            />
+          </div>
+
+          {adjustmentForm.paymentMode === 'Cheque' && (
+            <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <h4 className="text-xs font-bold uppercase text-slate-500">Cheque Details</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label="Bank Name"
+                  value={adjustmentForm.chequeDetails.bankName}
+                  onChange={(e) => setAdjustmentForm({ ...adjustmentForm, chequeDetails: { ...adjustmentForm.chequeDetails, bankName: e.target.value } })}
+                />
+                <Input
+                  label="Cheque No"
+                  value={adjustmentForm.chequeDetails.number}
+                  onChange={(e) => setAdjustmentForm({ ...adjustmentForm, chequeDetails: { ...adjustmentForm.chequeDetails, number: e.target.value } })}
+                />
+                <DatePicker
+                  label="Issue Date"
+                  value={adjustmentForm.chequeDetails.issueDate}
+                  onChange={(val) => setAdjustmentForm({ ...adjustmentForm, chequeDetails: { ...adjustmentForm.chequeDetails, issueDate: val } })}
+                />
+                <DatePicker
+                  label="Deposit Date"
+                  value={adjustmentForm.chequeDetails.depositDate}
+                  onChange={(val) => setAdjustmentForm({ ...adjustmentForm, chequeDetails: { ...adjustmentForm.chequeDetails, depositDate: val } })}
+                />
+              </div>
+            </div>
+          )}
+
+          <DatePicker
+            label="Adjustment Date"
+            value={adjustmentForm.adjustmentDate}
+            onChange={(val) => setAdjustmentForm({ ...adjustmentForm, adjustmentDate: val })}
+          />
+
+          <Textarea
+            label="Remarks"
+            placeholder="Add any remarks or notes..."
+            value={adjustmentForm.remarks}
+            onChange={(e) => setAdjustmentForm({ ...adjustmentForm, remarks: e.target.value })}
+          />
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Record Adjustment</Button>
           </div>
         </form>
       </Modal>
