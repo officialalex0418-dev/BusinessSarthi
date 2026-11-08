@@ -44,6 +44,7 @@ export default function StockistAccountManager() {
   const [payrolls, setPayrolls] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [adjustments, setAdjustments] = useState([]);
 
   // Modals & Forms
   const [modal, setModal] = useState(null); // 'payment' | 'expense' | 'adjustment'
@@ -73,7 +74,7 @@ export default function StockistAccountManager() {
         limit: 10000
       };
 
-      const [distRes, invRes, purRes, payRes, expRes, payrRes, stockRes, vendRes] = await Promise.all([
+      const [distRes, invRes, purRes, payRes, expRes, payrRes, stockRes, vendRes, adjRes] = await Promise.all([
         api.get('/distributors', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/sales-invoices', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/purchases', { params }).catch(() => ({ data: { data: { items: [] } } })),
@@ -81,7 +82,8 @@ export default function StockistAccountManager() {
         api.get('/expenses', { params }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/payroll', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } })),
         api.get('/inventory', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } })),
-        api.get('/vendors', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } }))
+        api.get('/vendors', { params: { limit: 10000 } }).catch(() => ({ data: { data: { items: [] } } })),
+        api.get('/vendor-adjustments', { params }).catch(() => ({ data: { data: { items: [] } } }))
       ]);
 
       setOutlets(distRes.data?.data?.items || []);
@@ -92,6 +94,7 @@ export default function StockistAccountManager() {
       setPayrolls(payrRes.data?.data?.items || payrRes.data?.data?.results || []);
       setInventoryItems(stockRes.data?.data?.items || []);
       setVendors(vendRes.data?.data?.items || vendRes.data?.data || []);
+      setAdjustments(adjRes.data?.data?.items || []);
     } catch (err) {
       console.error('Failed to load accounting data', err);
       setError('Failed to load accounting records. Please refresh.');
@@ -225,10 +228,15 @@ export default function StockistAccountManager() {
     ? outlets.reduce((sum, o) => sum + (Number(o.outstandingBalance) || 0), 0)
     : 233986.818;
 
+  // Vendor Claim Adjustments (Income)
+  const totalVendorAdjustments = hasRecords
+    ? adjustments.reduce((sum, adj) => sum + (Number(adj.amount) || 0), 0)
+    : 0;
+
   // Net Profit & Margin
   const netProfit = hasRecords
-    ? (grossMarginAmount - totalExpensesOfMonth - totalSalaryPaidOfMonth)
-    : 27601.168;
+    ? (grossMarginAmount + totalVendorAdjustments - totalExpensesOfMonth - totalSalaryPaidOfMonth)
+    : (27601.168 + totalVendorAdjustments);
   const netMarginPct = hasRecords
     ? (totalSalesAmount > 0 ? (netProfit / totalSalesAmount) * 100 : 0)
     : 10.62;
@@ -659,7 +667,7 @@ export default function StockistAccountManager() {
                   </div>
 
                   <div>
-                    <div className="border-t border-slate-800/80 pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="border-t border-slate-800/80 pt-6 grid grid-cols-2 sm:grid-cols-5 gap-4">
                       <div>
                         <p className="text-xs font-medium text-slate-400">Sales Amount</p>
                         <p className="text-sm font-extrabold text-white mt-1">
@@ -670,6 +678,12 @@ export default function StockistAccountManager() {
                         <p className="text-xs font-medium text-slate-400">Purchase Cost (COGS)</p>
                         <p className="text-sm font-extrabold text-white mt-1">
                           {formatDisplayMoney(displaySummaryCOGS, 2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-400">Vendor Adjustments</p>
+                        <p className="text-sm font-extrabold text-emerald-400 mt-1">
+                          {formatDisplayMoney(totalVendorAdjustments, 0)}
                         </p>
                       </div>
                       <div>
@@ -803,6 +817,10 @@ export default function StockistAccountManager() {
                         <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 flex justify-between font-bold text-indigo-700 dark:text-indigo-300">
                           <span>Gross Margin</span>
                           <span>{formatDisplayMoney(grossMarginAmount, 0)} ({grossMarginPercentage.toFixed(2)}%)</span>
+                        </div>
+                        <div className="p-4 flex justify-between text-slate-600 dark:text-slate-300">
+                          <span>Add: Vendor Claim Adjustments (Income)</span>
+                          <span className="text-emerald-600">+ {formatDisplayMoney(totalVendorAdjustments, 0)}</span>
                         </div>
                         <div className="p-4 flex justify-between text-slate-600 dark:text-slate-300">
                           <span>Less: Total Office Expenses</span>
