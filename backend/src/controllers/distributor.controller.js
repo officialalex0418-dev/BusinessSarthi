@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import ExcelJS from 'exceljs';
-import { Distributor, Invoice, Payment, SalesInvoice, Cheque, Company, Stockist, Inventory, Vendor } from '../models/index.js';
+import { Distributor, Invoice, Payment, SalesInvoice, Cheque, Company, Stockist, Inventory, Vendor, SalesReturn } from '../models/index.js';
 import { ApiError, asyncHandler } from '../utils/ApiError.js';
 import { getPagination, paginatedResponse } from '../utils/pagination.js';
 import { audit } from '../utils/audit.js';
@@ -151,21 +151,24 @@ export const hardDeleteDistributor = asyncHandler(async (req, res) => {
 /** GET /distributors/:id/ledger */
 export const getLedger = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const [invoices, payments] = await Promise.all([
+  const [invoices, payments, salesReturns] = await Promise.all([
     SalesInvoice.find({ distributor: id, company: req.companyId }).sort('saleDate'),
     Payment.find({ distributor: id, company: req.companyId }).sort('paymentDate'),
+    SalesReturn.find({ distributor: id, company: req.companyId, status: 'COMPLETED' }).sort('returnDate'),
   ]);
 
   // Combine and sort by date for ledger
   const ledger = [
     ...invoices.map(i => ({ type: 'INVOICE', date: i.saleDate, amount: i.netTotal, ref: i.invoiceNumber, id: i._id })),
-    ...payments.map(p => ({ type: 'PAYMENT', date: p.paymentDate, amount: p.amount, ref: p.method, id: p._id }))
+    ...payments.map(p => ({ type: 'PAYMENT', date: p.paymentDate, amount: p.amount, ref: p.method, id: p._id })),
+    ...salesReturns.map(r => ({ type: 'SALES_RETURN', date: r.returnDate, amount: r.totalAmount, ref: r.returnNumber, id: r._id }))
   ].sort((a, b) => new Date(a.date) - new Date(b.date));
 
   let balance = 0;
   const entries = ledger.map(item => {
     if (item.type === 'INVOICE') balance += item.amount;
-    else balance -= item.amount;
+    else if (item.type === 'PAYMENT') balance -= item.amount;
+    else if (item.type === 'SALES_RETURN') balance -= item.amount;
     return { ...item, runningBalance: balance };
   });
 
